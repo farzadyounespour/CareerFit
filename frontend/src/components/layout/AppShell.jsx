@@ -1,75 +1,95 @@
-import { BriefcaseBusiness, FileText, Gauge, UserRound } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  FileText,
+  Gauge,
+  Home,
+  LogIn,
+  UserPlus,
+  UserRound,
+} from "lucide-react";
 
 const navItems = [
+  { id: "home", label: "Home", icon: Home },
   { id: "profile", label: "Profile", icon: UserRound },
   { id: "resume", label: "Resume", icon: FileText },
-  { id: "job", label: "Job", icon: BriefcaseBusiness },
+  { id: "job", label: "Jobs", icon: BriefcaseBusiness },
   { id: "report", label: "Report", icon: Gauge },
 ];
 
-export default function AppShell({ activeScreen, onNavigate, children }) {
+export default function AppShell({ activeScreen, onNavigate, isSignedIn, onAuthOpen, onSignOut, children }) {
   return (
     <div className="min-h-screen bg-slate-50">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white px-5 py-6 lg:block">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-teal">CareerFit</p>
-          <h1 className="mt-2 text-2xl font-semibold text-ink">Application readiness</h1>
-        </div>
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
+          <button type="button" onClick={() => onNavigate("home")} className="flex items-center gap-3 text-left">
+            <span className="grid h-11 w-11 place-items-center rounded-md bg-teal text-white">
+              <BriefcaseBusiness size={22} />
+            </span>
+            <span>
+              <span className="block text-xl font-semibold text-ink">CareerFit</span>
+              <span className="block text-sm font-medium text-slate-500">Application readiness</span>
+            </span>
+          </button>
 
-        <nav className="mt-8 space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeScreen === item.id;
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onNavigate(item.id)}
-                className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium ${
-                  isActive
-                    ? "bg-teal text-white"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-ink"
-                }`}
-              >
-                <Icon size={18} />
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <div className="lg:pl-64">
-        <header className="border-b border-slate-200 bg-white px-4 py-4 lg:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-slate-500">Explainable resume-job matching</p>
-              <h2 className="text-xl font-semibold text-ink">CareerFit Workspace</h2>
-            </div>
-            <div className="flex rounded-md border border-slate-200 bg-slate-50 p-1 lg:hidden">
+          <nav className="order-3 w-full overflow-x-auto lg:order-2 lg:w-auto">
+            <div className="flex min-w-max rounded-md border border-slate-200 bg-slate-50 p-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
+                const isActive = activeScreen === item.id;
+
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    title={item.label}
                     onClick={() => onNavigate(item.id)}
-                    className={`rounded p-2 ${
-                      activeScreen === item.id ? "bg-teal text-white" : "text-slate-600"
+                    className={`inline-flex h-10 items-center gap-2 rounded px-3 text-sm font-semibold ${
+                      isActive
+                        ? "bg-teal text-white shadow-sm"
+                        : "text-slate-600 hover:bg-white hover:text-ink"
                     }`}
                   >
-                    <Icon size={18} />
+                    <Icon size={16} />
+                    {item.label}
                   </button>
                 );
               })}
             </div>
+          </nav>
+
+          <div className="order-2 flex flex-wrap items-center gap-2 lg:order-3">
+            {isSignedIn ? (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal"
+              >
+                Sign out
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onAuthOpen("login")}
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal"
+                >
+                  <LogIn size={16} />
+                  Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAuthOpen("create")}
+                  className="inline-flex items-center gap-2 rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal/90"
+                >
+                  <UserPlus size={16} />
+                  Sign up
+                </button>
+              </>
+            )}
           </div>
-        </header>
-        <main className="px-4 py-6 lg:px-8">{children}</main>
-      </div>
+        </div>
+      </header>
+
+      <main className="px-4 py-6 lg:px-8">{children}</main>
     </div>
   );
 }
-

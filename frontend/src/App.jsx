@@ -4,6 +4,7 @@ import AppShell from "./components/layout/AppShell.jsx";
 import { sampleJobDescription, sampleResume } from "./data/sampleInputs.js";
 import { analyzeMatch, searchJobs, uploadResume } from "./services/api.js";
 import AuthScreen from "./screens/AuthScreen.jsx";
+import HomeScreen from "./screens/HomeScreen.jsx";
 import JobMatchScreen from "./screens/JobMatchScreen.jsx";
 import ReportScreen from "./screens/ReportScreen.jsx";
 import ResumeUploadScreen from "./screens/ResumeUploadScreen.jsx";
@@ -17,7 +18,8 @@ const initialProfile = {
 
 export default function App() {
   const [isSignedIn, setIsSignedIn] = useState(false);
-  const [activeScreen, setActiveScreen] = useState("profile");
+  const [authMode, setAuthMode] = useState(null);
+  const [activeScreen, setActiveScreen] = useState("home");
   const [profile, setProfile] = useState(initialProfile);
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -127,6 +129,10 @@ export default function App() {
   }
 
   function renderScreen() {
+    if (activeScreen === "home") {
+      return <HomeScreen onNavigate={setActiveScreen} onAuthOpen={setAuthMode} />;
+    }
+
     if (activeScreen === "profile") {
       return (
         <UserProfileScreen
@@ -175,13 +181,30 @@ export default function App() {
     return <ReportScreen report={report} />;
   }
 
-  if (!isSignedIn) {
-    return <AuthScreen onContinue={() => setIsSignedIn(true)} />;
+  function handleAuthComplete() {
+    setIsSignedIn(true);
+    setAuthMode(null);
   }
 
   return (
-    <AppShell activeScreen={activeScreen} onNavigate={setActiveScreen}>
-      {renderScreen()}
-    </AppShell>
+    <>
+      <AppShell
+        activeScreen={activeScreen}
+        onNavigate={setActiveScreen}
+        isSignedIn={isSignedIn}
+        onAuthOpen={setAuthMode}
+        onSignOut={() => setIsSignedIn(false)}
+      >
+        {renderScreen()}
+      </AppShell>
+
+      {authMode && (
+        <AuthScreen
+          initialMode={authMode}
+          onContinue={handleAuthComplete}
+          onClose={() => setAuthMode(null)}
+        />
+      )}
+    </>
   );
 }
