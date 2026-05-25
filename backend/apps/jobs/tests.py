@@ -61,6 +61,7 @@ class JobSearchApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["results"][0]["source"], "Adzuna")
 
+    @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="")
     def test_search_uses_sample_data_without_credentials(self):
         response = self.client.get("/api/jobs/search/", {"title": "Junior Data Analyst"})
 
