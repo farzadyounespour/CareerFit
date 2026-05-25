@@ -1,4 +1,6 @@
 import re
+from collections import Counter
+from math import log, sqrt
 
 
 STOP_WORDS = {
@@ -85,11 +87,49 @@ def score_requirement(requirement, resume_text):
     resume_tokens = set(tokenize(resume_text))
 
     if not req_tokens:
-        return 0, []
+        return 0, [], 0
 
     overlap = sorted(req_tokens & resume_tokens)
-    score = round((len(overlap) / len(req_tokens)) * 100)
-    return score, overlap
+    overlap_score = (len(overlap) / len(req_tokens)) * 100
+    similarity_score = calculate_text_similarity(requirement, resume_text)
+    score = round((overlap_score * 0.7) + (similarity_score * 0.3))
+    return score, overlap, round(similarity_score)
+
+
+def calculate_text_similarity(requirement, resume_text):
+    requirement_tokens = tokenize(requirement)
+    resume_tokens = tokenize(resume_text)
+
+    if not requirement_tokens or not resume_tokens:
+        return 0
+
+    requirement_counts = Counter(requirement_tokens)
+    resume_counts = Counter(resume_tokens)
+    vocabulary = set(requirement_counts) | set(resume_counts)
+    document_count = 2
+
+    idf = {}
+    for token in vocabulary:
+        document_frequency = int(token in requirement_counts) + int(token in resume_counts)
+        idf[token] = log((document_count + 1) / (document_frequency + 1)) + 1
+
+    requirement_vector = {
+        token: requirement_counts[token] * idf[token]
+        for token in vocabulary
+    }
+    resume_vector = {
+        token: resume_counts[token] * idf[token]
+        for token in vocabulary
+    }
+
+    numerator = sum(requirement_vector[token] * resume_vector[token] for token in vocabulary)
+    requirement_magnitude = sqrt(sum(value * value for value in requirement_vector.values()))
+    resume_magnitude = sqrt(sum(value * value for value in resume_vector.values()))
+
+    if not requirement_magnitude or not resume_magnitude:
+        return 0
+
+    return (numerator / (requirement_magnitude * resume_magnitude)) * 100
 
 
 def categorize_requirement(score):
@@ -115,12 +155,13 @@ def analyze_resume_match(user_profile, resume_text, job_description):
     }
 
     for requirement in requirements:
-        score, evidence = score_requirement(requirement, resume_text)
+        score, evidence, similarity = score_requirement(requirement, resume_text)
         category = categorize_requirement(score)
         categories[category].append(
             {
                 "text": requirement,
                 "score": score,
+                "similarity": similarity,
                 "evidence": evidence[:8],
             }
         )
@@ -149,6 +190,7 @@ def analyze_resume_match(user_profile, resume_text, job_description):
             "match_score": match_score,
             "readiness_score": readiness_score,
             "requirements_reviewed": len(requirements),
+            "similarity_method": "tf-idf cosine",
         },
         "skills": {
             "matched": matched_skills,

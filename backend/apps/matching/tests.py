@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from .services import analyze_resume_match
+from .services import analyze_resume_match, calculate_text_similarity
 
 
 class AnalyzeResumeMatchTests(SimpleTestCase):
@@ -18,3 +18,21 @@ class AnalyzeResumeMatchTests(SimpleTestCase):
         self.assertIn("python", result["skills"]["matched"])
         self.assertIn("aws", result["skills"]["missing"])
         self.assertIn("recommendations", result)
+        reviewed_requirements = [
+            item
+            for group in result["requirements"].values()
+            for item in group
+        ]
+        self.assertIn("similarity", reviewed_requirements[0])
+
+    def test_text_similarity_increases_for_related_text(self):
+        related_score = calculate_text_similarity(
+            "Build Python dashboards with SQL",
+            "Python SQL dashboard projects using Tableau",
+        )
+        unrelated_score = calculate_text_similarity(
+            "Build Python dashboards with SQL",
+            "Customer service and inventory management",
+        )
+
+        self.assertGreater(related_score, unrelated_score)

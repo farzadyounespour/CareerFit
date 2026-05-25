@@ -1,6 +1,6 @@
 # CareerFit
 
-CareerFit is an explainable resume-job matching prototype. The first MVP lets a user enter profile details, provide resume text, paste a job description, and receive an application-readiness report with matched, partial, weak, and missing requirements.
+CareerFit is an explainable resume-job matching prototype. The MVP lets a user enter profile details, paste or upload resume content, paste a job description, and receive an application-readiness report with matched, partial, weak, and missing requirements.
 
 ## Project Structure
 
@@ -60,3 +60,18 @@ The frontend runs at `http://127.0.0.1:5173`.
 }
 ```
 
+The response includes score summaries, matched and missing skills, requirement-level evidence, and a TF-IDF cosine similarity signal for each reviewed requirement.
+
+### Upload Resume
+
+`POST /api/resumes/upload/`
+
+Send a multipart form request with a `file` field. Supported formats are `.pdf`, `.docx`, and `.txt`.
+
+```json
+{
+  "filename": "resume.pdf",
+  "text": "Extracted resume text...",
+  "character_count": 1234
+}
+```

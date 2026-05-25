@@ -25,6 +25,9 @@ export default function RequirementGroup({ title, items, tone }) {
                 <p className="text-sm font-medium text-slate-800">{item.text}</p>
                 <span className="shrink-0 text-sm font-semibold text-slate-500">{item.score}%</span>
               </div>
+              {typeof item.similarity === "number" && (
+                <p className="mt-1 text-xs text-slate-500">Similarity signal: {item.similarity}%</p>
+              )}
               {item.evidence.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {item.evidence.map((word) => (
@@ -41,4 +44,3 @@ export default function RequirementGroup({ title, items, tone }) {
     </section>
   );
 }
-

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import AppShell from "./components/layout/AppShell.jsx";
 import { sampleJobDescription, sampleResume } from "./data/sampleInputs.js";
-import { analyzeMatch } from "./services/api.js";
+import { analyzeMatch, uploadResume } from "./services/api.js";
 import AuthScreen from "./screens/AuthScreen.jsx";
 import JobMatchScreen from "./screens/JobMatchScreen.jsx";
 import ReportScreen from "./screens/ReportScreen.jsx";
@@ -23,6 +23,9 @@ export default function App() {
   const [jobDescription, setJobDescription] = useState("");
   const [report, setReport] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [resumeUploadStatus, setResumeUploadStatus] = useState("");
+  const [resumeUploadError, setResumeUploadError] = useState("");
   const [error, setError] = useState("");
 
   const canAnalyze = useMemo(
@@ -54,6 +57,26 @@ export default function App() {
     }
   }
 
+  async function handleResumeUpload(file) {
+    if (!file) {
+      return;
+    }
+
+    setResumeUploadError("");
+    setResumeUploadStatus("");
+    setIsUploadingResume(true);
+
+    try {
+      const result = await uploadResume(file);
+      setResumeText(result.text);
+      setResumeUploadStatus(`Loaded ${result.filename} (${result.character_count.toLocaleString()} characters).`);
+    } catch (uploadError) {
+      setResumeUploadError(uploadError.message);
+    } finally {
+      setIsUploadingResume(false);
+    }
+  }
+
   function renderScreen() {
     if (activeScreen === "profile") {
       return (
@@ -71,6 +94,10 @@ export default function App() {
           resumeText={resumeText}
           onChange={setResumeText}
           onLoadSample={() => setResumeText(sampleResume)}
+          onUpload={handleResumeUpload}
+          isUploading={isUploadingResume}
+          uploadStatus={resumeUploadStatus}
+          uploadError={resumeUploadError}
           onNext={() => setActiveScreen("job")}
         />
       );
