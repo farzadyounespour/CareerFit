@@ -54,6 +54,12 @@ npm run dev
 
 The frontend runs at `http://127.0.0.1:5173`.
 
+The frontend connects to the Django API through Vite's local `/api` proxy. For local development, use:
+
+```bash
+VITE_API_BASE_URL=/api
+```
+
 ## MVP API
 
 ### Search Jobs
