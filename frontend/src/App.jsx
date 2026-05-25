@@ -31,6 +31,7 @@ export default function App() {
   const [jobResults, setJobResults] = useState([]);
   const [isSearchingJobs, setIsSearchingJobs] = useState(false);
   const [jobSearchError, setJobSearchError] = useState("");
+  const [jobSearchNotice, setJobSearchNotice] = useState("");
   const [report, setReport] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
@@ -90,6 +91,7 @@ export default function App() {
   async function handleJobSearch(event) {
     event.preventDefault();
     setJobSearchError("");
+    setJobSearchNotice("");
     setJobResults([]);
 
     if (!jobSearch.title.trim()) {
@@ -105,6 +107,9 @@ export default function App() {
         country: jobSearch.country,
       });
       setJobResults(result.results);
+      if (result.using_sample_data) {
+        setJobSearchNotice("Showing sample job postings. Add Adzuna API keys to backend/.env for live job search.");
+      }
       if (result.results.length === 0) {
         setJobSearchError("No jobs found. Try a broader title or location.");
       }
@@ -171,6 +176,7 @@ export default function App() {
           onSelectJob={handleSelectJob}
           isSearchingJobs={isSearchingJobs}
           jobSearchError={jobSearchError}
+          jobSearchNotice={jobSearchNotice}
           onAnalyze={handleAnalyze}
           isLoading={isLoading}
           error={error}

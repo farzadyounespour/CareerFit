@@ -11,6 +11,7 @@ export default function JobMatchScreen({
   onSelectJob,
   isSearchingJobs,
   jobSearchError,
+  jobSearchNotice,
   onAnalyze,
   isLoading,
   error,
@@ -88,13 +89,24 @@ export default function JobMatchScreen({
           </div>
         )}
 
+        {jobSearchNotice && (
+          <div className="mt-4 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
+            {jobSearchNotice}
+          </div>
+        )}
+
         {jobResults.length > 0 && (
           <div className="mt-4 grid gap-3">
             {jobResults.map((job) => (
               <article key={job.id || `${job.title}-${job.company}`} className="rounded-md border border-slate-200 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h4 className="text-sm font-semibold text-ink">{job.title}</h4>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-sm font-semibold text-ink">{job.title}</h4>
+                      <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                        {job.source}
+                      </span>
+                    </div>
                     <p className="mt-1 text-sm text-slate-600">
                       {[job.company, job.location].filter(Boolean).join(" · ") || "Adzuna listing"}
                     </p>

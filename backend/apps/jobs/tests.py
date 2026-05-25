@@ -32,6 +32,14 @@ class AdzunaJobSearchTests(SimpleTestCase):
         self.assertEqual(jobs[0]["location"], "US, New York")
         self.assertIn("Python", jobs[0]["description"])
 
+    @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="")
+    def test_returns_sample_results_without_credentials(self):
+        jobs = search_adzuna_jobs("Junior Data Analyst", "Remote")
+
+        self.assertGreater(len(jobs), 0)
+        self.assertEqual(jobs[0]["source"], "Sample")
+        self.assertIn("description", jobs[0])
+
 
 class JobSearchApiTests(APITestCase):
     @patch("apps.jobs.views.search_adzuna_jobs")
@@ -52,3 +60,10 @@ class JobSearchApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["results"][0]["source"], "Adzuna")
+
+    def test_search_uses_sample_data_without_credentials(self):
+        response = self.client.get("/api/jobs/search/", {"title": "Junior Data Analyst"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["using_sample_data"])
+        self.assertEqual(response.data["source"], "Sample")

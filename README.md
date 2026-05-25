@@ -42,6 +42,8 @@ ADZUNA_APP_ID=your_app_id
 ADZUNA_APP_KEY=your_app_key
 ```
 
+If these credentials are not set, CareerFit still works locally by returning sample job postings for the search flow.
+
 ## Frontend Setup
 
 ```bash

@@ -11,11 +11,50 @@ class JobSearchError(ValueError):
 
 
 ADZUNA_API_BASE_URL = "https://api.adzuna.com/v1/api/jobs"
+SAMPLE_JOBS = [
+    {
+        "id": "sample-data-analyst",
+        "title": "Junior Data Analyst",
+        "company": "Northstar Analytics",
+        "location": "Remote, United States",
+        "description": (
+            "We are looking for a Junior Data Analyst who can collect, clean, and analyze business data. "
+            "Required skills include Python, SQL, Excel, Tableau or Power BI, communication, and problem solving. "
+            "The candidate should create dashboards, explain findings to stakeholders, and work with cross-functional teams."
+        ),
+        "url": "",
+        "source": "Sample",
+    },
+    {
+        "id": "sample-frontend-developer",
+        "title": "Frontend Developer Intern",
+        "company": "BrightApps Studio",
+        "location": "Toronto, Canada",
+        "description": (
+            "Join our product team to build responsive React interfaces with JavaScript, REST APIs, Git, teamwork, "
+            "and clear communication. Experience with accessibility, testing, and design systems is an asset."
+        ),
+        "url": "",
+        "source": "Sample",
+    },
+    {
+        "id": "sample-software-engineer",
+        "title": "Junior Software Engineer",
+        "company": "Civic Cloud",
+        "location": "New York, United States",
+        "description": (
+            "Build web services and internal tools using Python, Django, REST APIs, SQL, Docker, Git, and AWS. "
+            "Strong problem solving, documentation, and collaboration skills are important for this role."
+        ),
+        "url": "",
+        "source": "Sample",
+    },
+]
 
 
 def search_adzuna_jobs(title, location="", country="us", results_per_page=8):
     if not settings.ADZUNA_APP_ID or not settings.ADZUNA_APP_KEY:
-        raise JobSearchError("Adzuna API credentials are not configured.")
+        return search_sample_jobs(title, location, results_per_page)
 
     params = {
         "app_id": settings.ADZUNA_APP_ID,
@@ -40,6 +79,36 @@ def search_adzuna_jobs(title, location="", country="us", results_per_page=8):
         raise JobSearchError("Unable to reach Adzuna job search.") from exc
 
     return [_format_adzuna_job(job) for job in payload.get("results", [])]
+
+
+def search_sample_jobs(title, location="", results_per_page=8):
+    normalized_title = title.lower()
+    normalized_location = location.lower()
+    scored_jobs = []
+
+    for job in SAMPLE_JOBS:
+        searchable_text = " ".join(
+            [
+                job["title"],
+                job["company"],
+                job["location"],
+                job["description"],
+            ]
+        ).lower()
+        title_match = normalized_title in searchable_text
+        location_match = not normalized_location or normalized_location in job["location"].lower()
+        score = int(title_match) + int(location_match)
+
+        if title_match or location_match or not normalized_title:
+            scored_jobs.append((score, job))
+
+    if not scored_jobs:
+        scored_jobs = [(0, job) for job in SAMPLE_JOBS]
+
+    return [
+        {**job, "source": "Sample"}
+        for _score, job in sorted(scored_jobs, key=lambda item: item[0], reverse=True)[:results_per_page]
+    ]
 
 
 def _format_adzuna_job(job):

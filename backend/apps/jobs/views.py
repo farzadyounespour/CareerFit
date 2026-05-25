@@ -20,4 +20,13 @@ class JobSearchView(APIView):
         except JobSearchError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"results": jobs}, status=status.HTTP_200_OK)
+        using_sample_data = any(job.get("source") == "Sample" for job in jobs)
+
+        return Response(
+            {
+                "results": jobs,
+                "source": "Sample" if using_sample_data else "Adzuna",
+                "using_sample_data": using_sample_data,
+            },
+            status=status.HTTP_200_OK,
+        )
