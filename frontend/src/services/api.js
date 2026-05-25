@@ -33,3 +33,23 @@ export async function uploadResume(file) {
 
   return response.json();
 }
+
+export async function searchJobs({ title, location, country }) {
+  const params = new URLSearchParams({
+    title,
+    country,
+  });
+
+  if (location) {
+    params.set("location", location);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/jobs/search/?${params.toString()}`);
+
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}));
+    throw new Error(details.detail || "Unable to search jobs.");
+  }
+
+  return response.json();
+}

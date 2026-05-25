@@ -35,6 +35,13 @@ python manage.py runserver
 
 The API runs at `http://127.0.0.1:8000`.
 
+To enable Adzuna job search, create `backend/.env` and add your Adzuna credentials:
+
+```bash
+ADZUNA_APP_ID=your_app_id
+ADZUNA_APP_KEY=your_app_key
+```
+
 ## Frontend Setup
 
 ```bash
@@ -46,6 +53,30 @@ npm run dev
 The frontend runs at `http://127.0.0.1:5173`.
 
 ## MVP API
+
+### Search Jobs
+
+`GET /api/jobs/search/?title=Junior%20Data%20Analyst&location=New%20York&country=us`
+
+CareerFit uses Adzuna for job search. Supported country values are `us`, `ca`, and `gb`.
+
+```json
+{
+  "results": [
+    {
+      "id": "123",
+      "title": "Junior Data Analyst",
+      "company": "Example Company",
+      "location": "US, New York",
+      "description": "Job description text...",
+      "url": "https://...",
+      "source": "Adzuna"
+    }
+  ]
+}
+```
+
+### Analyze Match
 
 `POST /api/matches/analyze/`
 

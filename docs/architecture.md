@@ -4,7 +4,7 @@
 
 1. User enters profile information.
 2. User pastes resume content or uploads a PDF, DOCX, or TXT resume.
-3. User pastes a job description.
+3. User searches Adzuna for a job posting or pastes a job description.
 4. Frontend sends the combined request to the Django API.
 5. Backend extracts text from uploaded resumes when needed.
 6. Backend extracts requirement-style phrases and skills from the job description.
@@ -15,19 +15,19 @@
 
 - `UserProfileScreen`: basic user and target-role information.
 - `ResumeUploadScreen`: pasted resume text and file upload controls.
-- `JobMatchScreen`: pasted job description and sample job loading.
+- `JobMatchScreen`: Adzuna job search, job selection, pasted job description, and sample job loading.
 - `ReportScreen`: score, requirement categories, missing skills, and recommendations.
 
 ## Main Backend Areas
 
 - `accounts`: user profile data model placeholder.
 - `resumes`: resume text, PDF/DOCX/TXT parsing, and upload API.
-- `jobs`: job description and future API search placeholder.
+- `jobs`: job description domain and Adzuna search API integration.
 - `matching`: explainable matching service and API endpoint.
 
 ## Planned Upgrades
 
 - Store user sessions, resumes, jobs, and reports in PostgreSQL.
 - Add sentence-transformer embeddings.
-- Add Adzuna and The Muse job search integrations.
+- Add optional The Muse job search integration.
 - Add evaluation scripts for precision, recall, F1-score, and case-study validation.

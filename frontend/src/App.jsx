@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import AppShell from "./components/layout/AppShell.jsx";
 import { sampleJobDescription, sampleResume } from "./data/sampleInputs.js";
-import { analyzeMatch, uploadResume } from "./services/api.js";
+import { analyzeMatch, searchJobs, uploadResume } from "./services/api.js";
 import AuthScreen from "./screens/AuthScreen.jsx";
 import JobMatchScreen from "./screens/JobMatchScreen.jsx";
 import ReportScreen from "./screens/ReportScreen.jsx";
@@ -21,6 +21,14 @@ export default function App() {
   const [profile, setProfile] = useState(initialProfile);
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
+  const [jobSearch, setJobSearch] = useState({
+    title: "Junior Data Analyst",
+    location: "",
+    country: "us",
+  });
+  const [jobResults, setJobResults] = useState([]);
+  const [isSearchingJobs, setIsSearchingJobs] = useState(false);
+  const [jobSearchError, setJobSearchError] = useState("");
   const [report, setReport] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
@@ -77,6 +85,47 @@ export default function App() {
     }
   }
 
+  async function handleJobSearch(event) {
+    event.preventDefault();
+    setJobSearchError("");
+    setJobResults([]);
+
+    if (!jobSearch.title.trim()) {
+      setJobSearchError("Enter a job title before searching.");
+      return;
+    }
+
+    setIsSearchingJobs(true);
+    try {
+      const result = await searchJobs({
+        title: jobSearch.title.trim(),
+        location: jobSearch.location.trim(),
+        country: jobSearch.country,
+      });
+      setJobResults(result.results);
+      if (result.results.length === 0) {
+        setJobSearchError("No jobs found. Try a broader title or location.");
+      }
+    } catch (searchError) {
+      setJobSearchError(searchError.message);
+    } finally {
+      setIsSearchingJobs(false);
+    }
+  }
+
+  function handleSelectJob(job) {
+    const selectedDescription = [
+      job.title,
+      job.company ? `Company: ${job.company}` : "",
+      job.location ? `Location: ${job.location}` : "",
+      job.description,
+      job.url ? `Source: ${job.url}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    setJobDescription(selectedDescription);
+  }
+
   function renderScreen() {
     if (activeScreen === "profile") {
       return (
@@ -109,6 +158,13 @@ export default function App() {
           jobDescription={jobDescription}
           onChange={setJobDescription}
           onLoadSample={() => setJobDescription(sampleJobDescription)}
+          jobSearch={jobSearch}
+          onJobSearchChange={setJobSearch}
+          jobResults={jobResults}
+          onJobSearch={handleJobSearch}
+          onSelectJob={handleSelectJob}
+          isSearchingJobs={isSearchingJobs}
+          jobSearchError={jobSearchError}
           onAnalyze={handleAnalyze}
           isLoading={isLoading}
           error={error}
