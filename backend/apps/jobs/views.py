@@ -53,6 +53,7 @@ class JobSearchView(APIView):
                     "page": page,
                     "results_per_page": results_per_page,
                     "count": count,
+                    "total_pages": (count + results_per_page - 1) // results_per_page,
                     "has_previous": page > 1,
                     "has_next": page * results_per_page < count,
                 },

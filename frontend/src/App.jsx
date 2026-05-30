@@ -81,6 +81,7 @@ export default function App() {
   const [jobPagination, setJobPagination] = useState({
     page: 1,
     count: 0,
+    total_pages: 0,
     has_previous: false,
     has_next: false,
   });

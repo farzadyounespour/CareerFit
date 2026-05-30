@@ -271,6 +271,7 @@ class JobSearchApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["pagination"]["page"], 1)
+        self.assertEqual(response.data["pagination"]["total_pages"], 2)
         self.assertTrue(response.data["pagination"]["has_next"])
         self.assertFalse(response.data["pagination"]["has_previous"])
 

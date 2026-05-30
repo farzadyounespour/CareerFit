@@ -38,6 +38,7 @@ export default function JobMatchScreen({
   onAiCoachingChange,
 }) {
   const hasJobDescription = jobDescription.trim().length > 0;
+  const totalPages = pagination.total_pages || 1;
 
   return (
     <section className="mx-auto max-w-7xl">
@@ -156,7 +157,7 @@ export default function JobMatchScreen({
           {jobResults.length > 0 && !isSearchingJobs && (
             <div className="mt-4 flex items-center justify-end gap-2">
               <button type="button" disabled={!pagination.has_previous} onClick={() => onPageChange(jobSearch.page - 1)} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300">Previous</button>
-              <span className="text-sm font-semibold text-slate-500">Page {jobSearch.page}</span>
+              <span className="text-sm font-semibold text-slate-500">Page {jobSearch.page} of {totalPages}</span>
               <button type="button" disabled={!pagination.has_next} onClick={() => onPageChange(jobSearch.page + 1)} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300">Next</button>
             </div>
           )}
