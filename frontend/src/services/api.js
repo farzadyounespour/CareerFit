@@ -1,8 +1,23 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 function authHeaders() {
-  const token = localStorage.getItem("careerfit_token");
+  const token = getStoredToken();
   return token ? { Authorization: `Token ${token}` } : {};
+}
+
+export function getStoredToken() {
+  return localStorage.getItem("careerfit_token") || sessionStorage.getItem("careerfit_token");
+}
+
+export function storeToken(token, remember = false) {
+  clearStoredToken();
+  const storage = remember ? localStorage : sessionStorage;
+  storage.setItem("careerfit_token", token);
+}
+
+export function clearStoredToken() {
+  localStorage.removeItem("careerfit_token");
+  sessionStorage.removeItem("careerfit_token");
 }
 
 export async function analyzeMatch(payload) {
@@ -79,6 +94,22 @@ export async function fetchCurrentUser() {
   return getJson("/accounts/me/");
 }
 
+export async function requestPasswordReset(payload) {
+  return postJson("/accounts/password-reset/", payload);
+}
+
+export async function confirmPasswordReset(payload) {
+  return postJson("/accounts/password-reset-confirm/", payload);
+}
+
+export async function requestEmailVerification() {
+  return postJson("/accounts/email-verification/", {});
+}
+
+export async function confirmEmailVerification(payload) {
+  return postJson("/accounts/verify-email/", payload);
+}
+
 export async function updateCurrentUser(payload) {
   const response = await fetch(`${API_BASE_URL}/accounts/me/`, {
     method: "PATCH",
@@ -107,8 +138,24 @@ export async function fetchSavedJobs() {
   return getJson("/jobs/saved/");
 }
 
+export async function deleteSavedJob(jobId) {
+  return deleteJson(`/jobs/saved/${jobId}/`);
+}
+
 export async function fetchReportHistory() {
   return getJson("/matches/history/");
+}
+
+export async function deleteReport(reportId) {
+  return deleteJson(`/matches/history/${reportId}/`);
+}
+
+export async function deleteResume(resumeId) {
+  return deleteJson(`/resumes/${resumeId}/`);
+}
+
+export async function deleteAccount() {
+  return deleteJson("/accounts/me/");
 }
 
 async function getJson(path) {
@@ -126,6 +173,14 @@ async function postJson(path, payload) {
       ...authHeaders(),
     },
     body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+async function deleteJson(path) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "DELETE",
+    headers: authHeaders(),
   });
   return handleResponse(response);
 }

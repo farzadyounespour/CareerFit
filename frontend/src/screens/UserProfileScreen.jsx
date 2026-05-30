@@ -7,11 +7,22 @@ import {
   MapPin,
   Phone,
   UserRound,
+  Trash2,
 } from "lucide-react";
 
 const trackedFields = ["name", "email", "target_role", "experience_level", "location", "summary"];
 
-export default function UserProfileScreen({ profile, onChange, onNext, saveError }) {
+export default function UserProfileScreen({
+  profile,
+  onChange,
+  onNext,
+  saveError,
+  isSignedIn,
+  onDeleteAccount,
+  currentUser,
+  accountNotice,
+  onRequestEmailVerification,
+}) {
   const completedFields = trackedFields.filter((field) => profile[field]?.trim()).length;
   const completion = Math.round((completedFields / trackedFields.length) * 100);
 
@@ -94,6 +105,34 @@ export default function UserProfileScreen({ profile, onChange, onNext, saveError
               placeholder="Example: Data analytics student with hands-on experience using Python, SQL, and Tableau for reporting projects."
             />
           </section>
+
+          {isSignedIn && (
+            <section className="rounded-md border border-rose-200 bg-white p-5 shadow-panel">
+              <h3 className="font-semibold text-ink">Account email</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {currentUser?.email_verified ? "Your email address is verified." : "Verify your email address so account recovery is dependable."}
+              </p>
+              {!currentUser?.email_verified && (
+                <button type="button" onClick={onRequestEmailVerification} className="mt-3 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal">
+                  Send verification link
+                </button>
+              )}
+              {accountNotice && <p className="mt-3 break-words text-xs leading-5 text-slate-500">{accountNotice}</p>}
+              <div className="my-5 border-t border-slate-200" />
+              <h3 className="font-semibold text-rose-700">Privacy controls</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Deleting your account permanently removes your profile, saved resumes, saved jobs, and report history.
+              </p>
+              <button
+                type="button"
+                onClick={() => window.confirm("Delete your CareerFit account and all saved data?") && onDeleteAccount()}
+                className="mt-4 inline-flex items-center gap-2 rounded-md border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50"
+              >
+                <Trash2 size={16} />
+                Delete account
+              </button>
+            </section>
+          )}
         </div>
 
         <aside className="h-fit rounded-md border border-slate-200 bg-white p-5 shadow-panel">

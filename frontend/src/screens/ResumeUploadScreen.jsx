@@ -6,6 +6,7 @@ import {
   FileText,
   Info,
   ShieldCheck,
+  Trash2,
   Upload,
 } from "lucide-react";
 
@@ -18,6 +19,7 @@ export default function ResumeUploadScreen({
   uploadStatus,
   uploadError,
   onNext,
+  onDelete,
 }) {
   const wordCount = countWords(resumeText);
   const hasResume = resumeText.trim().length > 0;
@@ -137,6 +139,16 @@ export default function ResumeUploadScreen({
       </div>
 
       <div className="mt-6 flex justify-end">
+        {hasResume && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="mr-3 inline-flex items-center gap-2 rounded-md border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-rose-700 hover:bg-rose-50"
+          >
+            <Trash2 size={16} />
+            Clear resume
+          </button>
+        )}
         <button
           type="button"
           onClick={onNext}

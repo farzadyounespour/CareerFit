@@ -4,14 +4,25 @@ import AppShell from "./components/layout/AppShell.jsx";
 import { sampleJobDescription, sampleResume } from "./data/sampleInputs.js";
 import {
   analyzeMatch,
+  clearStoredToken,
+  confirmEmailVerification,
+  confirmPasswordReset,
+  deleteAccount,
+  deleteReport,
+  deleteResume,
+  deleteSavedJob,
   fetchCurrentUser,
   fetchReportHistory,
   fetchSavedJobs,
+  getStoredToken,
   loginAccount,
   logoutAccount,
   registerAccount,
+  requestEmailVerification,
+  requestPasswordReset,
   saveJob,
   searchJobs,
+  storeToken,
   updateCurrentUser,
   uploadResume,
 } from "./services/api.js";
@@ -52,6 +63,12 @@ export default function App() {
     page: 1,
   });
   const [jobResults, setJobResults] = useState([]);
+  const [jobPagination, setJobPagination] = useState({
+    page: 1,
+    count: 0,
+    has_previous: false,
+    has_next: false,
+  });
   const [isSearchingJobs, setIsSearchingJobs] = useState(false);
   const [jobSearchError, setJobSearchError] = useState("");
   const [jobSearchNotice, setJobSearchNotice] = useState("");
@@ -65,9 +82,31 @@ export default function App() {
   const [savedJobs, setSavedJobs] = useState([]);
   const [history, setHistory] = useState([]);
   const [useAiCoaching, setUseAiCoaching] = useState(false);
+  const [authLinkParams, setAuthLinkParams] = useState({});
+  const [accountNotice, setAccountNotice] = useState("");
 
   useEffect(() => {
-    if (!localStorage.getItem("careerfit_token")) {
+    const params = new URLSearchParams(window.location.search);
+    const resetUid = params.get("reset_uid");
+    const resetToken = params.get("reset_token");
+    const verifyUid = params.get("verify_uid");
+    const verifyToken = params.get("verify_token");
+    if (resetUid && resetToken) {
+      setAuthLinkParams({ uid: resetUid, token: resetToken });
+      setAuthMode("reset-confirm");
+    }
+    if (verifyUid && verifyToken) {
+      confirmEmailVerification({ uid: verifyUid, token: verifyToken })
+        .then(({ detail }) => {
+          setAccountNotice(detail);
+          setCurrentUser((user) => user ? { ...user, email_verified: true } : user);
+        })
+        .catch((verifyError) => setAccountNotice(verifyError.message));
+    }
+    if (resetUid || resetToken || verifyUid || verifyToken) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    if (!getStoredToken()) {
       return;
     }
     fetchCurrentUser()
@@ -86,7 +125,7 @@ export default function App() {
           summary: user.summary || currentProfile.summary,
         }));
       })
-      .catch(() => localStorage.removeItem("careerfit_token"));
+      .catch(() => clearStoredToken());
   }, []);
 
   const canAnalyze = useMemo(
@@ -183,6 +222,7 @@ export default function App() {
         page: nextSearch.page,
       });
       setJobResults(result.results);
+      setJobPagination(result.pagination);
       if (result.using_sample_data) {
         setJobSearchNotice("Showing sample job postings. Add Adzuna API keys to backend/.env for live job search.");
       }
@@ -232,6 +272,39 @@ export default function App() {
     setJobSearchNotice("Job saved to your account.");
   }
 
+  async function handleDeleteSavedJob(jobId) {
+    await deleteSavedJob(jobId);
+    setSavedJobs((currentJobs) => currentJobs.filter((job) => job.id !== jobId));
+  }
+
+  async function handleDeleteReport(reportId) {
+    await deleteReport(reportId);
+    setHistory((currentHistory) => currentHistory.filter((item) => item.id !== reportId));
+  }
+
+  async function handleDeleteUploadedResume() {
+    if (uploadedResumeId) {
+      await deleteResume(uploadedResumeId);
+    }
+    setUploadedResumeId(null);
+    setResumeText("");
+    setResumeUploadStatus("");
+  }
+
+  async function handleDeleteAccount() {
+    await deleteAccount();
+    clearStoredToken();
+    setCurrentUser(null);
+    setIsSignedIn(false);
+    setHistory([]);
+    setSavedJobs([]);
+    setReport(null);
+    setResumeText("");
+    setUploadedResumeId(null);
+    setProfile(initialProfile);
+    setActiveScreen("home");
+  }
+
   async function handleLoadHistory() {
     if (!isSignedIn) {
       setAuthMode("login");
@@ -263,6 +336,11 @@ export default function App() {
           onChange={setProfile}
           onNext={handleProfileContinue}
           saveError={profileSaveError}
+          isSignedIn={isSignedIn}
+          onDeleteAccount={handleDeleteAccount}
+          currentUser={currentUser}
+          accountNotice={accountNotice}
+          onRequestEmailVerification={handleRequestEmailVerification}
         />
       );
     }
@@ -281,6 +359,7 @@ export default function App() {
           uploadStatus={resumeUploadStatus}
           uploadError={resumeUploadError}
           onNext={() => setActiveScreen("job")}
+          onDelete={handleDeleteUploadedResume}
         />
       );
     }
@@ -301,6 +380,7 @@ export default function App() {
           jobSearchNotice={jobSearchNotice}
           onSaveJob={handleSaveJob}
           onPageChange={handleJobPageChange}
+          pagination={jobPagination}
           selectedJob={selectedJob}
           onAnalyze={handleAnalyze}
           isLoading={isLoading}
@@ -317,10 +397,15 @@ export default function App() {
           history={history}
           savedJobs={savedJobs}
           onOpenReport={(selectedReport) => {
-            setReport(selectedReport);
+            setReport(selectedReport.result);
+            setResumeText(selectedReport.resume_text);
+            setJobDescription(selectedReport.job_description);
+            setUploadedResumeId(null);
             setActiveScreen("report");
           }}
           onUseJob={handleUseSavedJob}
+          onDeleteJob={handleDeleteSavedJob}
+          onDeleteReport={handleDeleteReport}
         />
       );
     }
@@ -340,7 +425,7 @@ export default function App() {
       mode === "create"
         ? await registerAccount(form)
         : await loginAccount({ email: form.email, password: form.password });
-    localStorage.setItem("careerfit_token", result.token);
+    storeToken(result.token, form.remember);
     setCurrentUser(result.user);
     setIsSignedIn(true);
     setProfile((currentProfile) => ({
@@ -361,10 +446,15 @@ export default function App() {
     try {
       await logoutAccount();
     } finally {
-      localStorage.removeItem("careerfit_token");
+      clearStoredToken();
       setCurrentUser(null);
       setIsSignedIn(false);
     }
+  }
+
+  async function handleRequestEmailVerification() {
+    const result = await requestEmailVerification();
+    setAccountNotice(result.verification_url ? `${result.detail} ${result.verification_url}` : result.detail);
   }
 
   return (
@@ -385,6 +475,9 @@ export default function App() {
         <AuthScreen
           initialMode={authMode}
           onContinue={handleAuthComplete}
+          onPasswordReset={requestPasswordReset}
+          onPasswordResetConfirm={confirmPasswordReset}
+          linkParams={authLinkParams}
           onClose={() => setAuthMode(null)}
         />
       )}

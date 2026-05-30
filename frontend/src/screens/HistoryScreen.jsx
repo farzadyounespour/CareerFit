@@ -5,9 +5,10 @@ import {
   CalendarDays,
   FileClock,
   Gauge,
+  Trash2,
 } from "lucide-react";
 
-export default function HistoryScreen({ history, savedJobs, onOpenReport, onUseJob }) {
+export default function HistoryScreen({ history, savedJobs, onOpenReport, onUseJob, onDeleteJob, onDeleteReport }) {
   return (
     <section className="mx-auto max-w-7xl">
       <div>
@@ -37,7 +38,7 @@ export default function HistoryScreen({ history, savedJobs, onOpenReport, onUseJ
           </div>
           <div className="mt-5 space-y-3">
             {history.length ? history.map((item) => (
-              <button key={item.id} type="button" onClick={() => onOpenReport(item.result)} className="flex w-full items-center justify-between gap-4 rounded-md border border-slate-200 p-4 text-left hover:border-teal">
+              <article key={item.id} className="flex items-center justify-between gap-4 rounded-md border border-slate-200 p-4">
                 <div>
                   <p className="font-semibold text-ink">{item.target_role || "Target role"}</p>
                   <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
@@ -50,9 +51,10 @@ export default function HistoryScreen({ history, savedJobs, onOpenReport, onUseJ
                     <p className="text-xl font-bold text-teal">{item.summary.readiness_score}%</p>
                     <p className="text-xs font-semibold text-slate-500">Readiness</p>
                   </div>
-                  <ArrowRight size={17} className="text-slate-400" />
+                  <button type="button" title="Open report" onClick={() => onOpenReport(item)} className="rounded-md p-2 text-slate-500 hover:bg-emerald-50 hover:text-teal"><ArrowRight size={17} /></button>
+                  <button type="button" title="Delete report" onClick={() => onDeleteReport(item.id)} className="rounded-md p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 size={16} /></button>
                 </div>
-              </button>
+              </article>
             )) : <EmptyState icon={FileClock} text="Your generated reports will appear here." />}
           </div>
         </section>
@@ -72,10 +74,15 @@ export default function HistoryScreen({ history, savedJobs, onOpenReport, onUseJ
               <article key={job.id} className="rounded-md border border-slate-200 p-4">
                 <p className="font-semibold text-ink">{job.title}</p>
                 <p className="mt-1 text-sm text-slate-600">{job.company || "Saved posting"}</p>
-                <button type="button" onClick={() => onUseJob(job)} className="mt-4 inline-flex items-center gap-2 rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal/90">
-                  Use for analysis
-                  <ArrowRight size={15} />
-                </button>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => onUseJob(job)} className="inline-flex items-center gap-2 rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal/90">
+                    Use for analysis
+                    <ArrowRight size={15} />
+                  </button>
+                  <button type="button" title="Remove saved job" onClick={() => onDeleteJob(job.id)} className="rounded-md border border-rose-200 p-2 text-rose-600 hover:bg-rose-50">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </article>
             )) : <EmptyState icon={Bookmark} text="Save job postings to reuse them later." />}
           </div>
