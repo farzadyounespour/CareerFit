@@ -10,6 +10,8 @@ class MatchReport(models.Model):
     resume = models.ForeignKey(Resume, on_delete=models.SET_NULL, null=True, blank=True)
     job = models.ForeignKey(JobDescription, on_delete=models.SET_NULL, null=True, blank=True)
     target_role = models.CharField(max_length=180, blank=True)
+    resume_text_snapshot = models.TextField(blank=True)
+    job_description_snapshot = models.TextField(blank=True)
     result = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
 

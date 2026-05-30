@@ -28,9 +28,15 @@
 - `jobs`: job description domain and Adzuna search API integration.
 - `matching`: explainable matching service, optional structured LLM coaching, and API endpoint.
 
+## Deployment
+
+- SQLite remains the local default; `DATABASE_URL` enables PostgreSQL in production.
+- Gunicorn is the production web process and WhiteNoise serves collected static files.
+- Account emails use Django's console backend locally and configurable SMTP in production.
+- CI runs migrations checks, backend tests, matching evaluation, lint, frontend unit tests, and the production build.
+
 ## Planned Upgrades
 
-- Configure PostgreSQL for deployment.
 - Add sentence-transformer embeddings.
 - Add optional The Muse job search integration.
-- Add evaluation scripts for precision, recall, F1-score, and case-study validation.
+- Add human-reviewed case-study validation and score calibration.

@@ -43,9 +43,12 @@ class OptionalLlmCoachingTests(SimpleTestCase):
             "Python SQL dashboard experience",
             "Build Tableau dashboards with Python and SQL.",
             requested=True,
+            authorized=True,
         )
 
         self.assertEqual(coaching["status"], "completed")
         self.assertEqual(coaching["model"], "test-model")
         self.assertEqual(coaching["recommendations"][0]["priority"], "high")
         mock_openai.return_value.responses.parse.assert_called_once()
+        self.assertEqual(mock_openai.call_args.kwargs["timeout"], 20)
+        self.assertEqual(mock_openai.call_args.kwargs["max_retries"], 1)

@@ -21,9 +21,12 @@ class LLMCoachingResult(BaseModel):
     recommendations: list[LLMRecommendation] = Field(min_length=1, max_length=5)
 
 
-def enrich_match_report(match_result, resume_text, job_description, requested=False):
+def enrich_match_report(match_result, resume_text, job_description, requested=False, authorized=False):
     if not requested:
         return _status("skipped", "AI coaching was not requested.")
+
+    if not authorized:
+        return _status("sign_in_required", "Sign in to request optional AI coaching.")
 
     if not settings.CAREERFIT_ENABLE_LLM or not settings.OPENAI_API_KEY:
         return _status("not_configured", "AI coaching is not configured. Deterministic matching is still available.")
@@ -31,7 +34,11 @@ def enrich_match_report(match_result, resume_text, job_description, requested=Fa
     try:
         from openai import OpenAI
 
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        client = OpenAI(
+            api_key=settings.OPENAI_API_KEY,
+            timeout=settings.OPENAI_TIMEOUT_SECONDS,
+            max_retries=settings.OPENAI_MAX_RETRIES,
+        )
         response = client.responses.parse(
             model=settings.OPENAI_MODEL,
             input=[
@@ -50,10 +57,18 @@ def enrich_match_report(match_result, resume_text, job_description, requested=Fa
                 },
             ],
             text_format=LLMCoachingResult,
+            max_output_tokens=settings.OPENAI_MAX_OUTPUT_TOKENS,
         )
         coaching = response.output_parsed
         if not coaching:
             return _status("unavailable", "AI coaching returned no usable result.")
+        usage = getattr(response, "usage", None)
+        logger.info(
+            "Optional AI coaching completed model=%s input_tokens=%s output_tokens=%s",
+            settings.OPENAI_MODEL,
+            getattr(usage, "input_tokens", None),
+            getattr(usage, "output_tokens", None),
+        )
         return {
             "status": "completed",
             "model": settings.OPENAI_MODEL,

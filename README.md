@@ -58,6 +58,17 @@ AI coaching is opt-in for each scan. The explainable CareerFit score, ATS checks
 
 For deployment, set `DJANGO_DEBUG=False`, use a long random `DJANGO_SECRET_KEY`, and configure your real host and CORS origin. HTTPS redirect, secure cookies, and HSTS are enabled by default when debug mode is off.
 
+Production can use PostgreSQL by setting:
+
+```bash
+DATABASE_URL=postgresql://user:password@host:5432/careerfit
+FRONTEND_URL=https://your-careerfit-site.example
+```
+
+Configure SMTP environment variables from `backend/.env.example` for password reset and verification emails. API tokens expire after seven days by default. The included `Procfile` runs Gunicorn and WhiteNoise serves collected static assets.
+
+Before deployment, run `python manage.py collectstatic --noinput`. Configure automated PostgreSQL backups with your hosting provider and verify restore steps before storing real user resumes.
+
 ## Frontend Setup
 
 ```bash
@@ -83,6 +94,7 @@ VITE_API_BASE_URL=/api
 - ATS checks for contact details, resume sections, bullet formatting, and resume length.
 - Explainable skill matching, TF-IDF cosine similarity, missing-skill analysis, and recommendations.
 - Optional OpenAI-powered coaching with explicit user consent and deterministic fallback.
+- Expiring sessions, email verification, password reset, account deletion, and saved-data cleanup.
 
 ## Evaluation
 
@@ -95,6 +107,16 @@ python -m scripts.evaluate_matching
 ```
 
 The script prints precision, recall, and F1-score for the included resume/job cases.
+
+Run frontend checks:
+
+```bash
+cd frontend
+npm run lint
+npm run test
+npm run build
+npm run test:e2e
+```
 
 ## MVP API
 

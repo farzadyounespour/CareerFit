@@ -10,6 +10,7 @@ from .models import MatchReport
 from .serializers import AnalyzeMatchRequestSerializer
 from .llm_services import enrich_match_report
 from .services import analyze_resume_match
+from .throttles import LlmCoachingThrottle
 
 
 class AnalyzeMatchView(APIView):
@@ -22,11 +23,17 @@ class AnalyzeMatchView(APIView):
             resume_text=serializer.validated_data["resume_text"],
             job_description=serializer.validated_data["job_description"],
         )
+        use_llm = serializer.validated_data["use_llm"]
+        if use_llm:
+            throttle = LlmCoachingThrottle()
+            if not throttle.allow_request(request, self):
+                self.throttled(request, throttle.wait())
         result["ai_coaching"] = enrich_match_report(
             match_result=result,
             resume_text=serializer.validated_data["resume_text"],
             job_description=serializer.validated_data["job_description"],
-            requested=serializer.validated_data["use_llm"],
+            requested=use_llm,
+            authorized=request.user.is_authenticated,
         )
         if request.user.is_authenticated:
             resume = self._get_or_create_resume(request.user, serializer.validated_data)
@@ -44,6 +51,8 @@ class AnalyzeMatchView(APIView):
                 resume=resume,
                 job=job,
                 target_role=result["summary"]["target_role"],
+                resume_text_snapshot=serializer.validated_data["resume_text"],
+                job_description_snapshot=serializer.validated_data["job_description"],
                 result=result,
             )
             result["report_id"] = report.id
@@ -79,9 +88,22 @@ class ReportHistoryView(APIView):
                         "target_role": report.target_role,
                         "created_at": report.created_at,
                         "summary": report.result.get("summary", {}),
+                        "resume_text": report.resume_text_snapshot or (report.resume.raw_text if report.resume else ""),
+                        "job_description": report.job_description_snapshot or (report.job.raw_text if report.job else ""),
                         "result": report.result,
                     }
                     for report in reports
                 ]
             }
         )
+
+
+class ReportHistoryDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, report_id):
+        report = MatchReport.objects.filter(id=report_id, user=request.user).first()
+        if not report:
+            return Response({"detail": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
+        report.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

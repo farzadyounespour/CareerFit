@@ -12,6 +12,46 @@ CASES = [
         "job": "JavaScript React REST Docker Git collaboration",
         "expected_matched": {"javascript", "react", "rest", "git", "teamwork"},
     },
+    {
+        "resume": "Data analytics projects using Python pandas Excel PowerBI and SQL",
+        "job": "Business intelligence analyst with SQL Power BI Excel and data analysis",
+        "expected_matched": {"sql", "power bi", "excel", "data analysis"},
+    },
+    {
+        "resume": "Built Django RESTful APIs backed by PostgreSQL and Docker",
+        "job": "Python Django REST API PostgreSQL Docker AWS",
+        "expected_matched": {"django", "rest", "postgresql", "docker"},
+    },
+    {
+        "resume": "Machine learning coursework in NLP and Python with pandas",
+        "job": "ML engineer using Python machine learning natural language processing and AWS",
+        "expected_matched": {"python", "machine learning", "nlp"},
+    },
+    {
+        "resume": "Accessibility testing for React JavaScript interfaces",
+        "job": "Frontend engineer: JavaScript React accessibility testing and Git",
+        "expected_matched": {"javascript", "react", "accessibility", "testing"},
+    },
+    {
+        "resume": "Tableau data visualization dashboards and stakeholder communication",
+        "job": "Create Tableau reporting with data visualization and communication",
+        "expected_matched": {"tableau", "data visualization", "communication"},
+    },
+    {
+        "resume": "Azure deployment work with Docker and teamwork",
+        "job": "Cloud engineer with Azure Docker AWS and collaboration",
+        "expected_matched": {"azure", "docker", "teamwork"},
+    },
+    {
+        "resume": "Java backend services with MySQL and Git",
+        "job": "Java MySQL API development using Git",
+        "expected_matched": {"java", "mysql", "git"},
+    },
+    {
+        "resume": "Looker dashboards, business intelligence reporting, and leadership",
+        "job": "Analytics lead with Looker BI leadership and communication",
+        "expected_matched": {"looker", "business intelligence", "leadership"},
+    },
 ]
 
 
@@ -30,6 +70,7 @@ def evaluate():
     print(f"precision={precision:.3f}")
     print(f"recall={recall:.3f}")
     print(f"f1={f1_score:.3f}")
+    print(f"cases={len(CASES)}")
 
 
 if __name__ == "__main__":

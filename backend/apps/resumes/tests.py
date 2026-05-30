@@ -1,6 +1,8 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase
 from rest_framework.test import APITestCase
+from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
 
 from .parsers import ResumeParseError, extract_resume_text
 
@@ -42,3 +44,17 @@ class ResumeUploadApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["filename"], "resume.txt")
         self.assertIn("Python SQL", response.data["text"])
+
+    def test_signed_in_user_can_delete_own_resume(self):
+        user = User.objects.create_user(username="resume@example.com", password="careerfit-pass")
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        upload_response = self.client.post(
+            "/api/resumes/upload/",
+            {"file": SimpleUploadedFile("resume.txt", b"Python SQL dashboards")},
+            format="multipart",
+        )
+
+        delete_response = self.client.delete(f"/api/resumes/{upload_response.data['resume_id']}/")
+
+        self.assertEqual(delete_response.status_code, 204)

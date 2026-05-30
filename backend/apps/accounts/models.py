@@ -12,6 +12,7 @@ class UserProfile(models.Model):
     experience_level = models.CharField(max_length=80, blank=True)
     work_preference = models.CharField(max_length=120, blank=True)
     summary = models.TextField(blank=True)
+    email_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

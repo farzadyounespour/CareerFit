@@ -80,7 +80,12 @@ def search_adzuna_jobs(title, location="", country="us", page=1, results_per_pag
     except (URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise JobSearchError("Unable to reach Adzuna job search.") from exc
 
-    return [_format_adzuna_job(job) for job in payload.get("results", [])]
+    return {
+        "results": [_format_adzuna_job(job) for job in payload.get("results", [])],
+        "count": payload.get("count", 0),
+        "page": page,
+        "results_per_page": results_per_page,
+    }
 
 
 def search_sample_jobs(title, location="", page=1, results_per_page=8, remote=False):
@@ -111,10 +116,15 @@ def search_sample_jobs(title, location="", page=1, results_per_page=8, remote=Fa
 
     start = (page - 1) * results_per_page
     end = start + results_per_page
-    return [
-        {**job, "source": "Sample"}
-        for _score, job in sorted(scored_jobs, key=lambda item: item[0], reverse=True)[start:end]
-    ]
+    return {
+        "results": [
+            {**job, "source": "Sample"}
+            for _score, job in sorted(scored_jobs, key=lambda item: item[0], reverse=True)[start:end]
+        ],
+        "count": len(scored_jobs),
+        "page": page,
+        "results_per_page": results_per_page,
+    }
 
 
 def _format_adzuna_job(job):

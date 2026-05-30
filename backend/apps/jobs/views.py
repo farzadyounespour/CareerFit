@@ -14,7 +14,7 @@ class JobSearchView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            jobs = search_adzuna_jobs(
+            search_result = search_adzuna_jobs(
                 title=serializer.validated_data["title"],
                 location=serializer.validated_data.get("location", ""),
                 country=serializer.validated_data.get("country", "us"),
@@ -25,6 +25,10 @@ class JobSearchView(APIView):
         except JobSearchError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
+        jobs = search_result["results"]
+        count = search_result["count"]
+        page = search_result["page"]
+        results_per_page = search_result["results_per_page"]
         using_sample_data = any(job.get("source") == "Sample" for job in jobs)
 
         return Response(
@@ -32,6 +36,13 @@ class JobSearchView(APIView):
                 "results": jobs,
                 "source": "Sample" if using_sample_data else "Adzuna",
                 "using_sample_data": using_sample_data,
+                "pagination": {
+                    "page": page,
+                    "results_per_page": results_per_page,
+                    "count": count,
+                    "has_previous": page > 1,
+                    "has_next": page * results_per_page < count,
+                },
             },
             status=status.HTTP_200_OK,
         )
@@ -63,14 +74,44 @@ class SavedJobsView(APIView):
     def post(self, request):
         serializer = SavedJobSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        job = JobDescription.objects.create(
-            user=request.user,
-            title=serializer.validated_data["title"],
-            company=serializer.validated_data.get("company", ""),
-            location=serializer.validated_data.get("location", ""),
-            source=serializer.validated_data.get("source") or "manual",
-            source_url=serializer.validated_data.get("url", ""),
-            raw_text=serializer.validated_data["description"],
-            is_saved=True,
+        values = serializer.validated_data
+        source = values.get("source") or "manual"
+        external_id = values.get("external_id", "")
+        defaults = {
+            "title": values["title"],
+            "company": values.get("company", ""),
+            "location": values.get("location", ""),
+            "source_url": values.get("url", ""),
+            "raw_text": values["description"],
+            "is_saved": True,
+        }
+        if external_id:
+            job, created = JobDescription.objects.update_or_create(
+                user=request.user,
+                source=source,
+                external_id=external_id,
+                defaults=defaults,
+            )
+        else:
+            job = JobDescription.objects.create(
+                user=request.user,
+                source=source,
+                external_id="",
+                **defaults,
+            )
+            created = True
+        return Response(
+            {"id": job.id, "detail": "Job saved.", "created": created},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
-        return Response({"id": job.id, "detail": "Job saved."}, status=201)
+
+
+class SavedJobDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, job_id):
+        job = JobDescription.objects.filter(id=job_id, user=request.user, is_saved=True).first()
+        if not job:
+            return Response({"detail": "Saved job not found."}, status=status.HTTP_404_NOT_FOUND)
+        job.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

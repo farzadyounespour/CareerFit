@@ -54,6 +54,28 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    password = serializers.CharField(min_length=8, write_only=True)
+
+    def validate_password(self, password):
+        try:
+            validate_password(password)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+        return password
+
+
+class EmailVerificationSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+
+
 class UserProfileUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=120, required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
@@ -79,6 +101,8 @@ class UserProfileUpdateSerializer(serializers.Serializer):
             profile.name = validated_data["name"]
             user.first_name = validated_data["name"]
         if "email" in validated_data and validated_data["email"]:
+            if profile.email.lower() != validated_data["email"]:
+                profile.email_verified = False
             profile.email = validated_data["email"]
             user.email = validated_data["email"]
             user.username = validated_data["email"]
