@@ -12,6 +12,7 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "careerfit-dev-secret-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
 ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
+JOOBLE_API_KEY = os.getenv("JOOBLE_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
 CAREERFIT_ENABLE_LLM = os.getenv("CAREERFIT_ENABLE_LLM", "False") == "True"

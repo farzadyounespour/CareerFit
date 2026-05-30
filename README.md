@@ -35,14 +35,20 @@ python manage.py runserver
 
 The API runs at `http://127.0.0.1:8000`.
 
-To enable Adzuna job search, create `backend/.env` and add your Adzuna credentials:
+CareerFit searches Arbeitnow automatically without a key. To add Adzuna results, create `backend/.env` and add your Adzuna credentials:
 
 ```bash
 ADZUNA_APP_ID=your_app_id
 ADZUNA_APP_KEY=your_app_key
 ```
 
-If these credentials are not set, CareerFit still works locally by returning sample job postings for the search flow.
+You can also add an optional Jooble API key after registering at `https://jooble.org/api/about`:
+
+```bash
+JOOBLE_API_KEY=your_jooble_api_key
+```
+
+If live providers are unavailable, CareerFit still works locally by returning sample job postings for the search flow.
 
 If an Adzuna key has been shared publicly, revoke it in the Adzuna dashboard, create a new key, and update `backend/.env`.
 
@@ -89,7 +95,7 @@ VITE_API_BASE_URL=/api
 
 - Public home page with a private, login-required workspace for profile, resume, job, report, and saved-data editing.
 - PDF, DOCX, TXT, and pasted resume text input with a fully editable preview, clear action, and dismissible upload errors.
-- Live Adzuna job search with a sample-data fallback when keys are not configured.
+- Multi-provider job search with Adzuna, no-key Arbeitnow, optional Jooble, deduplication, and sample-data fallback.
 - Job saving, workplace, skill, experience-level, employment-type, salary filtering, and report history.
 - Application tracker with stages, notes, recruiter details, follow-up dates, interview dates, salary notes, and tailored resume links.
 - Reusable resume versions and saved daily or weekly job-search alerts.
@@ -128,7 +134,7 @@ npm run test:e2e
 
 `GET /api/jobs/search/?title=Junior%20Data%20Analyst&location=New%20York&country=us`
 
-CareerFit uses Adzuna for job search. Supported country values are `us`, `ca`, and `gb`.
+CareerFit combines available Adzuna, Arbeitnow, and optional Jooble results. Supported Adzuna country values are `us`, `ca`, and `gb`.
 
 ```json
 {

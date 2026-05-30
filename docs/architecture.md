@@ -4,7 +4,7 @@
 
 1. User enters profile information.
 2. User pastes resume content or uploads a PDF, DOCX, or TXT resume.
-3. User searches Adzuna for a job posting or pastes a job description.
+3. User searches normalized Adzuna, Arbeitnow, and optional Jooble results or pastes a job description.
 4. Frontend sends the combined request to the Django API.
 5. Backend extracts text from uploaded resumes when needed.
 6. Backend extracts requirement-style phrases and skills from the job description.
@@ -27,7 +27,7 @@
 
 - `accounts`: token-based registration, login, logout, and user profile API.
 - `resumes`: resume text, PDF/DOCX/TXT parsing, upload API, and reusable resume versions.
-- `jobs`: job description domain, Adzuna integration, search alerts, and application-tracker details.
+- `jobs`: job description domain, multi-provider search aggregation, search alerts, and application-tracker details.
 - `matching`: explainable matching service, optional structured LLM coaching, and API endpoint.
 
 ## Deployment

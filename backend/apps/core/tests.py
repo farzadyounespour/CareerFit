@@ -1,11 +1,16 @@
+from unittest.mock import patch
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
+from apps.jobs.services import JobSearchError
+
 
 class CareerFitWorkflowTests(APITestCase):
-    @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="")
-    def test_signed_in_user_can_upload_search_save_analyze_and_view_history(self):
+    @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="", JOOBLE_API_KEY="")
+    @patch("apps.jobs.services.search_arbeitnow_jobs", side_effect=JobSearchError("Unavailable"))
+    def test_signed_in_user_can_upload_search_save_analyze_and_view_history(self, _mock_arbeitnow):
         register_response = self.client.post(
             "/api/accounts/register/",
             {

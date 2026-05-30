@@ -284,7 +284,11 @@ export default function App() {
       setJobResults(result.results);
       setJobPagination(result.pagination);
       if (result.using_sample_data) {
-        setJobSearchNotice("Showing sample job postings. Add Adzuna API keys to backend/.env for live job search.");
+        setJobSearchNotice("Live job providers are unavailable. Showing local sample postings.");
+      } else if (result.provider_errors?.length) {
+        setJobSearchNotice(`Showing live postings from ${result.providers.join(", ")}. Some job providers are temporarily unavailable.`);
+      } else {
+        setJobSearchNotice(`Showing live postings from ${result.providers.join(", ")}.`);
       }
       if (result.results.length === 0) {
         setJobSearchError("No jobs found. Try a broader title or location.");

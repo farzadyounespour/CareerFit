@@ -6,7 +6,14 @@ from django.test import SimpleTestCase, override_settings
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-from .services import search_adzuna_jobs
+from .services import (
+    JobSearchError,
+    search_adzuna_jobs,
+    search_arbeitnow_jobs,
+    search_jobs,
+    search_jooble_jobs,
+    search_sample_jobs,
+)
 
 
 class AdzunaJobSearchTests(SimpleTestCase):
@@ -68,13 +75,98 @@ class AdzunaJobSearchTests(SimpleTestCase):
         self.assertIn("description", jobs["results"][0])
 
 
+class AdditionalJobProviderTests(SimpleTestCase):
+    @patch("apps.jobs.services.urlopen")
+    def test_formats_and_filters_arbeitnow_results(self, mock_urlopen):
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = b"""
+        {
+          "data": [
+            {
+              "slug": "remote-data-analyst",
+              "title": "Data Analyst",
+              "company_name": "Example Co",
+              "location": "Remote",
+              "remote": true,
+              "description": "<p>Build Python SQL dashboards.</p>",
+              "url": "https://arbeitnow.com/jobs/remote-data-analyst",
+              "job_types": ["full_time"]
+            }
+          ],
+          "links": {"next": null}
+        }
+        """
+
+        jobs = search_arbeitnow_jobs("Data Analyst", workplace="remote", skills="Python SQL")
+
+        self.assertEqual(jobs["results"][0]["source"], "Arbeitnow")
+        self.assertEqual(jobs["results"][0]["description"], "Build Python SQL dashboards.")
+
+    @override_settings(JOOBLE_API_KEY="jooble-key")
+    @patch("apps.jobs.services.urlopen")
+    def test_formats_jooble_results(self, mock_urlopen):
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = b"""
+        {
+          "totalCount": 1,
+          "jobs": [
+            {
+              "id": 42,
+              "title": "Data Analyst",
+              "company": "Example Co",
+              "location": "Montreal",
+              "snippet": "<b>Python SQL reporting</b>",
+              "salary": "$70,000",
+              "type": "Full-time",
+              "link": "https://jooble.org/job/42"
+            }
+          ]
+        }
+        """
+
+        jobs = search_jooble_jobs("Data Analyst")
+
+        self.assertEqual(jobs["results"][0]["source"], "Jooble")
+        self.assertEqual(jobs["results"][0]["employment_type"], "full_time")
+        self.assertEqual(jobs["results"][0]["description"], "Python SQL reporting")
+
+    @override_settings(ADZUNA_APP_ID="app-id", ADZUNA_APP_KEY="app-key", JOOBLE_API_KEY="")
+    @patch("apps.jobs.services.search_arbeitnow_jobs")
+    @patch("apps.jobs.services.search_adzuna_jobs")
+    def test_aggregates_and_deduplicates_live_results(self, mock_adzuna, mock_arbeitnow):
+        duplicate = {
+            "id": "1",
+            "title": "Data Analyst",
+            "company": "Example Co",
+            "location": "Remote",
+            "description": "Python SQL",
+            "url": "https://example.com/job",
+            "source": "Adzuna",
+        }
+        mock_adzuna.return_value = {"results": [duplicate], "count": 1}
+        mock_arbeitnow.return_value = {"results": [{**duplicate, "id": "other", "source": "Arbeitnow"}], "count": 1}
+
+        result = search_jobs("Data Analyst")
+
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["providers"], ["Adzuna", "Arbeitnow"])
+        self.assertFalse(result["using_sample_data"])
+
+    @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="", JOOBLE_API_KEY="")
+    @patch("apps.jobs.services.search_arbeitnow_jobs", side_effect=JobSearchError("Unavailable"))
+    def test_falls_back_to_samples_when_live_providers_are_unavailable(self, _mock_arbeitnow):
+        result = search_jobs("Data Analyst")
+
+        self.assertTrue(result["using_sample_data"])
+        self.assertEqual(result["providers"], ["Sample"])
+        self.assertEqual(result["provider_errors"][0]["provider"], "Arbeitnow")
+
+
 class JobSearchApiTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="search@example.com", password="careerfit-pass")
         token = Token.objects.create(user=self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
-    @patch("apps.jobs.views.search_adzuna_jobs")
+    @patch("apps.jobs.views.search_jobs")
     def test_search_returns_results(self, mock_search):
         mock_search.return_value = {
             "results": [
@@ -91,6 +183,9 @@ class JobSearchApiTests(APITestCase):
             "count": 1,
             "page": 1,
             "results_per_page": 8,
+            "providers": ["Adzuna"],
+            "provider_errors": [],
+            "using_sample_data": False,
         }
 
         response = self.client.get("/api/jobs/search/", {"title": "Junior Data Analyst"})
@@ -100,7 +195,17 @@ class JobSearchApiTests(APITestCase):
         self.assertFalse(response.data["pagination"]["has_next"])
 
     @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="")
-    def test_search_uses_sample_data_without_credentials(self):
+    @patch("apps.jobs.views.search_jobs")
+    def test_search_uses_sample_data_when_live_providers_are_unavailable(self, mock_search):
+        mock_search.return_value = {
+            "results": [{"id": "sample", "source": "Sample"}],
+            "count": 1,
+            "page": 1,
+            "results_per_page": 8,
+            "providers": ["Sample"],
+            "provider_errors": [],
+            "using_sample_data": True,
+        }
         response = self.client.get("/api/jobs/search/", {"title": "Junior Data Analyst"})
 
         self.assertEqual(response.status_code, 200)
@@ -148,7 +253,17 @@ class JobSearchApiTests(APITestCase):
         self.assertEqual(delete_response.status_code, 204)
 
     @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="")
-    def test_sample_search_returns_truthful_pagination(self):
+    @patch("apps.jobs.views.search_jobs")
+    def test_sample_search_returns_truthful_pagination(self, mock_search):
+        mock_search.return_value = {
+            "results": [{"id": "sample", "source": "Sample"}],
+            "count": 2,
+            "page": 1,
+            "results_per_page": 1,
+            "providers": ["Sample"],
+            "provider_errors": [],
+            "using_sample_data": True,
+        }
         response = self.client.get(
             "/api/jobs/search/",
             {"title": "Junior", "results_per_page": 1, "page": 1},
@@ -156,6 +271,7 @@ class JobSearchApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["pagination"]["page"], 1)
+        self.assertTrue(response.data["pagination"]["has_next"])
         self.assertFalse(response.data["pagination"]["has_previous"])
 
     def test_search_requires_login(self):
@@ -165,21 +281,16 @@ class JobSearchApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 401)
 
-    @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="")
     def test_sample_search_filters_workplace_salary_and_experience(self):
-        response = self.client.get(
-            "/api/jobs/search/",
-            {
-                "title": "Data Analyst",
-                "workplace": "remote",
-                "experience_level": "entry",
-                "employment_type": "full_time",
-                "salary_min": 60000,
-            },
+        result = search_sample_jobs(
+            title="Data Analyst",
+            workplace="remote",
+            experience_level="entry",
+            employment_type="full_time",
+            salary_min=60000,
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual([job["id"] for job in response.data["results"]], ["sample-data-analyst"])
+        self.assertEqual([job["id"] for job in result["results"]], ["sample-data-analyst"])
 
     def test_saved_job_can_be_updated_as_tracked_application(self):
         create_response = self.client.post(

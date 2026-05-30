@@ -7,7 +7,7 @@ from apps.resumes.models import Resume
 
 from .models import JobDescription, SearchAlert
 from .serializers import JobSearchSerializer, SavedJobSerializer, SearchAlertSerializer, TrackedJobUpdateSerializer
-from .services import JobSearchError, search_adzuna_jobs
+from .services import JobSearchError, search_jobs
 
 
 class JobSearchView(APIView):
@@ -18,7 +18,7 @@ class JobSearchView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            search_result = search_adzuna_jobs(
+            search_result = search_jobs(
                 title=serializer.validated_data["title"],
                 location=serializer.validated_data.get("location", ""),
                 country=serializer.validated_data.get("country", "us"),
@@ -39,12 +39,15 @@ class JobSearchView(APIView):
         count = search_result["count"]
         page = search_result["page"]
         results_per_page = search_result["results_per_page"]
-        using_sample_data = any(job.get("source") == "Sample" for job in jobs)
+        using_sample_data = search_result["using_sample_data"]
+        providers = search_result["providers"]
 
         return Response(
             {
                 "results": jobs,
-                "source": "Sample" if using_sample_data else "Adzuna",
+                "source": providers[0] if len(providers) == 1 else "Multiple",
+                "providers": providers,
+                "provider_errors": search_result["provider_errors"],
                 "using_sample_data": using_sample_data,
                 "pagination": {
                     "page": page,
