@@ -47,6 +47,34 @@ SKILL_KEYWORDS = {
     "teamwork",
     "leadership",
     "problem solving",
+    "azure",
+    "accessibility",
+    "testing",
+    "pandas",
+    "looker",
+    "r",
+    "data visualization",
+    "business intelligence",
+}
+
+SKILL_ALIASES = {
+    "bi": "business intelligence",
+    "powerbi": "power bi",
+    "rest api": "rest",
+    "restful": "rest",
+    "js": "javascript",
+    "ml": "machine learning",
+    "natural language processing": "nlp",
+    "data analytics": "data analysis",
+    "collaboration": "teamwork",
+    "problem-solving": "problem solving",
+}
+
+SECTION_PATTERNS = {
+    "summary": r"\b(summary|profile|objective|about me)\b",
+    "education": r"\b(education|academic background|degree|university|college)\b",
+    "experience": r"\b(experience|employment|work history|professional experience)\b",
+    "skills": r"\b(skills|technical skills|competencies|technologies)\b",
 }
 
 
@@ -79,7 +107,59 @@ def split_requirements(job_description):
 
 def extract_skills(text):
     normalized = normalize_text(text)
-    return sorted(skill for skill in SKILL_KEYWORDS if skill in normalized)
+    skills = {skill for skill in SKILL_KEYWORDS if _contains_phrase(normalized, skill)}
+    for alias, canonical_skill in SKILL_ALIASES.items():
+        if _contains_phrase(normalized, alias):
+            skills.add(canonical_skill)
+    return sorted(skills)
+
+
+def _contains_phrase(text, phrase):
+    return re.search(rf"(?<![a-zA-Z0-9]){re.escape(phrase)}(?![a-zA-Z0-9])", text) is not None
+
+
+def analyze_ats_readiness(resume_text):
+    normalized = normalize_text(resume_text)
+    checks = {
+        "email": bool(re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", resume_text)),
+        "phone": bool(re.search(r"(?:\+?\d[\d(). -]{8,}\d)", resume_text)),
+        "location": bool(
+            re.search(
+                r"\b(location|address|city|province|state|remote|canada|united states|montreal|toronto|vancouver|ottawa|new york)\b",
+                normalized,
+            )
+        ),
+        "summary": bool(re.search(SECTION_PATTERNS["summary"], normalized)),
+        "education": bool(re.search(SECTION_PATTERNS["education"], normalized)),
+        "experience": bool(re.search(SECTION_PATTERNS["experience"], normalized)),
+        "skills_section": bool(re.search(SECTION_PATTERNS["skills"], normalized)),
+        "bullets": bool(re.search(r"(?m)^\s*[-*•]\s+", resume_text)),
+        "reasonable_length": 50 <= len(resume_text.split()) <= 1200,
+    }
+    labels = {
+        "email": "Email address",
+        "phone": "Phone number",
+        "location": "Location",
+        "summary": "Summary section",
+        "education": "Education section",
+        "experience": "Experience section",
+        "skills_section": "Skills section",
+        "bullets": "Readable bullet points",
+        "reasonable_length": "Resume length",
+    }
+    passed = sum(checks.values())
+    return {
+        "score": round((passed / len(checks)) * 100),
+        "checks": [
+            {
+                "id": check_id,
+                "label": labels[check_id],
+                "passed": passed_check,
+            }
+            for check_id, passed_check in checks.items()
+        ],
+        "issues": [labels[check_id] for check_id, passed_check in checks.items() if not passed_check],
+    }
 
 
 def score_requirement(requirement, resume_text):
@@ -182,6 +262,7 @@ def analyze_resume_match(user_profile, resume_text, job_description):
         categories=categories,
         missing_skills=missing_skills,
     )
+    ats = analyze_ats_readiness(resume_text)
 
     return {
         "summary": {
@@ -196,6 +277,7 @@ def analyze_resume_match(user_profile, resume_text, job_description):
             "matched": matched_skills,
             "missing": missing_skills[:12],
         },
+        "ats": ats,
         "requirements": categories,
         "recommendations": recommendations,
     }

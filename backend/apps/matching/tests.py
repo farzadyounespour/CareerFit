@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from .services import analyze_resume_match, calculate_text_similarity
+from .services import analyze_ats_readiness, analyze_resume_match, calculate_text_similarity
 
 
 class AnalyzeResumeMatchTests(SimpleTestCase):
@@ -36,3 +36,26 @@ class AnalyzeResumeMatchTests(SimpleTestCase):
         )
 
         self.assertGreater(related_score, unrelated_score)
+
+    def test_ats_scan_detects_resume_sections_and_contact_details(self):
+        ats = analyze_ats_readiness(
+            """
+            Student User
+            student@example.com | +1 514 555 1212 | Montreal
+            Summary
+            Data analyst with dashboard experience.
+            Skills
+            Python, SQL, Tableau
+            Experience
+            - Built a dashboard.
+            - Cleaned data, documented findings, and presented recommendations to stakeholders.
+            - Collaborated with a project team to improve reporting quality and accuracy.
+            Education
+            Example University
+            Coursework included statistics, databases, business intelligence, and data visualization.
+            Projects included dashboard design, SQL analysis, and written communication.
+            Additional experience includes requirements gathering, quality checks, and reporting.
+            """
+        )
+
+        self.assertTrue(all(check["passed"] for check in ats["checks"]))

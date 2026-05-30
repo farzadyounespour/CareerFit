@@ -52,9 +52,9 @@ SAMPLE_JOBS = [
 ]
 
 
-def search_adzuna_jobs(title, location="", country="us", results_per_page=8):
+def search_adzuna_jobs(title, location="", country="us", page=1, results_per_page=8, remote=False):
     if not settings.ADZUNA_APP_ID or not settings.ADZUNA_APP_KEY:
-        return search_sample_jobs(title, location, results_per_page)
+        return search_sample_jobs(title, location, page, results_per_page, remote)
 
     params = {
         "app_id": settings.ADZUNA_APP_ID,
@@ -63,10 +63,12 @@ def search_adzuna_jobs(title, location="", country="us", results_per_page=8):
         "what": title,
         "content-type": "application/json",
     }
+    if remote:
+        params["what"] = f"{title} remote"
     if location:
         params["where"] = location
 
-    url = f"{ADZUNA_API_BASE_URL}/{country}/search/1?{urlencode(params)}"
+    url = f"{ADZUNA_API_BASE_URL}/{country}/search/{page}?{urlencode(params)}"
 
     try:
         with urlopen(url, timeout=10) as response:
@@ -81,12 +83,14 @@ def search_adzuna_jobs(title, location="", country="us", results_per_page=8):
     return [_format_adzuna_job(job) for job in payload.get("results", [])]
 
 
-def search_sample_jobs(title, location="", results_per_page=8):
+def search_sample_jobs(title, location="", page=1, results_per_page=8, remote=False):
     normalized_title = title.lower()
     normalized_location = location.lower()
     scored_jobs = []
 
     for job in SAMPLE_JOBS:
+        if remote and "remote" not in job["location"].lower():
+            continue
         searchable_text = " ".join(
             [
                 job["title"],
@@ -102,12 +106,14 @@ def search_sample_jobs(title, location="", results_per_page=8):
         if title_match or location_match or not normalized_title:
             scored_jobs.append((score, job))
 
-    if not scored_jobs:
+    if not scored_jobs and not normalized_title and not normalized_location:
         scored_jobs = [(0, job) for job in SAMPLE_JOBS]
 
+    start = (page - 1) * results_per_page
+    end = start + results_per_page
     return [
         {**job, "source": "Sample"}
-        for _score, job in sorted(scored_jobs, key=lambda item: item[0], reverse=True)[:results_per_page]
+        for _score, job in sorted(scored_jobs, key=lambda item: item[0], reverse=True)[start:end]
     ]
 
 

@@ -20,11 +20,13 @@ class ResumeUploadView(APIView):
         except ResumeParseError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(
-            {
-                "filename": resume_file.name,
-                "text": text,
-                "character_count": len(text),
-            },
-            status=status.HTTP_200_OK,
-        )
+        payload = {
+            "filename": resume_file.name,
+            "text": text,
+            "character_count": len(text),
+        }
+        if request.user.is_authenticated:
+            resume = request.user.resume_set.create(title=resume_file.name, raw_text=text)
+            payload["resume_id"] = resume.id
+
+        return Response(payload, status=status.HTTP_200_OK)

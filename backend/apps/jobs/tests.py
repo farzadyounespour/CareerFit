@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
+from django.contrib.auth.models import User
 from django.test import SimpleTestCase, override_settings
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from .services import search_adzuna_jobs
@@ -68,3 +70,23 @@ class JobSearchApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["using_sample_data"])
         self.assertEqual(response.data["source"], "Sample")
+
+    def test_saved_job_keeps_location(self):
+        user = User.objects.create_user(username="jobs@example.com", password="careerfit-pass")
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        create_response = self.client.post(
+            "/api/jobs/saved/",
+            {
+                "title": "Data Analyst",
+                "company": "Example Co",
+                "location": "Montreal, QC",
+                "description": "Build reporting dashboards.",
+            },
+            format="json",
+        )
+        list_response = self.client.get("/api/jobs/saved/")
+
+        self.assertEqual(create_response.status_code, 201)
+        self.assertEqual(list_response.data["results"][0]["location"], "Montreal, QC")
