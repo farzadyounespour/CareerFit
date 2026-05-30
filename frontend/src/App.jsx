@@ -42,6 +42,7 @@ import JobMatchScreen from "./screens/JobMatchScreen.jsx";
 import ReportScreen from "./screens/ReportScreen.jsx";
 import ResumeUploadScreen from "./screens/ResumeUploadScreen.jsx";
 import UserProfileScreen from "./screens/UserProfileScreen.jsx";
+import { applyProfileToJobSearch } from "./utils/jobSearchDefaults.js";
 
 const initialProfile = {
   name: "",
@@ -137,6 +138,7 @@ export default function App() {
       .then(({ user }) => {
         setCurrentUser(user);
         setIsSignedIn(true);
+        setJobSearch((currentSearch) => applyProfileToJobSearch(currentSearch, user));
         setProfile((currentProfile) => ({
           ...currentProfile,
           name: user.name || currentProfile.name,
@@ -263,6 +265,7 @@ export default function App() {
     try {
       const result = await updateCurrentUser(profile);
       setCurrentUser(result.user);
+      setJobSearch((currentSearch) => applyProfileToJobSearch(currentSearch, result.user));
       const versions = await fetchResumeVersions();
       setResumeVersions(versions.results);
       setActiveScreen("resume");
@@ -654,6 +657,7 @@ export default function App() {
     storeToken(result.token, form.remember);
     setCurrentUser(result.user);
     setIsSignedIn(true);
+    setJobSearch((currentSearch) => applyProfileToJobSearch(currentSearch, result.user));
     setProfile((currentProfile) => ({
       ...currentProfile,
       name: result.user.name || currentProfile.name,
