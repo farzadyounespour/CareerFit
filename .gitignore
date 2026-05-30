@@ -12,4 +12,6 @@ build/
 .vite/
 coverage/
 *.log
-
+playwright-report/
+test-results/
+staticfiles/
