@@ -70,4 +70,16 @@ describe("ResumeUploadScreen", () => {
     expect(onDismissError).toHaveBeenCalledOnce();
     expect(onDelete).toHaveBeenCalledOnce();
   });
+
+  it("lets the user remove a saved resume version", () => {
+    const onDeleteVersion = vi.fn();
+    renderScreen({
+      resumeVersions: [{ id: 7, title: "Analyst tailored", text: "Resume text" }],
+      onDeleteVersion,
+    });
+
+    fireEvent.click(screen.getByTitle("Remove Analyst tailored"));
+
+    expect(onDeleteVersion).toHaveBeenCalledWith(7);
+  });
 });

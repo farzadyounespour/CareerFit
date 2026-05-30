@@ -29,6 +29,7 @@ export default function ResumeUploadScreen({
   resumeVersions = [],
   onSaveVersion = () => {},
   onLoadVersion = () => {},
+  onDeleteVersion = () => {},
 }) {
   const [versionTitle, setVersionTitle] = useState("");
   const wordCount = countWords(resumeText);
@@ -78,10 +79,15 @@ export default function ResumeUploadScreen({
             </div>
             <div className="mt-3 max-h-44 space-y-2 overflow-auto">
               {resumeVersions.length ? resumeVersions.map((resume) => (
-                <button key={resume.id} type="button" onClick={() => onLoadVersion(resume)} className="flex w-full items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-2 text-left text-sm hover:border-teal hover:bg-emerald-50">
-                  <span className="truncate font-semibold text-slate-700">{resume.title}</span>
-                  <FolderOpen size={15} className="shrink-0 text-teal" />
-                </button>
+                <div key={resume.id} className="flex items-center gap-1 rounded-md border border-slate-200 px-1 py-1 hover:border-teal hover:bg-emerald-50">
+                  <button type="button" title={`Load ${resume.title}`} onClick={() => onLoadVersion(resume)} className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded px-2 py-1 text-left text-sm">
+                    <span className="truncate font-semibold text-slate-700">{resume.title}</span>
+                    <FolderOpen size={15} className="shrink-0 text-teal" />
+                  </button>
+                  <button type="button" title={`Remove ${resume.title}`} onClick={() => onDeleteVersion(resume.id)} className="shrink-0 rounded p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               )) : <p className="text-sm leading-6 text-slate-500">Save the edited text when you want to keep a reusable version.</p>}
             </div>
           </section>

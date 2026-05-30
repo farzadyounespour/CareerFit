@@ -400,6 +400,15 @@ export default function App() {
     setResumeUploadStatus("");
   }
 
+  async function handleDeleteResumeVersion(resumeId) {
+    await deleteResume(resumeId);
+    setResumeVersions((currentVersions) => currentVersions.filter((resume) => resume.id !== resumeId));
+    if (uploadedResumeId === resumeId) {
+      setUploadedResumeId(null);
+      setResumeUploadStatus("Removed the saved resume version. Your editable preview is still available.");
+    }
+  }
+
   async function handleDeleteAccount() {
     await deleteAccount();
     clearStoredToken();
@@ -498,6 +507,7 @@ export default function App() {
           resumeVersions={resumeVersions}
           onSaveVersion={handleCreateResumeVersion}
           onLoadVersion={handleLoadResumeVersion}
+          onDeleteVersion={handleDeleteResumeVersion}
         />
       );
     }
