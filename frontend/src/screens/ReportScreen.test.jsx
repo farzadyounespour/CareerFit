@@ -11,10 +11,20 @@ const report = {
     match_score: 62,
     readiness_score: 56,
     requirements_reviewed: 3,
+    score_breakdown: {
+      requirement_evidence: { score: 58, weight: 65 },
+      skill_coverage: { score: 67, weight: 35 },
+      ats_preparation: { score: 77, weight: 20 },
+      job_match_weight: 80,
+    },
   },
   skills: {
     matched: ["python", "sql"],
-    missing: ["tableau"],
+    missing: ["tableau", "nlp"],
+    missing_details: [
+      { name: "tableau", priority: "high" },
+      { name: "nlp", priority: "low" },
+    ],
   },
   ats: {
     score: 77,
@@ -61,6 +71,9 @@ describe("ReportScreen", () => {
     expect(screen.getByText("Your application at a glance")).toBeVisible();
     expect(screen.getByText("Improve these first")).toBeVisible();
     expect(screen.getByText("Skills for this job")).toBeVisible();
+    expect(screen.getByText("How CareerFit calculates the score")).toBeVisible();
+    expect(screen.getByText("65% of job match")).toBeVisible();
+    expect(screen.getByText("optional")).toBeVisible();
     expect(screen.getByText("Want more specific improvements?")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Get specific improvements" }));

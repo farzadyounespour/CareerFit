@@ -1,4 +1,4 @@
-from apps.matching.services import extract_skills
+from apps.matching.services import analyze_resume_match, extract_skills
 
 
 CASES = [
@@ -54,6 +54,26 @@ CASES = [
     },
 ]
 
+SCORE_CASES = [
+    {
+        "label": "strong",
+        "resume": "Data analyst with Python SQL Tableau communication. Built Tableau dashboards and improved reporting.",
+    },
+    {
+        "label": "partial",
+        "resume": "Data analyst with Python SQL. Built reporting scripts.",
+    },
+    {
+        "label": "unrelated",
+        "resume": "Retail associate with teamwork. Helped customers and managed inventory.",
+    },
+]
+
+SCORE_JOB = (
+    "We need a data analyst. Required: Python, SQL, Tableau, and communication. "
+    "Build dashboards and improve reporting."
+)
+
 
 def evaluate():
     true_positive = false_positive = false_negative = 0
@@ -71,6 +91,13 @@ def evaluate():
     print(f"recall={recall:.3f}")
     print(f"f1={f1_score:.3f}")
     print(f"cases={len(CASES)}")
+    scores = [
+        analyze_resume_match({"target_role": "Data Analyst"}, case["resume"], SCORE_JOB)["summary"]["match_score"]
+        for case in SCORE_CASES
+    ]
+    ordering_correct = scores == sorted(scores, reverse=True)
+    print("score_ordering=" + ",".join(f"{case['label']}:{score}" for case, score in zip(SCORE_CASES, scores)))
+    print(f"score_ordering_correct={ordering_correct}")
 
 
 if __name__ == "__main__":

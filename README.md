@@ -115,7 +115,7 @@ VITE_API_BASE_URL=/api
 - Application tracker with stages, notes, recruiter details, follow-up dates, interview dates, salary notes, and tailored resume links.
 - Reusable resume versions and saved daily or weekly job-search alerts.
 - Interactive ATS preparation checks for contact details, resume sections, bullet formatting, dates, measurable achievements, paragraph length, and resume length.
-- Explainable skill matching, TF-IDF cosine similarity, missing-skill analysis, and recommendations.
+- Explainable weighted requirement matching, best-segment TF-IDF evidence, skill coverage, missing-skill analysis, and recommendations.
 - Role-specific interview questions, STAR answer prompts, and a progress dashboard.
 - Persistent light and dark appearance modes across the public site and private workspace.
 - Optional local Ollama or OpenAI-powered coaching with explicit user consent and deterministic fallback.
@@ -131,7 +131,7 @@ source .venv/bin/activate
 python -m scripts.evaluate_matching
 ```
 
-The script prints precision, recall, and F1-score for the included resume/job cases.
+The script prints precision, recall, and F1-score for the included resume/job cases, then checks that strong, partial, and unrelated resumes rank in the expected order.
 
 Run frontend checks:
 
@@ -183,7 +183,7 @@ CareerFit combines available Adzuna, Arbeitnow, and optional Jooble results. Sup
 }
 ```
 
-The response includes score summaries, matched and missing skills, requirement-level evidence, a TF-IDF cosine similarity signal for each reviewed requirement, and the optional AI coaching status.
+The response includes score summaries, an explainable score breakdown, matched and missing skills, weighted requirement-level evidence, a best-segment TF-IDF cosine similarity signal for each reviewed requirement, and the optional AI coaching status.
 
 ### Preview Match
 

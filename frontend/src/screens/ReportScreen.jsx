@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   ArrowRight,
+  Calculator,
   CheckCircle2,
   ChevronDown,
   FileText,
@@ -62,6 +63,12 @@ export default function ReportScreen({
   const requirementGaps = requirements.missing.length + requirements.weak.length;
   const priorityActions = buildPriorityActions(skills, requirements, atsIssues, recommendations);
   const aiCompleted = aiCoaching?.status === "completed";
+  const scoreBreakdown = summary.score_breakdown || {
+    requirement_evidence: { score: matchScore, weight: 65 },
+    skill_coverage: { score: matchScore, weight: 35 },
+    ats_preparation: { score: atsScore, weight: 20 },
+    job_match_weight: 80,
+  };
 
   return (
     <section className="mx-auto max-w-7xl">
@@ -110,6 +117,7 @@ export default function ReportScreen({
               <ScoreCard label="Job match" value={matchScore} detail="Evidence found for this posting" />
               <ScoreCard label="ATS preparation" value={atsScore} detail={`${atsIssues.length} check${atsIssues.length === 1 ? "" : "s"} to improve`} />
             </div>
+            <ScoreExplanation breakdown={scoreBreakdown} />
           </section>
 
           <section id="priority-improvements" className="rounded-md border border-slate-200 bg-white shadow-panel">
@@ -129,7 +137,10 @@ export default function ReportScreen({
                 <article key={`${item.title}-${index}`} className="grid gap-3 p-5 sm:grid-cols-[32px_1fr]">
                   <span className="grid h-7 w-7 place-items-center rounded bg-slate-100 text-xs font-bold text-slate-600">{index + 1}</span>
                   <div>
-                    <p className="text-sm font-semibold text-ink">{item.title}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-ink">{item.title}</p>
+                      <ImpactBadge priority={item.priority} />
+                    </div>
                     <p className="mt-1 text-sm leading-6 text-slate-600">{item.detail}</p>
                   </div>
                 </article>
@@ -144,7 +155,7 @@ export default function ReportScreen({
             </div>
             <div className="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">
               <SkillBlock title="Supported in your resume" skills={skills.matched} tone="matched" empty="No explicit skill matches found yet." />
-              <SkillBlock title="Missing from your resume" skills={skills.missing} tone="missing" empty="No important skill gaps detected." />
+              <SkillBlock title="Missing from your resume" skills={skills.missing} details={skills.missing_details} tone="missing" empty="No important skill gaps detected." />
             </div>
           </section>
 
@@ -270,6 +281,42 @@ function ScoreCard({ label, value, detail }) {
   );
 }
 
+function ScoreExplanation({ breakdown }) {
+  return (
+    <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+      <div className="flex items-start gap-3">
+        <Calculator className="mt-0.5 shrink-0 text-teal" size={18} />
+        <div>
+          <p className="text-sm font-semibold text-ink">How CareerFit calculates the score</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Job match combines requirement evidence and skill coverage. Readiness combines {breakdown.job_match_weight}% job match with {breakdown.ats_preparation.weight}% ATS preparation. AI coaching does not change the score.
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <BreakdownItem label="Requirement evidence" value={breakdown.requirement_evidence.score} detail={`${breakdown.requirement_evidence.weight}% of job match`} />
+        <BreakdownItem label="Skill coverage" value={breakdown.skill_coverage.score} detail={`${breakdown.skill_coverage.weight}% of job match`} />
+        <BreakdownItem label="ATS preparation" value={breakdown.ats_preparation.score} detail={`${breakdown.ats_preparation.weight}% of readiness`} />
+      </div>
+    </div>
+  );
+}
+
+function BreakdownItem({ label, value, detail }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-semibold text-slate-700">{label}</span>
+        <span className="font-bold text-teal">{value}%</span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div className="h-full rounded-full bg-teal" style={{ width: `${value}%` }} />
+      </div>
+      <p className="mt-1.5 text-xs text-slate-500">{detail}</p>
+    </div>
+  );
+}
+
 function ScoreDial({ value }) {
   const background = `conic-gradient(#0f766e ${value * 3.6}deg, #e2e8f0 0deg)`;
   return (
@@ -284,14 +331,18 @@ function ScoreDial({ value }) {
   );
 }
 
-function SkillBlock({ title, skills, tone, empty }) {
+function SkillBlock({ title, skills, details = [], tone, empty }) {
   const className = tone === "matched" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800";
+  const priorities = new Map(details.map((item) => [item.name, item.priority]));
   return (
     <div className="p-5">
       <p className="text-sm font-semibold text-slate-700">{title}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {skills.length ? skills.map((skill) => (
-          <span key={skill} className={`rounded px-2 py-1 text-xs font-semibold ${className}`}>{skill}</span>
+          <span key={skill} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${className}`}>
+            {skill}
+            {priorities.get(skill) === "low" && <span className="font-medium opacity-75">optional</span>}
+          </span>
         )) : <span className="text-sm text-slate-500">{empty}</span>}
       </div>
     </div>
@@ -370,7 +421,10 @@ function RequirementDetails({ requirements }) {
               <article key={`${key}-${item.text}-${item.score}`} className="px-5 py-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <p className="max-w-3xl text-sm font-medium leading-6 text-slate-700">{item.text}</p>
-                  <span className="text-sm font-bold text-slate-500">{item.score}%</span>
+                  <div className="flex items-center gap-2">
+                    <ImpactBadge priority={item.priority} />
+                    <span className="text-sm font-bold text-slate-500">{item.score}%</span>
+                  </div>
                 </div>
                 {!!item.evidence.length && (
                   <p className="mt-2 text-xs leading-5 text-slate-500">Evidence found: {item.evidence.join(", ")}</p>
@@ -435,24 +489,32 @@ function SummaryRow({ label, value }) {
 
 function buildPriorityActions(skills, requirements, atsIssues, recommendations) {
   const actions = [];
-  if (skills.missing.length) {
+  const importantSkillGaps = (skills.missing_details || skills.missing.map((name) => ({ name, priority: "high" })))
+    .filter((item) => item.priority !== "low");
+  if (importantSkillGaps.length) {
     actions.push({
       title: "Add evidence for missing skills",
-      detail: `Use a project or work bullet to support ${skills.missing.slice(0, 5).join(", ")} when those skills reflect your real experience.`,
+      detail: `Use a project or work bullet to support ${importantSkillGaps.slice(0, 5).map((item) => item.name).join(", ")} when those skills reflect your real experience.`,
+      priority: "high",
     });
   }
-  requirements.missing.slice(0, 2).forEach((item) => {
-    actions.push({ title: "Address a missing requirement", detail: item.text });
+  [...requirements.missing].sort(comparePriority).slice(0, 2).forEach((item) => {
+    actions.push({ title: "Address a missing requirement", detail: item.text, priority: item.priority || "high" });
   });
   requirements.weak.slice(0, 1).forEach((item) => {
-    actions.push({ title: "Strengthen a weak requirement", detail: item.text });
+    actions.push({ title: "Strengthen a weak requirement", detail: item.text, priority: item.priority || "medium" });
   });
   atsIssues.slice(0, 2).forEach((issue) => {
-    actions.push({ title: `Improve ${issue.toLowerCase()}`, detail: `Update your resume so recruiters and applicant tracking systems can clearly detect your ${issue.toLowerCase()}.` });
+    actions.push({ title: `Improve ${issue.toLowerCase()}`, detail: `Update your resume so recruiters and applicant tracking systems can clearly detect your ${issue.toLowerCase()}.`, priority: "medium" });
   });
-  recommendations.forEach((item) => actions.push(item));
+  recommendations.forEach((item) => actions.push({ ...item, priority: item.priority || "medium" }));
 
   return uniqueActions(actions).slice(0, 5);
+}
+
+function comparePriority(first, second) {
+  const rank = { high: 0, medium: 1, low: 2 };
+  return (rank[first.priority] ?? 1) - (rank[second.priority] ?? 1);
 }
 
 function uniqueActions(actions) {
@@ -463,6 +525,12 @@ function uniqueActions(actions) {
     seen.add(key);
     return true;
   });
+}
+
+function ImpactBadge({ priority }) {
+  if (!priority) return null;
+  const className = priority === "high" ? "bg-rose-50 text-rose-700" : priority === "low" ? "bg-slate-100 text-slate-500" : "bg-amber-50 text-amber-900";
+  return <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${className}`}>{priority} impact</span>;
 }
 
 function readinessLabel(score) {
