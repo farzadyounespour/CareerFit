@@ -9,3 +9,8 @@ class ResumeUploadSerializer(serializers.Serializer):
         if resume_file.size > max_size_mb * 1024 * 1024:
             raise serializers.ValidationError(f"Resume files must be {max_size_mb} MB or smaller.")
         return resume_file
+
+
+class ResumeVersionSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=160)
+    text = serializers.CharField(max_length=50000)

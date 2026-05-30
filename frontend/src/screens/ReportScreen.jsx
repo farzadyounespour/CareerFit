@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Lightbulb,
+  MessagesSquare,
   Printer,
   RotateCcw,
   Sparkles,
@@ -34,7 +35,7 @@ export default function ReportScreen({ report, resumeText, jobDescription, onNav
     );
   }
 
-  const { summary, skills, requirements, recommendations, ats, ai_coaching: aiCoaching } = report;
+  const { summary, skills, requirements, recommendations, ats, interview_prep: interviewPrep, ai_coaching: aiCoaching } = report;
   const issues = {
     searchability: requirements.missing.length,
     hardSkills: skills.missing.length,
@@ -205,6 +206,41 @@ export default function ReportScreen({ report, resumeText, jobDescription, onNav
                   ))}
                 </div>
               </ScanSection>
+              {interviewPrep && (
+                <ScanSection
+                  title="Interview preparation"
+                  badge={`${interviewPrep.questions.length} prompts`}
+                  intro="Practice concise examples for this role before the conversation starts."
+                  tip="Use the STAR structure and adapt each answer to the selected posting."
+                >
+                  <div className="grid gap-4 p-4 lg:grid-cols-[1fr_260px]">
+                    <div className="space-y-3">
+                      {interviewPrep.questions.map((item) => (
+                        <article key={item.question} className="rounded-md border border-slate-200 bg-white p-4">
+                          <div className="flex items-start gap-3">
+                            <MessagesSquare size={17} className="mt-0.5 shrink-0 text-teal" />
+                            <div>
+                              <p className="text-sm font-semibold text-ink">{item.question}</p>
+                              <p className="mt-2 text-sm leading-6 text-slate-500">{item.hint}</p>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                    <aside className="h-fit rounded-md border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="text-sm font-semibold text-teal">STAR answer guide</p>
+                      <div className="mt-3 space-y-3">
+                        {interviewPrep.star_prompts.map((item) => (
+                          <div key={item.label}>
+                            <p className="text-sm font-semibold text-ink">{item.label}</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-600">{item.detail}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </aside>
+                  </div>
+                </ScanSection>
+              )}
               {aiCoaching?.status === "completed" && (
                 <ScanSection
                   title="AI coaching"

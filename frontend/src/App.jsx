@@ -7,13 +7,18 @@ import {
   clearStoredToken,
   confirmEmailVerification,
   confirmPasswordReset,
+  createResumeVersion,
+  createSearchAlert,
   deleteAccount,
   deleteReport,
   deleteResume,
   deleteSavedJob,
+  deleteSearchAlert,
   fetchCurrentUser,
   fetchReportHistory,
+  fetchResumeVersions,
   fetchSavedJobs,
+  fetchSearchAlerts,
   getStoredToken,
   loginAccount,
   logoutAccount,
@@ -24,9 +29,12 @@ import {
   searchJobs,
   storeToken,
   updateCurrentUser,
+  updateSearchAlert,
+  updateTrackedJob,
   uploadResume,
 } from "./services/api.js";
 import AuthScreen from "./screens/AuthScreen.jsx";
+import DashboardScreen from "./screens/DashboardScreen.jsx";
 import HomeScreen from "./screens/HomeScreen.jsx";
 import HistoryScreen from "./screens/HistoryScreen.jsx";
 import JobMatchScreen from "./screens/JobMatchScreen.jsx";
@@ -87,6 +95,8 @@ export default function App() {
   const [error, setError] = useState("");
   const [savedJobs, setSavedJobs] = useState([]);
   const [history, setHistory] = useState([]);
+  const [resumeVersions, setResumeVersions] = useState([]);
+  const [searchAlerts, setSearchAlerts] = useState([]);
   const [useAiCoaching, setUseAiCoaching] = useState(false);
   const [authLinkParams, setAuthLinkParams] = useState({});
   const [accountNotice, setAccountNotice] = useState("");
@@ -134,16 +144,28 @@ export default function App() {
       .catch(() => clearStoredToken());
   }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [activeScreen]);
+
   const canAnalyze = useMemo(
     () => resumeText.trim().length > 0 && jobDescription.trim().length > 0,
     [resumeText, jobDescription],
   );
 
-  function handleNavigate(screen) {
+  async function handleNavigate(screen) {
     if (screen !== "home" && !isSignedIn) {
       setPendingScreen(screen);
       setAuthMode("login");
       return;
+    }
+    if (screen === "history" || screen === "dashboard") {
+      await loadSavedWorkspace(screen);
+      return;
+    }
+    if (screen === "resume") {
+      const result = await fetchResumeVersions();
+      setResumeVersions(result.results);
     }
     setActiveScreen(screen);
   }
@@ -193,6 +215,12 @@ export default function App() {
       const result = await uploadResume(file);
       setResumeText(result.text);
       setUploadedResumeId(result.resume_id || null);
+      if (result.resume_id) {
+        setResumeVersions((currentVersions) => [
+          { id: result.resume_id, title: result.filename, text: result.text },
+          ...currentVersions.filter((resume) => resume.id !== result.resume_id),
+        ]);
+      }
       setResumeUploadStatus(`Loaded ${result.filename} (${result.character_count.toLocaleString()} characters).`);
     } catch (uploadError) {
       setResumeUploadError(uploadError.message);
@@ -215,6 +243,8 @@ export default function App() {
     try {
       const result = await updateCurrentUser(profile);
       setCurrentUser(result.user);
+      const versions = await fetchResumeVersions();
+      setResumeVersions(versions.results);
       setActiveScreen("resume");
     } catch (profileError) {
       setProfileSaveError(profileError.message);
@@ -292,13 +322,60 @@ export default function App() {
       setAuthMode("login");
       return;
     }
-    await saveJob(job);
+    const result = await saveJob(job);
+    setSavedJobs((currentJobs) => [result.job, ...currentJobs.filter((item) => item.id !== result.job.id)]);
     setJobSearchNotice("Job saved to your account.");
+  }
+
+  async function handleCreateSearchAlert() {
+    const alertSearch = { ...jobSearch };
+    if (!alertSearch.salary_min) delete alertSearch.salary_min;
+    if (!alertSearch.salary_max) delete alertSearch.salary_max;
+    const result = await createSearchAlert({
+      ...alertSearch,
+      name: `${jobSearch.title}${jobSearch.location ? ` in ${jobSearch.location}` : ""}`,
+      frequency: "weekly",
+    });
+    setSearchAlerts((currentAlerts) => [result.alert, ...currentAlerts]);
+    setJobSearchNotice("Weekly search alert saved. You can manage it from your dashboard.");
   }
 
   async function handleDeleteSavedJob(jobId) {
     await deleteSavedJob(jobId);
     setSavedJobs((currentJobs) => currentJobs.filter((job) => job.id !== jobId));
+  }
+
+  async function handleUpdateTrackedJob(jobId, values) {
+    const result = await updateTrackedJob(jobId, values);
+    setSavedJobs((currentJobs) => currentJobs.map((job) => job.id === jobId ? result.job : job));
+  }
+
+  async function handleDeleteSearchAlert(alertId) {
+    await deleteSearchAlert(alertId);
+    setSearchAlerts((currentAlerts) => currentAlerts.filter((alert) => alert.id !== alertId));
+  }
+
+  async function handleToggleSearchAlert(alert) {
+    const result = await updateSearchAlert(alert.id, { is_active: !alert.is_active });
+    setSearchAlerts((currentAlerts) => currentAlerts.map((item) => item.id === alert.id ? result.alert : item));
+  }
+
+  async function handleUpdateSearchAlert(alert, values) {
+    const result = await updateSearchAlert(alert.id, values);
+    setSearchAlerts((currentAlerts) => currentAlerts.map((item) => item.id === alert.id ? result.alert : item));
+  }
+
+  async function handleCreateResumeVersion(title) {
+    const result = await createResumeVersion({ title, text: resumeText });
+    setResumeVersions((currentVersions) => [result.resume, ...currentVersions]);
+    setUploadedResumeId(result.resume.id);
+    setResumeUploadStatus(`Saved ${result.resume.title} as a reusable resume version.`);
+  }
+
+  function handleLoadResumeVersion(resume) {
+    setResumeText(resume.text);
+    setUploadedResumeId(resume.id);
+    setResumeUploadStatus(`Loaded ${resume.title}.`);
   }
 
   async function handleDeleteReport(reportId) {
@@ -309,6 +386,7 @@ export default function App() {
   async function handleDeleteUploadedResume() {
     if (uploadedResumeId) {
       await deleteResume(uploadedResumeId);
+      setResumeVersions((currentVersions) => currentVersions.filter((resume) => resume.id !== uploadedResumeId));
     }
     setUploadedResumeId(null);
     setResumeText("");
@@ -323,6 +401,8 @@ export default function App() {
     setIsSignedIn(false);
     setHistory([]);
     setSavedJobs([]);
+    setResumeVersions([]);
+    setSearchAlerts([]);
     setReport(null);
     setResumeText("");
     setUploadedResumeId(null);
@@ -339,14 +419,18 @@ export default function App() {
     await loadSavedWorkspace();
   }
 
-  async function loadSavedWorkspace() {
-    const [historyResult, savedJobResult] = await Promise.all([
+  async function loadSavedWorkspace(destination = "history") {
+    setActiveScreen(destination);
+    const [historyResult, savedJobResult, resumeResult, alertResult] = await Promise.all([
       fetchReportHistory(),
       fetchSavedJobs(),
+      fetchResumeVersions(),
+      fetchSearchAlerts(),
     ]);
     setHistory(historyResult.results);
     setSavedJobs(savedJobResult.results);
-    setActiveScreen("history");
+    setResumeVersions(resumeResult.results);
+    setSearchAlerts(alertResult.results);
   }
 
   function handleUseSavedJob(job) {
@@ -375,6 +459,20 @@ export default function App() {
       );
     }
 
+    if (activeScreen === "dashboard") {
+      return (
+        <DashboardScreen
+          history={history}
+          savedJobs={savedJobs}
+          searchAlerts={searchAlerts}
+          onNavigate={handleNavigate}
+          onToggleAlert={handleToggleSearchAlert}
+          onUpdateAlert={handleUpdateSearchAlert}
+          onDeleteAlert={handleDeleteSearchAlert}
+        />
+      );
+    }
+
     if (activeScreen === "resume") {
       return (
         <ResumeUploadScreen
@@ -391,6 +489,9 @@ export default function App() {
           onDismissError={handleDismissResumeError}
           onNext={() => handleNavigate("job")}
           onDelete={handleDeleteUploadedResume}
+          resumeVersions={resumeVersions}
+          onSaveVersion={handleCreateResumeVersion}
+          onLoadVersion={handleLoadResumeVersion}
         />
       );
     }
@@ -410,6 +511,7 @@ export default function App() {
           jobSearchError={jobSearchError}
           jobSearchNotice={jobSearchNotice}
           onSaveJob={handleSaveJob}
+          onCreateSearchAlert={handleCreateSearchAlert}
           onPageChange={handleJobPageChange}
           pagination={jobPagination}
           selectedJob={selectedJob}
@@ -437,6 +539,8 @@ export default function App() {
           onUseJob={handleUseSavedJob}
           onDeleteJob={handleDeleteSavedJob}
           onDeleteReport={handleDeleteReport}
+          onUpdateJob={handleUpdateTrackedJob}
+          resumeVersions={resumeVersions}
         />
       );
     }
@@ -471,8 +575,8 @@ export default function App() {
       summary: result.user.summary || currentProfile.summary,
     }));
     setAuthMode(null);
-    if (pendingScreen === "history") {
-      await loadSavedWorkspace();
+    if (pendingScreen === "history" || pendingScreen === "dashboard") {
+      await loadSavedWorkspace(pendingScreen);
     } else {
       setActiveScreen(pendingScreen || "profile");
     }

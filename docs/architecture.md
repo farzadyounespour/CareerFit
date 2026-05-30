@@ -11,21 +11,23 @@
 7. Backend compares each requirement with resume evidence and TF-IDF cosine similarity.
 8. Backend checks ATS-oriented resume structure and contact information.
 9. With explicit user consent, the backend may request structured OpenAI coaching suggestions.
-10. Frontend displays an explainable report and saves it for signed-in users.
+10. Frontend displays an explainable report, ATS preparation checks, and interview prompts.
+11. Signed-in users save resume versions, search alerts, and application-tracker details.
 
 ## Main Frontend Screens
 
 - `UserProfileScreen`: basic user and target-role information.
+- `DashboardScreen`: pipeline metrics, upcoming follow-ups, interviews, and saved search alerts.
 - `ResumeUploadScreen`: pasted resume text and file upload controls.
 - `JobMatchScreen`: Adzuna job search, job selection, pasted job description, and sample job loading.
 - `ReportScreen`: score, requirement categories, missing skills, and recommendations.
-- `HistoryScreen`: saved job postings and prior readiness reports.
+- `HistoryScreen`: application tracker board and prior readiness reports.
 
 ## Main Backend Areas
 
 - `accounts`: token-based registration, login, logout, and user profile API.
-- `resumes`: resume text, PDF/DOCX/TXT parsing, and upload API.
-- `jobs`: job description domain and Adzuna search API integration.
+- `resumes`: resume text, PDF/DOCX/TXT parsing, upload API, and reusable resume versions.
+- `jobs`: job description domain, Adzuna integration, search alerts, and application-tracker details.
 - `matching`: explainable matching service, optional structured LLM coaching, and API endpoint.
 
 ## Deployment

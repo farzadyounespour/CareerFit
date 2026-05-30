@@ -47,7 +47,7 @@ class AnalyzeResumeMatchTests(SimpleTestCase):
             Skills
             Python, SQL, Tableau
             Experience
-            - Built a dashboard.
+            - 2025: Built a dashboard and reduced manual reporting by 20%.
             - Cleaned data, documented findings, and presented recommendations to stakeholders.
             - Collaborated with a project team to improve reporting quality and accuracy.
             Education
@@ -59,3 +59,17 @@ class AnalyzeResumeMatchTests(SimpleTestCase):
         )
 
         self.assertTrue(all(check["passed"] for check in ats["checks"]))
+
+    def test_match_report_includes_role_specific_interview_prep(self):
+        result = analyze_resume_match(
+            user_profile={"target_role": "Data Analyst"},
+            resume_text="Python SQL dashboard analysis",
+            job_description="Build Python dashboards and SQL reports for stakeholders.",
+        )
+
+        self.assertGreaterEqual(len(result["interview_prep"]["questions"]), 3)
+        self.assertTrue(any("python" in item["question"].lower() for item in result["interview_prep"]["questions"]))
+        self.assertEqual(
+            [item["label"] for item in result["interview_prep"]["star_prompts"]],
+            ["Situation", "Task", "Action", "Result"],
+        )

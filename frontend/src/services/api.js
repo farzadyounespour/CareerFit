@@ -164,6 +164,34 @@ export async function deleteSavedJob(jobId) {
   return deleteJson(`/jobs/saved/${jobId}/`);
 }
 
+export async function updateTrackedJob(jobId, payload) {
+  return patchJson(`/jobs/saved/${jobId}/`, payload);
+}
+
+export async function fetchSearchAlerts() {
+  return getJson("/jobs/alerts/");
+}
+
+export async function createSearchAlert(payload) {
+  return postJson("/jobs/alerts/", payload);
+}
+
+export async function updateSearchAlert(alertId, payload) {
+  return patchJson(`/jobs/alerts/${alertId}/`, payload);
+}
+
+export async function deleteSearchAlert(alertId) {
+  return deleteJson(`/jobs/alerts/${alertId}/`);
+}
+
+export async function fetchResumeVersions() {
+  return getJson("/resumes/");
+}
+
+export async function createResumeVersion(payload) {
+  return postJson("/resumes/", payload);
+}
+
 export async function fetchReportHistory() {
   return getJson("/matches/history/");
 }
@@ -190,6 +218,18 @@ async function getJson(path) {
 async function postJson(path, payload) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+async function patchJson(path, payload) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PATCH",
     headers: {
       "Content-Type": "application/json",
       ...authHeaders(),

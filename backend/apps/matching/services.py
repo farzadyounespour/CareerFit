@@ -118,8 +118,10 @@ def _contains_phrase(text, phrase):
     return re.search(rf"(?<![a-zA-Z0-9]){re.escape(phrase)}(?![a-zA-Z0-9])", text) is not None
 
 
-def analyze_ats_readiness(resume_text):
+def analyze_ats_readiness(resume_text, target_role=""):
     normalized = normalize_text(resume_text)
+    paragraphs = [line.strip() for line in resume_text.splitlines() if line.strip()]
+    target_terms = [token for token in tokenize(target_role) if len(token) > 3]
     checks = {
         "email": bool(re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", resume_text)),
         "phone": bool(re.search(r"(?:\+?\d[\d(). -]{8,}\d)", resume_text)),
@@ -135,6 +137,10 @@ def analyze_ats_readiness(resume_text):
         "skills_section": bool(re.search(SECTION_PATTERNS["skills"], normalized)),
         "bullets": bool(re.search(r"(?m)^\s*[-*•]\s+", resume_text)),
         "reasonable_length": 50 <= len(resume_text.split()) <= 1200,
+        "dates": bool(re.search(r"\b(?:19|20)\d{2}\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b", normalized)),
+        "measurable_results": bool(re.search(r"\b\d+(?:[.,]\d+)?%?\b", resume_text)),
+        "concise_paragraphs": all(len(paragraph.split()) <= 55 for paragraph in paragraphs),
+        "target_role": not target_terms or any(term in normalized for term in target_terms),
     }
     labels = {
         "email": "Email address",
@@ -146,6 +152,10 @@ def analyze_ats_readiness(resume_text):
         "skills_section": "Skills section",
         "bullets": "Readable bullet points",
         "reasonable_length": "Resume length",
+        "dates": "Experience dates",
+        "measurable_results": "Measurable achievements",
+        "concise_paragraphs": "Concise paragraphs",
+        "target_role": "Target-role language",
     }
     passed = sum(checks.values())
     return {
@@ -262,7 +272,7 @@ def analyze_resume_match(user_profile, resume_text, job_description):
         categories=categories,
         missing_skills=missing_skills,
     )
-    ats = analyze_ats_readiness(resume_text)
+    ats = analyze_ats_readiness(resume_text, user_profile.get("target_role", ""))
 
     return {
         "summary": {
@@ -280,6 +290,40 @@ def analyze_resume_match(user_profile, resume_text, job_description):
         "ats": ats,
         "requirements": categories,
         "recommendations": recommendations,
+        "interview_prep": build_interview_prep(job_description, job_skills),
+    }
+
+
+def build_interview_prep(job_description, job_skills=None):
+    skills = sorted(job_skills or extract_skills(job_description))[:5]
+    questions = [
+        {
+            "type": "role",
+            "question": "What interests you about this role, and which part of your experience is most relevant?",
+            "hint": "Connect one requirement from the posting to a specific project or result.",
+        },
+        {
+            "type": "behavioral",
+            "question": "Tell me about a time you solved a difficult problem with limited information.",
+            "hint": "Use Situation, Task, Action, and Result. Include a measurable outcome when possible.",
+        },
+    ]
+    questions.extend(
+        {
+            "type": "skill",
+            "question": f"Describe a project where you used {skill}. What did you contribute and what improved?",
+            "hint": "Name the context, your decision, and the result instead of only defining the skill.",
+        }
+        for skill in skills
+    )
+    return {
+        "questions": questions[:7],
+        "star_prompts": [
+            {"label": "Situation", "detail": "Set the context in one or two sentences."},
+            {"label": "Task", "detail": "Clarify your responsibility or the problem you owned."},
+            {"label": "Action", "detail": "Explain the steps you personally took."},
+            {"label": "Result", "detail": "Close with the outcome, ideally using a number."},
+        ],
     }
 
 

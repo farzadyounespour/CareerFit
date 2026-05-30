@@ -70,3 +70,18 @@ class ResumeUploadApiTests(APITestCase):
         delete_response = self.client.delete(f"/api/resumes/{upload_response.data['resume_id']}/")
 
         self.assertEqual(delete_response.status_code, 204)
+
+    def test_user_can_save_and_list_pasted_resume_versions(self):
+        user = User.objects.create_user(username="versions@example.com", password="careerfit-pass")
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        create_response = self.client.post(
+            "/api/resumes/",
+            {"title": "Analyst tailored", "text": "Python SQL dashboard achievements"},
+            format="json",
+        )
+        list_response = self.client.get("/api/resumes/")
+
+        self.assertEqual(create_response.status_code, 201)
+        self.assertEqual(list_response.data["results"][0]["title"], "Analyst tailored")

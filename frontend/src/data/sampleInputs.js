@@ -8,7 +8,7 @@ Skills
 Python, pandas, SQL, Excel, Tableau, Git, data cleaning, communication, and problem solving.
 
 Experience
-- Built a student success dashboard using Python, pandas, and Tableau to identify course performance trends.
+- 2025: Built a student success dashboard using Python, pandas, and Tableau to identify course performance trends and reduced manual reporting work by 20%.
 - Created SQL queries for cleaning and joining enrollment datasets.
 - Presented findings to a project team and wrote clear documentation for non-technical users.
 - Used Git for version control and collaborated in a small software engineering team.

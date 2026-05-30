@@ -91,8 +91,11 @@ VITE_API_BASE_URL=/api
 - PDF, DOCX, TXT, and pasted resume text input with a fully editable preview, clear action, and dismissible upload errors.
 - Live Adzuna job search with a sample-data fallback when keys are not configured.
 - Job saving, workplace, skill, experience-level, employment-type, salary filtering, and report history.
-- Interactive ATS preparation checks for contact details, resume sections, bullet formatting, and resume length.
+- Application tracker with stages, notes, recruiter details, follow-up dates, interview dates, salary notes, and tailored resume links.
+- Reusable resume versions and saved daily or weekly job-search alerts.
+- Interactive ATS preparation checks for contact details, resume sections, bullet formatting, dates, measurable achievements, paragraph length, and resume length.
 - Explainable skill matching, TF-IDF cosine similarity, missing-skill analysis, and recommendations.
+- Role-specific interview questions, STAR answer prompts, and a progress dashboard.
 - Optional OpenAI-powered coaching with explicit user consent and deterministic fallback.
 - Expiring sessions, email verification, password reset, account deletion, and saved-data cleanup.
 

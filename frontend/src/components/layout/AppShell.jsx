@@ -1,5 +1,6 @@
 import {
   BriefcaseBusiness,
+  ChartNoAxesCombined,
   FileText,
   Gauge,
   History,
@@ -8,17 +9,38 @@ import {
   UserPlus,
   UserRound,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 const navItems = [
   { id: "home", label: "Home", icon: Home },
+  { id: "dashboard", label: "Dashboard", icon: ChartNoAxesCombined },
   { id: "profile", label: "Profile", icon: UserRound },
   { id: "resume", label: "Resume", icon: FileText },
   { id: "job", label: "Jobs", icon: BriefcaseBusiness },
   { id: "report", label: "Report", icon: Gauge },
-  { id: "history", label: "Saved", icon: History },
+  { id: "history", label: "Tracker", icon: History },
 ];
 
 export default function AppShell({ activeScreen, onNavigate, isSignedIn, currentUser, onAuthOpen, onSignOut, onHistory, children }) {
+  const navRef = useRef(null);
+  const activeItemRef = useRef(null);
+
+  useEffect(() => {
+    function centerActiveTab() {
+      const nav = navRef.current;
+      const activeItem = activeItemRef.current;
+      if (!nav || !activeItem) return;
+      nav.scrollTo({
+        left: activeItem.offsetLeft - ((nav.clientWidth - activeItem.clientWidth) / 2),
+        behavior: "smooth",
+      });
+    }
+
+    centerActiveTab();
+    window.addEventListener("resize", centerActiveTab);
+    return () => window.removeEventListener("resize", centerActiveTab);
+  }, [activeScreen]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur lg:px-8">
@@ -33,7 +55,7 @@ export default function AppShell({ activeScreen, onNavigate, isSignedIn, current
             </span>
           </button>
 
-          <nav className="order-3 w-full overflow-x-auto lg:order-2 lg:w-auto">
+          <nav ref={navRef} className="order-3 w-full overflow-x-auto lg:order-2 lg:w-auto">
             <div className="flex min-w-max rounded-md border border-slate-200 bg-slate-50 p-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -42,6 +64,7 @@ export default function AppShell({ activeScreen, onNavigate, isSignedIn, current
                 return (
                   <button
                     key={item.id}
+                    ref={isActive ? activeItemRef : null}
                     type="button"
                     onClick={() => item.id === "history" ? onHistory() : onNavigate(item.id)}
                     className={`inline-flex h-10 items-center gap-2 rounded px-3 text-sm font-semibold ${

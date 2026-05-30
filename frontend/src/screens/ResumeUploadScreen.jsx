@@ -4,13 +4,16 @@ import {
   ClipboardPaste,
   FileCheck2,
   FileText,
+  FolderOpen,
   Info,
+  Save,
   ShieldCheck,
   Trash2,
   Upload,
   X,
   XCircle,
 } from "lucide-react";
+import { useState } from "react";
 
 export default function ResumeUploadScreen({
   resumeText,
@@ -23,7 +26,11 @@ export default function ResumeUploadScreen({
   onDismissError,
   onNext,
   onDelete,
+  resumeVersions = [],
+  onSaveVersion = () => {},
+  onLoadVersion = () => {},
 }) {
+  const [versionTitle, setVersionTitle] = useState("");
   const wordCount = countWords(resumeText);
   const hasResume = resumeText.trim().length > 0;
   const resumeStatus = getResumeStatus(wordCount);
@@ -52,6 +59,33 @@ export default function ResumeUploadScreen({
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[340px_1fr]">
         <div className="space-y-5">
+          <section className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 place-items-center rounded-md bg-sky-50 text-sky-700"><FolderOpen size={20} /></span>
+              <div>
+                <h3 className="font-semibold text-ink">Resume versions</h3>
+                <p className="text-sm text-slate-500">Reuse tailored copies for each application.</p>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <input value={versionTitle} onChange={(event) => setVersionTitle(event.target.value)} className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal focus:outline-none" placeholder="Version name" />
+              <button type="button" title="Save resume version" disabled={!hasResume || !versionTitle.trim()} onClick={() => {
+                onSaveVersion(versionTitle.trim());
+                setVersionTitle("");
+              }} className="rounded-md bg-teal p-2 text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-300">
+                <Save size={17} />
+              </button>
+            </div>
+            <div className="mt-3 max-h-44 space-y-2 overflow-auto">
+              {resumeVersions.length ? resumeVersions.map((resume) => (
+                <button key={resume.id} type="button" onClick={() => onLoadVersion(resume)} className="flex w-full items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-2 text-left text-sm hover:border-teal hover:bg-emerald-50">
+                  <span className="truncate font-semibold text-slate-700">{resume.title}</span>
+                  <FolderOpen size={15} className="shrink-0 text-teal" />
+                </button>
+              )) : <p className="text-sm leading-6 text-slate-500">Save the edited text when you want to keep a reusable version.</p>}
+            </div>
+          </section>
+
           <section className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
             <div className="flex items-center gap-3">
               <span className="grid h-11 w-11 place-items-center rounded-md bg-emerald-50 text-teal">
@@ -235,6 +269,18 @@ function getAtsChecks(text) {
     {
       label: "Resume length between 50 and 1,200 words",
       passed: countWords(text) >= 50 && countWords(text) <= 1200,
+    },
+    {
+      label: "Experience dates included",
+      passed: /\b(?:19|20)\d{2}\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i.test(text),
+    },
+    {
+      label: "Measurable achievements included",
+      passed: /\b\d+(?:[.,]\d+)?%?\b/.test(text),
+    },
+    {
+      label: "Paragraphs stay concise for scanning",
+      passed: text.split("\n").filter((line) => line.trim()).every((line) => line.trim().split(/\s+/).length <= 55),
     },
   ];
 }

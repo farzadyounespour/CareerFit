@@ -47,3 +47,25 @@ class SavedJobSerializer(serializers.Serializer):
     location = serializers.CharField(max_length=220, required=False, allow_blank=True)
     url = serializers.URLField(required=False, allow_blank=True)
     source = serializers.CharField(max_length=80, required=False, allow_blank=True)
+
+
+class TrackedJobUpdateSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=["saved", "preparing", "applied", "interview", "offer", "rejected", "archived"],
+        required=False,
+    )
+    notes = serializers.CharField(max_length=5000, required=False, allow_blank=True)
+    recruiter_name = serializers.CharField(max_length=160, required=False, allow_blank=True)
+    recruiter_email = serializers.EmailField(required=False, allow_blank=True)
+    salary_text = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    follow_up_date = serializers.DateField(required=False, allow_null=True)
+    interview_date = serializers.DateField(required=False, allow_null=True)
+    applied_at = serializers.DateField(required=False, allow_null=True)
+    excitement = serializers.IntegerField(min_value=1, max_value=5, required=False)
+    resume_version_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+
+
+class SearchAlertSerializer(JobSearchSerializer):
+    name = serializers.CharField(max_length=180, required=False, allow_blank=True)
+    frequency = serializers.ChoiceField(choices=["daily", "weekly"], default="weekly", required=False)
+    is_active = serializers.BooleanField(default=True, required=False)

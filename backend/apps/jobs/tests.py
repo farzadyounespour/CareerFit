@@ -180,3 +180,46 @@ class JobSearchApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual([job["id"] for job in response.data["results"]], ["sample-data-analyst"])
+
+    def test_saved_job_can_be_updated_as_tracked_application(self):
+        create_response = self.client.post(
+            "/api/jobs/saved/",
+            {"title": "Data Analyst", "description": "Build dashboards."},
+            format="json",
+        )
+
+        response = self.client.patch(
+            f"/api/jobs/saved/{create_response.data['id']}/",
+            {
+                "status": "interview",
+                "notes": "Prepare reporting example.",
+                "follow_up_date": "2026-06-04",
+                "excitement": 5,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["job"]["status"], "interview")
+        self.assertEqual(response.data["job"]["excitement"], 5)
+        self.assertEqual(response.data["job"]["follow_up_date"].isoformat(), "2026-06-04")
+
+    def test_search_alert_can_be_created_paused_and_deleted(self):
+        create_response = self.client.post(
+            "/api/jobs/alerts/",
+            {"title": "Data Analyst", "country": "ca", "frequency": "daily"},
+            format="json",
+        )
+        alert_id = create_response.data["alert"]["id"]
+        pause_response = self.client.patch(
+            f"/api/jobs/alerts/{alert_id}/",
+            {"is_active": False},
+            format="json",
+        )
+        list_response = self.client.get("/api/jobs/alerts/")
+        delete_response = self.client.delete(f"/api/jobs/alerts/{alert_id}/")
+
+        self.assertEqual(create_response.status_code, 201)
+        self.assertFalse(pause_response.data["alert"]["is_active"])
+        self.assertEqual(len(list_response.data["results"]), 1)
+        self.assertEqual(delete_response.status_code, 204)

@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  BellPlus,
   Bookmark,
   BriefcaseBusiness,
   Building2,
@@ -26,6 +27,7 @@ export default function JobMatchScreen({
   jobSearchError,
   jobSearchNotice,
   onSaveJob,
+  onCreateSearchAlert,
   onPageChange,
   pagination,
   selectedJob,
@@ -86,9 +88,15 @@ export default function JobMatchScreen({
         </form>
 
         <div className="mt-5 border-t border-slate-100 pt-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <SlidersHorizontal size={16} className="text-teal" />
-            Refine results
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <SlidersHorizontal size={16} className="text-teal" />
+              Refine results
+            </div>
+            <button type="button" onClick={onCreateSearchAlert} className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal">
+              <BellPlus size={16} />
+              Save search alert
+            </button>
           </div>
           <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <SelectField label="Workplace" value={jobSearch.workplace} onChange={(value) => onJobSearchChange({ ...jobSearch, workplace: value, page: 1 })} options={[

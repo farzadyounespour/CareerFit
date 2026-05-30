@@ -5,7 +5,24 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .parsers import ResumeParseError, extract_resume_text
-from .serializers import ResumeUploadSerializer
+from .serializers import ResumeUploadSerializer, ResumeVersionSerializer
+
+
+class ResumeVersionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        resumes = request.user.resume_set.order_by("-created_at")
+        return Response({"results": [serialize_resume(resume) for resume in resumes]})
+
+    def post(self, request):
+        serializer = ResumeVersionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        resume = request.user.resume_set.create(
+            title=serializer.validated_data["title"],
+            raw_text=serializer.validated_data["text"],
+        )
+        return Response({"resume": serialize_resume(resume)}, status=status.HTTP_201_CREATED)
 
 
 class ResumeUploadView(APIView):
@@ -43,3 +60,25 @@ class ResumeDetailView(APIView):
             return Response({"detail": "Resume not found."}, status=status.HTTP_404_NOT_FOUND)
         resume.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def patch(self, request, resume_id):
+        resume = request.user.resume_set.filter(id=resume_id).first()
+        if not resume:
+            return Response({"detail": "Resume not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ResumeVersionSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        if "title" in serializer.validated_data:
+            resume.title = serializer.validated_data["title"]
+        if "text" in serializer.validated_data:
+            resume.raw_text = serializer.validated_data["text"]
+        resume.save()
+        return Response({"resume": serialize_resume(resume)})
+
+
+def serialize_resume(resume):
+    return {
+        "id": resume.id,
+        "title": resume.title,
+        "text": resume.raw_text,
+        "created_at": resume.created_at,
+    }

@@ -11,7 +11,7 @@ Data analyst with dashboard experience.
 Skills
 Python SQL Tableau
 Experience
-- Built a Tableau dashboard for reporting.
+- 2025: Built a Tableau dashboard for reporting and reduced manual work by 20%.
 - Cleaned data with Python and SQL.
 Education
 Example University
@@ -40,7 +40,7 @@ function renderScreen(overrides = {}) {
 describe("ResumeUploadScreen", () => {
   it("shows live ATS failures for an incomplete resume and checks for a prepared resume", () => {
     const { rerender } = renderScreen({ resumeText: "Short resume" });
-    expect(screen.getByText("0 of 6 checks ready")).toBeVisible();
+    expect(screen.getByText("1 of 9 checks ready")).toBeVisible();
 
     rerender(
       <ResumeUploadScreen
@@ -56,7 +56,7 @@ describe("ResumeUploadScreen", () => {
         onDelete={() => {}}
       />,
     );
-    expect(screen.getByText("6 of 6 checks ready")).toBeVisible();
+    expect(screen.getByText("9 of 9 checks ready")).toBeVisible();
   });
 
   it("lets the user dismiss a wrong-file error and clear loaded text", () => {
