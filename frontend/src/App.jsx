@@ -54,6 +54,7 @@ const initialProfile = {
 };
 
 export default function App() {
+  const [isDarkMode, setIsDarkMode] = useState(getInitialDarkMode);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authMode, setAuthMode] = useState(null);
@@ -147,6 +148,11 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [activeScreen]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDarkMode);
+    localStorage.setItem("careerfit_theme", isDarkMode ? "dark" : "light");
+  }, [isDarkMode]);
 
   const canAnalyze = useMemo(
     () => resumeText.trim().length > 0 && jobDescription.trim().length > 0,
@@ -609,6 +615,8 @@ export default function App() {
         onAuthOpen={setAuthMode}
         onSignOut={handleSignOut}
         onHistory={handleLoadHistory}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode((currentMode) => !currentMode)}
       >
         {renderScreen()}
       </AppShell>
@@ -628,4 +636,12 @@ export default function App() {
       )}
     </>
   );
+}
+
+function getInitialDarkMode() {
+  const savedTheme = localStorage.getItem("careerfit_theme");
+  if (savedTheme) {
+    return savedTheme === "dark";
+  }
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches || false;
 }

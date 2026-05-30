@@ -6,6 +6,8 @@ import {
   History,
   Home,
   LogIn,
+  Moon,
+  Sun,
   UserPlus,
   UserRound,
 } from "lucide-react";
@@ -21,7 +23,7 @@ const navItems = [
   { id: "history", label: "Tracker", icon: History },
 ];
 
-export default function AppShell({ activeScreen, onNavigate, isSignedIn, currentUser, onAuthOpen, onSignOut, onHistory, children }) {
+export default function AppShell({ activeScreen, onNavigate, isSignedIn, currentUser, onAuthOpen, onSignOut, onHistory, isDarkMode, onToggleDarkMode, children }) {
   const navRef = useRef(null);
   const activeItemRef = useRef(null);
 
@@ -82,6 +84,15 @@ export default function AppShell({ activeScreen, onNavigate, isSignedIn, current
           </nav>
 
           <div className="order-2 flex flex-wrap items-center gap-2 lg:order-3">
+            <button
+              type="button"
+              title={isDarkMode ? "Use light mode" : "Use dark mode"}
+              aria-label={isDarkMode ? "Use light mode" : "Use dark mode"}
+              onClick={onToggleDarkMode}
+              className="rounded-md border border-slate-300 bg-white p-2 text-slate-700 hover:border-teal hover:text-teal"
+            >
+              {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
             {isSignedIn ? (
               <>
                 <span className="hidden text-sm font-semibold text-slate-600 sm:inline">

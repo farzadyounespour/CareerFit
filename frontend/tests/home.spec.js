@@ -15,3 +15,13 @@ test("mobile navigation remains horizontally usable", async ({ page }) => {
   await page.getByRole("button", { name: "Jobs", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "CareerFit account" })).toBeVisible();
 });
+
+test("dark mode persists across reloads", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTitle("Use dark mode").click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(page.getByTitle("Use light mode")).toBeVisible();
+});

@@ -96,6 +96,7 @@ VITE_API_BASE_URL=/api
 - Interactive ATS preparation checks for contact details, resume sections, bullet formatting, dates, measurable achievements, paragraph length, and resume length.
 - Explainable skill matching, TF-IDF cosine similarity, missing-skill analysis, and recommendations.
 - Role-specific interview questions, STAR answer prompts, and a progress dashboard.
+- Persistent light and dark appearance modes across the public site and private workspace.
 - Optional OpenAI-powered coaching with explicit user consent and deterministic fallback.
 - Expiring sessions, email verification, password reset, account deletion, and saved-data cleanup.
 

@@ -17,3 +17,171 @@ select,
 button {
   font: inherit;
 }
+
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background: #101722;
+  color: #e7edf5;
+}
+
+.dark .bg-white,
+.dark .bg-white\/95,
+.dark .bg-white\/70 {
+  background-color: #182230;
+}
+
+.dark .bg-slate-50 {
+  background-color: #101722;
+}
+
+.dark .bg-slate-100,
+.dark .bg-slate-100\/70 {
+  background-color: #202c3a;
+}
+
+.dark .bg-slate-200 {
+  background-color: #334155;
+}
+
+.dark .bg-slate-300 {
+  background-color: #475569;
+}
+
+.dark .bg-emerald-50,
+.dark .bg-emerald-50\/40 {
+  background-color: #12352f;
+}
+
+.dark .bg-emerald-100 {
+  background-color: #18483f;
+}
+
+.dark .bg-sky-50 {
+  background-color: #102f46;
+}
+
+.dark .bg-amber-50 {
+  background-color: #3b2a12;
+}
+
+.dark .bg-rose-50 {
+  background-color: #3d1d28;
+}
+
+.dark .bg-rose-100 {
+  background-color: #542331;
+}
+
+.dark .bg-indigo-50 {
+  background-color: #24264c;
+}
+
+.dark .text-ink,
+.dark .text-slate-800,
+.dark .text-slate-900 {
+  color: #f8fafc;
+}
+
+.dark .text-slate-700 {
+  color: #d7e0eb;
+}
+
+.dark .text-slate-600 {
+  color: #c0ccda;
+}
+
+.dark .text-slate-500 {
+  color: #9eafc2;
+}
+
+.dark .text-slate-400 {
+  color: #8a9bb0;
+}
+
+.dark .text-slate-300 {
+  color: #718399;
+}
+
+.dark .text-teal {
+  color: #5eead4;
+}
+
+.dark .text-emerald-500,
+.dark .text-emerald-600,
+.dark .text-emerald-700,
+.dark .text-emerald-800,
+.dark .text-emerald-900 {
+  color: #6ee7b7;
+}
+
+.dark .text-sky-600,
+.dark .text-sky-700,
+.dark .text-sky-800 {
+  color: #7dd3fc;
+}
+
+.dark .text-amber,
+.dark .text-amber-700,
+.dark .text-amber-800,
+.dark .text-amber-900 {
+  color: #fbbf24;
+}
+
+.dark .text-rose-400,
+.dark .text-rose-600,
+.dark .text-rose-700,
+.dark .text-rose-800 {
+  color: #fda4af;
+}
+
+.dark .text-blue-800,
+.dark .text-indigo-700 {
+  color: #a5b4fc;
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300 {
+  border-color: #405064;
+}
+
+.dark .border-emerald-200 {
+  border-color: #247a68;
+}
+
+.dark .border-sky-200 {
+  border-color: #246386;
+}
+
+.dark .border-amber-200,
+.dark .border-amber-300 {
+  border-color: #8a6224;
+}
+
+.dark .border-rose-200 {
+  border-color: #925064;
+}
+
+.dark .border-blue-200 {
+  border-color: #365f95;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #182230;
+  color: #f8fafc;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #8292a7;
+}
+
+.dark .shadow-panel,
+.dark .shadow-sm {
+  --tw-shadow-color: rgb(0 0 0 / 0.28);
+}
