@@ -1,11 +1,12 @@
 from django.urls import path
 
-from .views import AnalyzeMatchView, PreviewMatchView, ReportHistoryDetailView, ReportHistoryView
+from .views import AnalyzeMatchView, CoachMatchView, PreviewMatchView, ReportHistoryDetailView, ReportHistoryView
 
 
 urlpatterns = [
     path("analyze/", AnalyzeMatchView.as_view(), name="analyze-match"),
     path("preview/", PreviewMatchView.as_view(), name="preview-match"),
+    path("coach/", CoachMatchView.as_view(), name="coach-match"),
     path("history/", ReportHistoryView.as_view(), name="report-history"),
     path("history/<int:report_id>/", ReportHistoryDetailView.as_view(), name="report-history-detail"),
 ]

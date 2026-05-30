@@ -24,6 +24,7 @@ import {
   logoutAccount,
   previewMatch,
   registerAccount,
+  requestAiCoaching,
   requestEmailVerification,
   requestPasswordReset,
   saveJob,
@@ -97,6 +98,8 @@ export default function App() {
   const [jobSearchNotice, setJobSearchNotice] = useState("");
   const [report, setReport] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingAiCoaching, setIsLoadingAiCoaching] = useState(false);
+  const [aiCoachingError, setAiCoachingError] = useState("");
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [resumeUploadStatus, setResumeUploadStatus] = useState("");
   const [resumeUploadError, setResumeUploadError] = useState("");
@@ -197,6 +200,7 @@ export default function App() {
 
   async function handleAnalyze() {
     setError("");
+    setAiCoachingError("");
 
     if (!canAnalyze) {
       setError("Please add both resume text and a job description before generating the report.");
@@ -224,6 +228,28 @@ export default function App() {
       setError(apiError.message);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleRequestAiCoaching() {
+    setAiCoachingError("");
+    if (!canAnalyze) {
+      setAiCoachingError("Add both resume text and a job description before requesting specific improvements.");
+      return;
+    }
+
+    setIsLoadingAiCoaching(true);
+    try {
+      const result = await requestAiCoaching({
+        user_profile: profile,
+        resume_text: resumeText,
+        job_description: jobDescription,
+      });
+      setReport((currentReport) => currentReport ? { ...currentReport, ai_coaching: result.ai_coaching } : currentReport);
+    } catch (coachingError) {
+      setAiCoachingError(coachingError.message);
+    } finally {
+      setIsLoadingAiCoaching(false);
     }
   }
 
@@ -649,6 +675,9 @@ export default function App() {
         resumeText={resumeText}
         jobDescription={jobDescription}
         onNavigate={setActiveScreen}
+        onRequestAiCoaching={handleRequestAiCoaching}
+        isLoadingAiCoaching={isLoadingAiCoaching}
+        aiCoachingError={aiCoachingError}
       />
     );
   }

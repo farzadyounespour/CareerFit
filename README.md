@@ -191,6 +191,12 @@ The response includes score summaries, matched and missing skills, requirement-l
 
 Returns the deterministic score summary and skill gaps for the current resume and selected job without saving a report or requesting AI coaching.
 
+### Request Specific Improvements
+
+`POST /api/matches/coach/`
+
+Returns optional AI coaching for the current resume and selected job without saving a duplicate report. The endpoint uses the configured Ollama or OpenAI provider and applies the dedicated coaching rate limit.
+
 ### Upload Resume
 
 `POST /api/resumes/upload/`

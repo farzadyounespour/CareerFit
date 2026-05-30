@@ -67,6 +67,47 @@ class MatchPersistenceApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 401)
 
+    @patch("apps.matching.views.enrich_match_report")
+    def test_coaching_returns_specific_improvements_without_saving_report(self, mock_enrich):
+        user = User.objects.create_user(username="coach@example.com", password="careerfit-pass")
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        mock_enrich.return_value = {
+            "status": "completed",
+            "headline": "Tailor the resume",
+            "summary": "Start with the strongest gap.",
+            "recommendations": [],
+        }
+
+        response = self.client.post(
+            "/api/matches/coach/",
+            {
+                "user_profile": {"target_role": "Data Analyst"},
+                "resume_text": "Python SQL dashboard experience",
+                "job_description": "Build dashboards with Python, SQL, and Tableau.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["ai_coaching"]["status"], "completed")
+        self.assertEqual(MatchReport.objects.filter(user=user).count(), 0)
+        mock_enrich.assert_called_once()
+        self.assertTrue(mock_enrich.call_args.kwargs["requested"])
+        self.assertTrue(mock_enrich.call_args.kwargs["authorized"])
+
+    def test_coaching_requires_login(self):
+        response = self.client.post(
+            "/api/matches/coach/",
+            {
+                "resume_text": "Python SQL dashboard experience",
+                "job_description": "Build dashboards with Python and SQL.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+
     @override_settings(CAREERFIT_ENABLE_LLM=False, OPENAI_API_KEY="")
     def test_analysis_requires_login(self):
         response = self.client.post(

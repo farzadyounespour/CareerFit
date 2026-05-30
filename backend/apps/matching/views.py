@@ -7,7 +7,7 @@ from apps.jobs.models import JobDescription
 from apps.resumes.models import Resume
 
 from .models import MatchReport
-from .serializers import AnalyzeMatchRequestSerializer, PreviewMatchRequestSerializer
+from .serializers import AnalyzeMatchRequestSerializer, CoachMatchRequestSerializer, PreviewMatchRequestSerializer
 from .llm_services import enrich_match_report
 from .services import analyze_resume_match
 from .throttles import LlmCoachingThrottle
@@ -92,6 +92,34 @@ class PreviewMatchView(APIView):
             {
                 "summary": result["summary"],
                 "skills": result["skills"],
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class CoachMatchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = CoachMatchRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        throttle = LlmCoachingThrottle()
+        if not throttle.allow_request(request, self):
+            self.throttled(request, throttle.wait())
+        result = analyze_resume_match(
+            user_profile=serializer.validated_data.get("user_profile", {}),
+            resume_text=serializer.validated_data["resume_text"],
+            job_description=serializer.validated_data["job_description"],
+        )
+        return Response(
+            {
+                "ai_coaching": enrich_match_report(
+                    match_result=result,
+                    resume_text=serializer.validated_data["resume_text"],
+                    job_description=serializer.validated_data["job_description"],
+                    requested=True,
+                    authorized=request.user.is_authenticated,
+                )
             },
             status=status.HTTP_200_OK,
         )

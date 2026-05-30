@@ -30,3 +30,7 @@ class PreviewMatchRequestSerializer(serializers.Serializer):
     user_profile = UserProfileSerializer(required=False)
     resume_text = serializers.CharField(max_length=50000)
     job_description = serializers.CharField(max_length=30000)
+
+
+class CoachMatchRequestSerializer(PreviewMatchRequestSerializer):
+    pass
