@@ -189,6 +189,9 @@ export default function App() {
       const result = await fetchResumeVersions();
       setResumeVersions(result.results);
     }
+    if (screen === "job") {
+      setJobSearch((currentSearch) => applyProfileToJobSearch(currentSearch, profile));
+    }
     setActiveScreen(screen);
   }
 
@@ -523,6 +526,7 @@ export default function App() {
 
   function handleUseSavedJob(job) {
     handleSelectJob(job);
+    setJobSearch((currentSearch) => applyProfileToJobSearch(currentSearch, profile));
     setActiveScreen("job");
   }
 

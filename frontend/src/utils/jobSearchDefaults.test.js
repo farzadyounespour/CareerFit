@@ -18,7 +18,7 @@ describe("applyProfileToJobSearch", () => {
     });
   });
 
-  it("keeps existing search values when profile fields are empty", () => {
+  it("keeps the existing title but clears a stale location when profile fields are empty", () => {
     const result = applyProfileToJobSearch(
       { title: "Data Analyst", location: "Boston", country: "us", page: 2 },
       { target_role: "", location: "" },
@@ -26,7 +26,7 @@ describe("applyProfileToJobSearch", () => {
 
     expect(result).toEqual({
       title: "Data Analyst",
-      location: "Boston",
+      location: "",
       country: "us",
       page: 1,
     });

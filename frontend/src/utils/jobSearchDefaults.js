@@ -3,7 +3,7 @@ export function applyProfileToJobSearch(currentSearch, profile) {
   return {
     ...currentSearch,
     title: profile.target_role?.trim() || currentSearch.title,
-    location: location || currentSearch.location,
+    location,
     country: inferSearchCountry(location, currentSearch.country),
     page: 1,
   };
