@@ -33,6 +33,40 @@ class MatchPersistenceApiTests(APITestCase):
         self.assertIn("ats", response.data)
         self.assertEqual(response.data["ai_coaching"]["status"], "skipped")
 
+    def test_preview_returns_scores_without_saving_report(self):
+        user = User.objects.create_user(username="preview@example.com", password="careerfit-pass")
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = self.client.post(
+            "/api/matches/preview/",
+            {
+                "user_profile": {"target_role": "Data Analyst"},
+                "resume_text": "Python SQL dashboard experience",
+                "job_description": "Build dashboards with Python, SQL, and Tableau.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("match_score", response.data["summary"])
+        self.assertIn("readiness_score", response.data["summary"])
+        self.assertIn("matched", response.data["skills"])
+        self.assertIn("missing", response.data["skills"])
+        self.assertEqual(MatchReport.objects.filter(user=user).count(), 0)
+
+    def test_preview_requires_login(self):
+        response = self.client.post(
+            "/api/matches/preview/",
+            {
+                "resume_text": "Python SQL dashboard experience",
+                "job_description": "Build dashboards with Python and SQL.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+
     @override_settings(CAREERFIT_ENABLE_LLM=False, OPENAI_API_KEY="")
     def test_analysis_requires_login(self):
         response = self.client.post(

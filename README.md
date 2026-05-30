@@ -110,6 +110,7 @@ VITE_API_BASE_URL=/api
 - Public home page with a private, login-required workspace for profile, resume, job, report, and saved-data editing.
 - PDF, DOCX, TXT, and pasted resume text input with a fully editable preview, clear action, and dismissible upload errors.
 - Multi-provider job search with Adzuna, no-key Arbeitnow, optional Jooble, deduplication, and sample-data fallback.
+- Instant deterministic resume comparison when a user selects a job, with match score, readiness score, and skill gaps before generating a full report.
 - Job saving, workplace, skill, experience-level, employment-type, salary filtering, and report history.
 - Application tracker with stages, notes, recruiter details, follow-up dates, interview dates, salary notes, and tailored resume links.
 - Reusable resume versions and saved daily or weekly job-search alerts.
@@ -183,6 +184,12 @@ CareerFit combines available Adzuna, Arbeitnow, and optional Jooble results. Sup
 ```
 
 The response includes score summaries, matched and missing skills, requirement-level evidence, a TF-IDF cosine similarity signal for each reviewed requirement, and the optional AI coaching status.
+
+### Preview Match
+
+`POST /api/matches/preview/`
+
+Returns the deterministic score summary and skill gaps for the current resume and selected job without saving a report or requesting AI coaching.
 
 ### Upload Resume
 

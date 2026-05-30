@@ -7,7 +7,7 @@ from apps.jobs.models import JobDescription
 from apps.resumes.models import Resume
 
 from .models import MatchReport
-from .serializers import AnalyzeMatchRequestSerializer
+from .serializers import AnalyzeMatchRequestSerializer, PreviewMatchRequestSerializer
 from .llm_services import enrich_match_report
 from .services import analyze_resume_match
 from .throttles import LlmCoachingThrottle
@@ -74,6 +74,26 @@ class AnalyzeMatchView(APIView):
             user=user,
             title=validated_data.get("resume_title") or "Analyzed resume",
             raw_text=validated_data["resume_text"],
+        )
+
+
+class PreviewMatchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = PreviewMatchRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = analyze_resume_match(
+            user_profile=serializer.validated_data.get("user_profile", {}),
+            resume_text=serializer.validated_data["resume_text"],
+            job_description=serializer.validated_data["job_description"],
+        )
+        return Response(
+            {
+                "summary": result["summary"],
+                "skills": result["skills"],
+            },
+            status=status.HTTP_200_OK,
         )
 
 

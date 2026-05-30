@@ -31,6 +31,9 @@ export default function JobMatchScreen({
   onPageChange,
   pagination,
   selectedJob,
+  matchPreview,
+  isPreviewingMatch,
+  matchPreviewError,
   onAnalyze,
   isLoading,
   error,
@@ -186,6 +189,26 @@ export default function JobMatchScreen({
             </div>
           )}
 
+          {isPreviewingMatch && (
+            <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm font-semibold text-slate-700">Comparing with your resume...</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="h-16 animate-pulse rounded-md bg-slate-200" />
+                <div className="h-16 animate-pulse rounded-md bg-slate-200" />
+              </div>
+            </div>
+          )}
+
+          {matchPreviewError && (
+            <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              {matchPreviewError}
+            </p>
+          )}
+
+          {matchPreview && !isPreviewingMatch && (
+            <MatchPreview preview={matchPreview} />
+          )}
+
           <textarea value={jobDescription} onChange={(event) => onChange(event.target.value)} className="mt-4 min-h-[360px] w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm leading-6 focus:border-teal focus:outline-none" placeholder="Select a job posting or paste its description here..." />
 
           {error && <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
@@ -200,11 +223,51 @@ export default function JobMatchScreen({
 
           <button type="button" onClick={onAnalyze} disabled={isLoading || !hasJobDescription} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-300">
             <Sparkles size={16} />
-            {isLoading ? "Analyzing..." : "Generate readiness report"}
+            {isLoading ? "Analyzing..." : "Generate full readiness report"}
           </button>
         </aside>
       </div>
     </section>
+  );
+}
+
+function MatchPreview({ preview }) {
+  const matchedSkills = preview.skills.matched.slice(0, 5);
+  const missingSkills = preview.skills.missing.slice(0, 5);
+
+  return (
+    <section className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-teal">Quick resume comparison</p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <ScoreSummary label="Match score" value={preview.summary.match_score} />
+        <ScoreSummary label="Readiness" value={preview.summary.readiness_score} />
+      </div>
+      <SkillSummary label="Matched skills" skills={matchedSkills} emptyText="No clear matches yet" tone="emerald" />
+      <SkillSummary label="Missing skills" skills={missingSkills} emptyText="No missing skills found" tone="amber" />
+    </section>
+  );
+}
+
+function ScoreSummary({ label, value }) {
+  return (
+    <div className="rounded-md border border-emerald-100 bg-white p-3">
+      <p className="text-xs font-semibold text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-ink">{value}%</p>
+    </div>
+  );
+}
+
+function SkillSummary({ label, skills, emptyText, tone }) {
+  const className = tone === "emerald" ? "bg-white text-teal" : "bg-amber-100 text-amber-900";
+  return (
+    <div className="mt-3">
+      <p className="text-xs font-semibold text-slate-600">{label}</p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {skills.length
+          ? skills.map((skill) => <span key={skill} className={`rounded px-2 py-1 text-xs font-semibold ${className}`}>{skill}</span>)
+          : <span className="text-xs text-slate-500">{emptyText}</span>}
+      </div>
+    </div>
   );
 }
 

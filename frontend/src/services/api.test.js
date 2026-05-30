@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { searchJobs, storeToken } from "./api.js";
+import { previewMatch, searchJobs, storeToken } from "./api.js";
 
 
 afterEach(() => {
@@ -35,5 +35,33 @@ describe("searchJobs", () => {
     expect(url).toContain("skills=Python+SQL");
     expect(url).toContain("salary_min=60000");
     expect(options.headers).toEqual({ Authorization: "Token careerfit-test-token" });
+  });
+});
+
+
+describe("previewMatch", () => {
+  it("sends the resume and job description with login credentials", async () => {
+    storeToken("careerfit-test-token");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ summary: {}, skills: {} }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await previewMatch({
+      resume_text: "Python SQL",
+      job_description: "Build dashboards with Python.",
+    });
+
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/matches/preview/");
+    expect(options.headers).toEqual({
+      "Content-Type": "application/json",
+      Authorization: "Token careerfit-test-token",
+    });
+    expect(JSON.parse(options.body)).toEqual({
+      resume_text: "Python SQL",
+      job_description: "Build dashboards with Python.",
+    });
   });
 });

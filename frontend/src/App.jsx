@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import AppShell from "./components/layout/AppShell.jsx";
 import { sampleJobDescription, sampleResume } from "./data/sampleInputs.js";
@@ -22,6 +22,7 @@ import {
   getStoredToken,
   loginAccount,
   logoutAccount,
+  previewMatch,
   registerAccount,
   requestEmailVerification,
   requestPasswordReset,
@@ -65,6 +66,11 @@ export default function App() {
   const [uploadedResumeId, setUploadedResumeId] = useState(null);
   const [jobDescription, setJobDescription] = useState("");
   const [selectedJob, setSelectedJob] = useState(null);
+  const [matchPreview, setMatchPreview] = useState(null);
+  const [isPreviewingMatch, setIsPreviewingMatch] = useState(false);
+  const [matchPreviewError, setMatchPreviewError] = useState("");
+  const matchPreviewCache = useRef(new Map());
+  const matchPreviewRequest = useRef(0);
   const [jobSearch, setJobSearch] = useState({
     title: "Junior Data Analyst",
     location: "",
@@ -154,6 +160,13 @@ export default function App() {
     document.documentElement.classList.toggle("dark", isDarkMode);
     localStorage.setItem("careerfit_theme", isDarkMode ? "dark" : "light");
   }, [isDarkMode]);
+
+  useEffect(() => {
+    setMatchPreview(null);
+    setMatchPreviewError("");
+    matchPreviewRequest.current += 1;
+    setIsPreviewingMatch(false);
+  }, [resumeText]);
 
   const canAnalyze = useMemo(
     () => resumeText.trim().length > 0 && jobDescription.trim().length > 0,
@@ -314,7 +327,7 @@ export default function App() {
     await runJobSearch(nextSearch);
   }
 
-  function handleSelectJob(job) {
+  async function handleSelectJob(job) {
     const selectedDescription = [
       job.title,
       job.company ? `Company: ${job.company}` : "",
@@ -326,6 +339,58 @@ export default function App() {
       .join("\n\n");
     setJobDescription(selectedDescription);
     setSelectedJob(job);
+    setMatchPreview(null);
+    setMatchPreviewError("");
+    const requestId = matchPreviewRequest.current + 1;
+    matchPreviewRequest.current = requestId;
+
+    if (!resumeText.trim()) {
+      setIsPreviewingMatch(false);
+      setMatchPreviewError("Upload or select a resume to calculate your match score.");
+      return;
+    }
+
+    const cacheKey = `${resumeText}\n---job---\n${selectedDescription}`;
+    const cachedPreview = matchPreviewCache.current.get(cacheKey);
+    if (cachedPreview) {
+      setIsPreviewingMatch(false);
+      setMatchPreview(cachedPreview);
+      return;
+    }
+
+    setIsPreviewingMatch(true);
+    try {
+      const result = await previewMatch({
+        user_profile: profile,
+        resume_text: resumeText,
+        job_description: selectedDescription,
+      });
+      matchPreviewCache.current.set(cacheKey, result);
+      if (matchPreviewRequest.current === requestId) {
+        setMatchPreview(result);
+      }
+    } catch (previewError) {
+      if (matchPreviewRequest.current === requestId) {
+        setMatchPreviewError(previewError.message);
+      }
+    } finally {
+      if (matchPreviewRequest.current === requestId) {
+        setIsPreviewingMatch(false);
+      }
+    }
+  }
+
+  function handleJobDescriptionChange(value) {
+    setJobDescription(value);
+    setMatchPreview(null);
+    setMatchPreviewError("");
+    matchPreviewRequest.current += 1;
+    setIsPreviewingMatch(false);
+  }
+
+  function handleLoadSampleJob() {
+    setSelectedJob(null);
+    handleJobDescriptionChange(sampleJobDescription);
   }
 
   async function handleSaveJob(job) {
@@ -521,8 +586,8 @@ export default function App() {
       return (
         <JobMatchScreen
           jobDescription={jobDescription}
-          onChange={setJobDescription}
-          onLoadSample={() => setJobDescription(sampleJobDescription)}
+          onChange={handleJobDescriptionChange}
+          onLoadSample={handleLoadSampleJob}
           jobSearch={jobSearch}
           onJobSearchChange={setJobSearch}
           jobResults={jobResults}
@@ -536,6 +601,9 @@ export default function App() {
           onPageChange={handleJobPageChange}
           pagination={jobPagination}
           selectedJob={selectedJob}
+          matchPreview={matchPreview}
+          isPreviewingMatch={isPreviewingMatch}
+          matchPreviewError={matchPreviewError}
           onAnalyze={handleAnalyze}
           isLoading={isLoading}
           error={error}

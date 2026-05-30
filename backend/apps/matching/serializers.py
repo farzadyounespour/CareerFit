@@ -24,3 +24,9 @@ class AnalyzeMatchRequestSerializer(serializers.Serializer):
     job_url = serializers.URLField(required=False, allow_blank=True)
     resume_id = serializers.IntegerField(required=False, min_value=1)
     use_llm = serializers.BooleanField(required=False, default=False)
+
+
+class PreviewMatchRequestSerializer(serializers.Serializer):
+    user_profile = UserProfileSerializer(required=False)
+    resume_text = serializers.CharField(max_length=50000)
+    job_description = serializers.CharField(max_length=30000)

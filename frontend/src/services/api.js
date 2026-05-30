@@ -38,6 +38,24 @@ export async function analyzeMatch(payload) {
   return response.json();
 }
 
+export async function previewMatch(payload) {
+  const response = await fetch(`${API_BASE_URL}/matches/preview/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}));
+    throw new Error(details.detail || "Unable to preview resume match.");
+  }
+
+  return response.json();
+}
+
 export async function uploadResume(file) {
   const formData = new FormData();
   formData.append("file", file);
