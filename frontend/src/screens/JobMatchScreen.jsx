@@ -9,6 +9,7 @@ import {
   FileSearch,
   MapPin,
   Search,
+  SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
 
@@ -84,10 +85,39 @@ export default function JobMatchScreen({
           </button>
         </form>
 
-        <label className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
-          <input type="checkbox" checked={jobSearch.remote} onChange={(event) => onJobSearchChange({ ...jobSearch, remote: event.target.checked, page: 1 })} className="h-4 w-4 accent-teal" />
-          Prefer remote opportunities
-        </label>
+        <div className="mt-5 border-t border-slate-100 pt-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <SlidersHorizontal size={16} className="text-teal" />
+            Refine results
+          </div>
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <SelectField label="Workplace" value={jobSearch.workplace} onChange={(value) => onJobSearchChange({ ...jobSearch, workplace: value, page: 1 })} options={[
+              ["any", "Any workplace"],
+              ["remote", "Remote"],
+              ["hybrid", "Hybrid"],
+              ["on_site", "On-site"],
+            ]} />
+            <SearchField label="Skills" value={jobSearch.skills} onChange={(value) => onJobSearchChange({ ...jobSearch, skills: value, page: 1 })} placeholder="Python SQL" />
+            <SelectField label="Experience" value={jobSearch.experience_level} onChange={(value) => onJobSearchChange({ ...jobSearch, experience_level: value, page: 1 })} options={[
+              ["any", "Any level"],
+              ["internship", "Internship"],
+              ["entry", "Entry level"],
+              ["mid", "Mid level"],
+              ["senior", "Senior"],
+            ]} />
+            <SelectField label="Employment" value={jobSearch.employment_type} onChange={(value) => onJobSearchChange({ ...jobSearch, employment_type: value, page: 1 })} options={[
+              ["any", "Any type"],
+              ["full_time", "Full-time"],
+              ["part_time", "Part-time"],
+              ["contract", "Contract"],
+              ["permanent", "Permanent"],
+            ]} />
+            <div className="grid grid-cols-2 gap-2">
+              <NumberField label="Salary min" value={jobSearch.salary_min} onChange={(value) => onJobSearchChange({ ...jobSearch, salary_min: value, page: 1 })} placeholder="50000" />
+              <NumberField label="Salary max" value={jobSearch.salary_max} onChange={(value) => onJobSearchChange({ ...jobSearch, salary_max: value, page: 1 })} placeholder="90000" />
+            </div>
+          </div>
+        </div>
 
         {jobSearchError && <Notice tone="amber">{jobSearchError}</Notice>}
         {jobSearchNotice && <Notice tone="sky">{jobSearchNotice}</Notice>}
@@ -178,6 +208,26 @@ function SearchField({ label, value, onChange, placeholder }) {
   );
 }
 
+function NumberField({ label, value, onChange, placeholder }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <input type="number" min="0" value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-2 py-2 text-sm focus:border-teal focus:outline-none" placeholder={placeholder} />
+    </label>
+  );
+}
+
+function SelectField({ label, value, onChange, options }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal focus:outline-none">
+        {options.map(([optionValue, optionLabel]) => <option key={optionValue} value={optionValue}>{optionLabel}</option>)}
+      </select>
+    </label>
+  );
+}
+
 function JobCard({ job, selected, onSelect, onSave }) {
   return (
     <article className={`rounded-md border bg-white p-4 shadow-panel ${selected ? "border-teal" : "border-slate-200"}`}>
@@ -189,6 +239,7 @@ function JobCard({ job, selected, onSelect, onSave }) {
           </div>
           <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><Building2 size={15} />{job.company || "Company not listed"}</p>
           <p className="mt-1 flex items-center gap-2 text-sm text-slate-600"><MapPin size={15} />{job.location || "Location not listed"}</p>
+          {(job.salary_min || job.salary_max) && <p className="mt-1 text-sm font-semibold text-emerald-700">{formatSalary(job.salary_min, job.salary_max)}</p>}
         </div>
         <div className="flex gap-2">
           {job.url && <a href={job.url} target="_blank" rel="noreferrer" title="Open posting" className="rounded-md border border-slate-300 p-2 text-slate-600 hover:border-teal hover:text-teal"><ExternalLink size={16} /></a>}
@@ -202,6 +253,13 @@ function JobCard({ job, selected, onSelect, onSave }) {
       </button>
     </article>
   );
+}
+
+function formatSalary(minimum, maximum) {
+  const formatter = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  if (minimum && maximum) return `${formatter.format(minimum)} - ${formatter.format(maximum)}`;
+  if (minimum) return `From ${formatter.format(minimum)}`;
+  return `Up to ${formatter.format(maximum)}`;
 }
 
 function LoadingResults() {

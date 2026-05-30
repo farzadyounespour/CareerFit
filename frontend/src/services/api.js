@@ -56,19 +56,41 @@ export async function uploadResume(file) {
   return response.json();
 }
 
-export async function searchJobs({ title, location, country, page = 1, remote = false }) {
+export async function searchJobs({
+  title,
+  location,
+  country,
+  page = 1,
+  workplace = "any",
+  skills = "",
+  experience_level = "any",
+  employment_type = "any",
+  salary_min = "",
+  salary_max = "",
+}) {
   const params = new URLSearchParams({
     title,
     country,
     page: String(page),
-    remote: String(remote),
+    workplace,
+    skills,
+    experience_level,
+    employment_type,
   });
 
   if (location) {
     params.set("location", location);
   }
+  if (salary_min) {
+    params.set("salary_min", salary_min);
+  }
+  if (salary_max) {
+    params.set("salary_max", salary_max);
+  }
 
-  const response = await fetch(`${API_BASE_URL}/jobs/search/?${params.toString()}`);
+  const response = await fetch(`${API_BASE_URL}/jobs/search/?${params.toString()}`, {
+    headers: authHeaders(),
+  });
 
   if (!response.ok) {
     const details = await response.json().catch(() => ({}));

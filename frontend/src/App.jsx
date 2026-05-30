@@ -49,6 +49,7 @@ export default function App() {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authMode, setAuthMode] = useState(null);
+  const [pendingScreen, setPendingScreen] = useState(null);
   const [activeScreen, setActiveScreen] = useState("home");
   const [profile, setProfile] = useState(initialProfile);
   const [resumeText, setResumeText] = useState("");
@@ -59,7 +60,12 @@ export default function App() {
     title: "Junior Data Analyst",
     location: "",
     country: "us",
-    remote: false,
+    workplace: "any",
+    skills: "",
+    experience_level: "any",
+    employment_type: "any",
+    salary_min: "",
+    salary_max: "",
     page: 1,
   });
   const [jobResults, setJobResults] = useState([]);
@@ -133,6 +139,15 @@ export default function App() {
     [resumeText, jobDescription],
   );
 
+  function handleNavigate(screen) {
+    if (screen !== "home" && !isSignedIn) {
+      setPendingScreen(screen);
+      setAuthMode("login");
+      return;
+    }
+    setActiveScreen(screen);
+  }
+
   async function handleAnalyze() {
     setError("");
 
@@ -186,6 +201,10 @@ export default function App() {
     }
   }
 
+  function handleDismissResumeError() {
+    setResumeUploadError("");
+  }
+
   async function handleProfileContinue() {
     setProfileSaveError("");
     if (!isSignedIn) {
@@ -218,7 +237,12 @@ export default function App() {
         title: nextSearch.title.trim(),
         location: nextSearch.location.trim(),
         country: nextSearch.country,
-        remote: nextSearch.remote,
+        workplace: nextSearch.workplace,
+        skills: nextSearch.skills.trim(),
+        experience_level: nextSearch.experience_level,
+        employment_type: nextSearch.employment_type,
+        salary_min: nextSearch.salary_min,
+        salary_max: nextSearch.salary_max,
         page: nextSearch.page,
       });
       setJobResults(result.results);
@@ -288,6 +312,7 @@ export default function App() {
     }
     setUploadedResumeId(null);
     setResumeText("");
+    setResumeUploadError("");
     setResumeUploadStatus("");
   }
 
@@ -307,9 +332,14 @@ export default function App() {
 
   async function handleLoadHistory() {
     if (!isSignedIn) {
+      setPendingScreen("history");
       setAuthMode("login");
       return;
     }
+    await loadSavedWorkspace();
+  }
+
+  async function loadSavedWorkspace() {
     const [historyResult, savedJobResult] = await Promise.all([
       fetchReportHistory(),
       fetchSavedJobs(),
@@ -326,7 +356,7 @@ export default function App() {
 
   function renderScreen() {
     if (activeScreen === "home") {
-      return <HomeScreen onNavigate={setActiveScreen} onAuthOpen={setAuthMode} />;
+      return <HomeScreen onNavigate={handleNavigate} onAuthOpen={setAuthMode} />;
     }
 
     if (activeScreen === "profile") {
@@ -358,7 +388,8 @@ export default function App() {
           isUploading={isUploadingResume}
           uploadStatus={resumeUploadStatus}
           uploadError={resumeUploadError}
-          onNext={() => setActiveScreen("job")}
+          onDismissError={handleDismissResumeError}
+          onNext={() => handleNavigate("job")}
           onDelete={handleDeleteUploadedResume}
         />
       );
@@ -440,6 +471,12 @@ export default function App() {
       summary: result.user.summary || currentProfile.summary,
     }));
     setAuthMode(null);
+    if (pendingScreen === "history") {
+      await loadSavedWorkspace();
+    } else {
+      setActiveScreen(pendingScreen || "profile");
+    }
+    setPendingScreen(null);
   }
 
   async function handleSignOut() {
@@ -449,6 +486,7 @@ export default function App() {
       clearStoredToken();
       setCurrentUser(null);
       setIsSignedIn(false);
+      setActiveScreen("home");
     }
   }
 
@@ -461,7 +499,7 @@ export default function App() {
     <>
       <AppShell
         activeScreen={activeScreen}
-        onNavigate={setActiveScreen}
+        onNavigate={handleNavigate}
         isSignedIn={isSignedIn}
         currentUser={currentUser}
         onAuthOpen={setAuthMode}
@@ -478,7 +516,10 @@ export default function App() {
           onPasswordReset={requestPasswordReset}
           onPasswordResetConfirm={confirmPasswordReset}
           linkParams={authLinkParams}
-          onClose={() => setAuthMode(null)}
+          onClose={() => {
+            setAuthMode(null);
+            setPendingScreen(null);
+          }}
         />
       )}
     </>

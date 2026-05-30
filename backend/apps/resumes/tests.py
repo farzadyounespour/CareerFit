@@ -33,6 +33,9 @@ class ResumeParserTests(SimpleTestCase):
 
 class ResumeUploadApiTests(APITestCase):
     def test_upload_returns_extracted_text(self):
+        user = User.objects.create_user(username="upload@example.com", password="careerfit-pass")
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
         resume_file = SimpleUploadedFile(
             "resume.txt",
             b"Python SQL dashboards",
@@ -44,6 +47,15 @@ class ResumeUploadApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["filename"], "resume.txt")
         self.assertIn("Python SQL", response.data["text"])
+
+    def test_upload_requires_login(self):
+        response = self.client.post(
+            "/api/resumes/upload/",
+            {"file": SimpleUploadedFile("resume.txt", b"Python SQL dashboards")},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 401)
 
     def test_signed_in_user_can_delete_own_resume(self):
         user = User.objects.create_user(username="resume@example.com", password="careerfit-pass")

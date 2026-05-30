@@ -9,6 +9,8 @@ from .services import JobSearchError, search_adzuna_jobs
 
 
 class JobSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         serializer = JobSearchSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
@@ -21,6 +23,12 @@ class JobSearchView(APIView):
                 page=serializer.validated_data.get("page", 1),
                 results_per_page=serializer.validated_data.get("results_per_page", 8),
                 remote=serializer.validated_data.get("remote", False),
+                workplace=serializer.validated_data.get("workplace", "any"),
+                skills=serializer.validated_data.get("skills", ""),
+                experience_level=serializer.validated_data.get("experience_level", "any"),
+                employment_type=serializer.validated_data.get("employment_type", "any"),
+                salary_min=serializer.validated_data.get("salary_min"),
+                salary_max=serializer.validated_data.get("salary_max"),
             )
         except JobSearchError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)

@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth.models import User
 from django.test import SimpleTestCase, override_settings
@@ -35,6 +36,29 @@ class AdzunaJobSearchTests(SimpleTestCase):
         self.assertIn("Python", jobs["results"][0]["description"])
         self.assertEqual(jobs["count"], 0)
 
+    @override_settings(ADZUNA_APP_ID="app-id", ADZUNA_APP_KEY="app-key")
+    @patch("apps.jobs.services.urlopen")
+    def test_passes_job_filters_to_adzuna(self, mock_urlopen):
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = b'{"count": 0, "results": []}'
+
+        search_adzuna_jobs(
+            "Data Analyst",
+            workplace="hybrid",
+            skills="Python SQL",
+            experience_level="senior",
+            employment_type="full_time",
+            salary_min=70000,
+            salary_max=110000,
+        )
+
+        params = parse_qs(urlparse(mock_urlopen.call_args.args[0]).query)
+        self.assertIn("Python SQL", params["what"][0])
+        self.assertIn("hybrid", params["what"][0])
+        self.assertIn("senior", params["what"][0])
+        self.assertEqual(params["salary_min"], ["70000"])
+        self.assertEqual(params["salary_max"], ["110000"])
+        self.assertEqual(params["full_time"], ["1"])
+
     @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="")
     def test_returns_sample_results_without_credentials(self):
         jobs = search_adzuna_jobs("Junior Data Analyst", "Remote")
@@ -45,6 +69,11 @@ class AdzunaJobSearchTests(SimpleTestCase):
 
 
 class JobSearchApiTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="search@example.com", password="careerfit-pass")
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
     @patch("apps.jobs.views.search_adzuna_jobs")
     def test_search_returns_results(self, mock_search):
         mock_search.return_value = {
@@ -128,3 +157,26 @@ class JobSearchApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["pagination"]["page"], 1)
         self.assertFalse(response.data["pagination"]["has_previous"])
+
+    def test_search_requires_login(self):
+        self.client.credentials()
+
+        response = self.client.get("/api/jobs/search/", {"title": "Data Analyst"})
+
+        self.assertEqual(response.status_code, 401)
+
+    @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="")
+    def test_sample_search_filters_workplace_salary_and_experience(self):
+        response = self.client.get(
+            "/api/jobs/search/",
+            {
+                "title": "Data Analyst",
+                "workplace": "remote",
+                "experience_level": "entry",
+                "employment_type": "full_time",
+                "salary_min": 60000,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([job["id"] for job in response.data["results"]], ["sample-data-analyst"])

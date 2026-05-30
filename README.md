@@ -87,11 +87,11 @@ VITE_API_BASE_URL=/api
 
 ## Current Features
 
-- Token-based sign up, login, logout, and saved workspace access.
-- PDF, DOCX, TXT, and pasted resume text input.
+- Public home page with a private, login-required workspace for profile, resume, job, report, and saved-data editing.
+- PDF, DOCX, TXT, and pasted resume text input with a fully editable preview, clear action, and dismissible upload errors.
 - Live Adzuna job search with a sample-data fallback when keys are not configured.
-- Job saving, remote-role filtering, and report history for signed-in users.
-- ATS checks for contact details, resume sections, bullet formatting, and resume length.
+- Job saving, workplace, skill, experience-level, employment-type, salary filtering, and report history.
+- Interactive ATS preparation checks for contact details, resume sections, bullet formatting, and resume length.
 - Explainable skill matching, TF-IDF cosine similarity, missing-skill analysis, and recommendations.
 - Optional OpenAI-powered coaching with explicit user consent and deterministic fallback.
 - Expiring sessions, email verification, password reset, account deletion, and saved-data cleanup.

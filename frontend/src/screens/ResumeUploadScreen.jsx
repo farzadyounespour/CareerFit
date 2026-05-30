@@ -8,6 +8,8 @@ import {
   ShieldCheck,
   Trash2,
   Upload,
+  X,
+  XCircle,
 } from "lucide-react";
 
 export default function ResumeUploadScreen({
@@ -18,12 +20,15 @@ export default function ResumeUploadScreen({
   isUploading,
   uploadStatus,
   uploadError,
+  onDismissError,
   onNext,
   onDelete,
 }) {
   const wordCount = countWords(resumeText);
   const hasResume = resumeText.trim().length > 0;
   const resumeStatus = getResumeStatus(wordCount);
+  const atsChecks = getAtsChecks(resumeText);
+  const passedChecks = atsChecks.filter((item) => item.passed).length;
 
   return (
     <section className="mx-auto max-w-6xl">
@@ -84,9 +89,12 @@ export default function ResumeUploadScreen({
               </p>
             )}
             {uploadError && (
-              <p className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm leading-6 text-rose-700">
-                {uploadError}
-              </p>
+              <div className="mt-4 flex items-start justify-between gap-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm leading-6 text-rose-700">
+                <span>{uploadError}</span>
+                <button type="button" title="Dismiss upload error" onClick={onDismissError} className="mt-0.5 shrink-0 rounded p-1 hover:bg-rose-100">
+                  <X size={15} />
+                </button>
+              </div>
             )}
           </section>
 
@@ -95,11 +103,9 @@ export default function ResumeUploadScreen({
               <ShieldCheck size={18} className="text-teal" />
               <h3 className="font-semibold text-ink">ATS preparation</h3>
             </div>
+            <p className="mt-2 text-xs font-semibold text-slate-500">{passedChecks} of {atsChecks.length} checks ready</p>
             <div className="mt-4 space-y-3">
-              <ChecklistItem text="Use clear section headings" />
-              <ChecklistItem text="Include email, phone, and location" />
-              <ChecklistItem text="Use readable bullet points" />
-              <ChecklistItem text="Keep skills tied to evidence" />
+              {atsChecks.map((item) => <ChecklistItem key={item.label} {...item} />)}
             </div>
           </section>
         </div>
@@ -112,7 +118,7 @@ export default function ResumeUploadScreen({
               </span>
               <div>
                 <h3 className="font-semibold text-ink">Resume text preview</h3>
-                <p className="text-sm text-slate-500">Review extracted text or paste your resume directly.</p>
+                <p className="text-sm text-slate-500">Review, edit, or remove all extracted text before matching.</p>
               </div>
             </div>
             <ResumeBadge status={resumeStatus} />
@@ -163,11 +169,12 @@ export default function ResumeUploadScreen({
   );
 }
 
-function ChecklistItem({ text }) {
+function ChecklistItem({ label, passed }) {
+  const Icon = passed ? CheckCircle2 : XCircle;
   return (
     <div className="flex items-center gap-3 text-sm text-slate-600">
-      <CheckCircle2 size={17} className="shrink-0 text-emerald-500" />
-      <span>{text}</span>
+      <Icon size={17} className={passed ? "shrink-0 text-emerald-500" : "shrink-0 text-rose-400"} />
+      <span>{label}</span>
     </div>
   );
 }
@@ -200,4 +207,34 @@ function getResumeStatus(wordCount) {
     return { label: "Add more detail", tone: "short" };
   }
   return { label: "Ready to match", tone: "ready" };
+}
+
+function getAtsChecks(text) {
+  const normalized = text.toLowerCase();
+  return [
+    {
+      label: "Clear summary, skills, experience, and education headings",
+      passed: ["summary", "skills", "experience", "education"].every((heading) => normalized.includes(heading)),
+    },
+    {
+      label: "Email address included",
+      passed: /[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(text),
+    },
+    {
+      label: "Phone number included",
+      passed: /(?:\+?\d[\d(). -]{8,}\d)/.test(text),
+    },
+    {
+      label: "Location included",
+      passed: /\b(location|address|city|province|state|remote|canada|united states|montreal|toronto|vancouver|ottawa|new york)\b/i.test(text),
+    },
+    {
+      label: "Readable bullet points used",
+      passed: /^\s*[-*•]\s+/m.test(text),
+    },
+    {
+      label: "Resume length between 50 and 1,200 words",
+      passed: countWords(text) >= 50 && countWords(text) <= 1200,
+    },
+  ];
 }

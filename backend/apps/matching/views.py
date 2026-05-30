@@ -14,6 +14,8 @@ from .throttles import LlmCoachingThrottle
 
 
 class AnalyzeMatchView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         serializer = AnalyzeMatchRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

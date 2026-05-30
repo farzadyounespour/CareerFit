@@ -34,7 +34,7 @@ class MatchPersistenceApiTests(APITestCase):
         self.assertEqual(response.data["ai_coaching"]["status"], "skipped")
 
     @override_settings(CAREERFIT_ENABLE_LLM=False, OPENAI_API_KEY="")
-    def test_ai_coaching_request_falls_back_when_not_configured(self):
+    def test_analysis_requires_login(self):
         response = self.client.post(
             "/api/matches/analyze/",
             {
@@ -45,9 +45,7 @@ class MatchPersistenceApiTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["ai_coaching"]["status"], "sign_in_required")
-        self.assertIn("summary", response.data)
+        self.assertEqual(response.status_code, 401)
 
     @override_settings(CAREERFIT_ENABLE_LLM=False, OPENAI_API_KEY="")
     def test_signed_in_ai_coaching_request_falls_back_when_not_configured(self):

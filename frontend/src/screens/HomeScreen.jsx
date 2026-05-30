@@ -49,7 +49,7 @@ export default function HomeScreen({ onNavigate, onAuthOpen }) {
             </button>
           </div>
           <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-slate-700">
-            <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-600" />Free to try</span>
+            <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-600" />Private workspace</span>
             <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-600" />Explainable scores</span>
             <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-600" />Real job search</span>
           </div>
@@ -124,7 +124,7 @@ export default function HomeScreen({ onNavigate, onAuthOpen }) {
         <article className="rounded-md border border-slate-200 bg-white p-6 shadow-panel">
           <span className="grid h-11 w-11 place-items-center rounded-md bg-amber-50 text-amber"><Bookmark size={20} /></span>
           <h2 className="mt-4 text-xl font-semibold text-ink">Keep the jobs and reports that matter</h2>
-          <p className="mt-2 leading-7 text-slate-600">Create an account to save postings, revisit scans, and compare how your readiness improves as you tailor your resume.</p>
+          <p className="mt-2 leading-7 text-slate-600">Create an account to search postings, save your resume workspace, revisit scans, and compare how your readiness improves as you tailor your resume.</p>
           <button type="button" onClick={() => onAuthOpen("create")} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-teal hover:text-teal/80">Create a free workspace <ArrowRight size={15} /></button>
         </article>
       </section>

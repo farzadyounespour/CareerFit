@@ -12,6 +12,31 @@ class JobSearchSerializer(serializers.Serializer):
     page = serializers.IntegerField(min_value=1, default=1, required=False)
     results_per_page = serializers.IntegerField(min_value=1, max_value=20, default=8, required=False)
     remote = serializers.BooleanField(default=False, required=False)
+    workplace = serializers.ChoiceField(
+        choices=["any", "remote", "hybrid", "on_site"],
+        default="any",
+        required=False,
+    )
+    skills = serializers.CharField(max_length=180, required=False, allow_blank=True)
+    experience_level = serializers.ChoiceField(
+        choices=["any", "internship", "entry", "mid", "senior"],
+        default="any",
+        required=False,
+    )
+    employment_type = serializers.ChoiceField(
+        choices=["any", "full_time", "part_time", "contract", "permanent"],
+        default="any",
+        required=False,
+    )
+    salary_min = serializers.IntegerField(min_value=0, required=False)
+    salary_max = serializers.IntegerField(min_value=0, required=False)
+
+    def validate(self, attrs):
+        salary_min = attrs.get("salary_min")
+        salary_max = attrs.get("salary_max")
+        if salary_min is not None and salary_max is not None and salary_max < salary_min:
+            raise serializers.ValidationError("Maximum salary must be greater than or equal to minimum salary.")
+        return attrs
 
 
 class SavedJobSerializer(serializers.Serializer):

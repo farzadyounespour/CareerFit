@@ -10,6 +10,7 @@ from .serializers import ResumeUploadSerializer
 
 class ResumeUploadView(APIView):
     parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = ResumeUploadSerializer(data=request.data)
