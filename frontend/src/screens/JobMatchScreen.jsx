@@ -1,4 +1,16 @@
-import { BriefcaseBusiness, ClipboardPaste, ExternalLink, Search, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Bookmark,
+  BriefcaseBusiness,
+  Building2,
+  CheckCircle2,
+  ClipboardPaste,
+  ExternalLink,
+  FileSearch,
+  MapPin,
+  Search,
+  Sparkles,
+} from "lucide-react";
 
 export default function JobMatchScreen({
   jobDescription,
@@ -12,162 +24,194 @@ export default function JobMatchScreen({
   isSearchingJobs,
   jobSearchError,
   jobSearchNotice,
+  onSaveJob,
+  onPageChange,
+  selectedJob,
   onAnalyze,
   isLoading,
   error,
+  useAiCoaching,
+  onAiCoachingChange,
 }) {
+  const hasJobDescription = jobDescription.trim().length > 0;
+
   return (
-    <section className="mx-auto max-w-5xl">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <section className="mx-auto max-w-7xl">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-ink">Job matching</h2>
-          <p className="mt-1 text-slate-600">Search Adzuna or paste the target job description.</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-teal">Job discovery</p>
+          <h2 className="mt-2 text-3xl font-semibold text-ink">Choose the role you want to evaluate</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">
+            Search job postings, select a role, and review the description before generating your readiness report.
+          </p>
         </div>
         <button
           type="button"
           onClick={onLoadSample}
-          className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal"
         >
           <ClipboardPaste size={16} />
-          Load sample
+          Load sample job
         </button>
       </div>
 
-      <section className="mb-5 rounded-md border border-slate-200 bg-white p-4 shadow-panel">
-        <div className="flex items-center gap-2">
-          <BriefcaseBusiness size={18} className="text-teal" />
-          <h3 className="font-semibold text-ink">Find a job posting</h3>
+      <section className="mt-6 rounded-md border border-slate-200 bg-white p-5 shadow-panel">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-md bg-emerald-50 text-teal">
+            <Search size={18} />
+          </span>
+          <div>
+            <h3 className="font-semibold text-ink">Find job postings</h3>
+            <p className="text-sm text-slate-500">Search by role and location, then choose a posting to analyze.</p>
+          </div>
         </div>
 
-        <form onSubmit={onJobSearch} className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_120px_auto]">
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Job title</span>
-            <input
-              value={jobSearch.title}
-              onChange={(event) => onJobSearchChange({ ...jobSearch, title: event.target.value })}
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal focus:outline-none"
-              placeholder="Junior Data Analyst"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Location</span>
-            <input
-              value={jobSearch.location}
-              onChange={(event) => onJobSearchChange({ ...jobSearch, location: event.target.value })}
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal focus:outline-none"
-              placeholder="New York"
-            />
-          </label>
-
+        <form onSubmit={onJobSearch} className="mt-5 grid gap-3 lg:grid-cols-[1fr_1fr_150px_auto]">
+          <SearchField label="Job title" value={jobSearch.title} onChange={(value) => onJobSearchChange({ ...jobSearch, title: value })} placeholder="Junior Data Analyst" />
+          <SearchField label="Location" value={jobSearch.location} onChange={(value) => onJobSearchChange({ ...jobSearch, location: value })} placeholder="Toronto" />
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Country</span>
-            <select
-              value={jobSearch.country}
-              onChange={(event) => onJobSearchChange({ ...jobSearch, country: event.target.value })}
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal focus:outline-none"
-            >
-              <option value="us">US</option>
+            <select value={jobSearch.country} onChange={(event) => onJobSearchChange({ ...jobSearch, country: event.target.value })} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal focus:outline-none">
+              <option value="us">United States</option>
               <option value="ca">Canada</option>
-              <option value="gb">UK</option>
+              <option value="gb">United Kingdom</option>
             </select>
           </label>
-
-          <button
-            type="submit"
-            disabled={isSearchingJobs}
-            className="mt-7 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
+          <button type="submit" disabled={isSearchingJobs} className="mt-7 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-ink px-5 text-sm font-semibold text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-slate-400">
             <Search size={16} />
-            {isSearchingJobs ? "Searching..." : "Search"}
+            {isSearchingJobs ? "Searching..." : "Search jobs"}
           </button>
         </form>
 
-        {jobSearchError && (
-          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            {jobSearchError}
-          </div>
-        )}
-
-        {jobSearchNotice && (
-          <div className="mt-4 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
-            {jobSearchNotice}
-          </div>
-        )}
-
-        {jobResults.length > 0 && (
-          <div className="mt-4 grid gap-3">
-            {jobResults.map((job) => (
-              <article key={job.id || `${job.title}-${job.company}`} className="rounded-md border border-slate-200 p-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-sm font-semibold text-ink">{job.title}</h4>
-                      <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-                        {job.source}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {[job.company, job.location].filter(Boolean).join(" · ") || "Adzuna listing"}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {job.url && (
-                      <a
-                        href={job.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        <ExternalLink size={14} />
-                        Open
-                      </a>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => onSelectJob(job)}
-                      className="rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal/90"
-                    >
-                      Use job
-                    </button>
-                  </div>
-                </div>
-                <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{job.description}</p>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <div className="rounded-md border border-slate-200 bg-white p-4 shadow-panel">
-        <label className="block">
-          <span className="text-sm font-medium text-slate-700">Job description</span>
-          <textarea
-            value={jobDescription}
-            onChange={(event) => onChange(event.target.value)}
-            className="mt-3 min-h-[360px] w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm leading-6 focus:border-teal focus:outline-none"
-            placeholder="Paste the job posting here..."
-          />
+        <label className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
+          <input type="checkbox" checked={jobSearch.remote} onChange={(event) => onJobSearchChange({ ...jobSearch, remote: event.target.checked, page: 1 })} className="h-4 w-4 accent-teal" />
+          Prefer remote opportunities
         </label>
 
-        {error && (
-          <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-            {error}
-          </div>
-        )}
+        {jobSearchError && <Notice tone="amber">{jobSearchError}</Notice>}
+        {jobSearchNotice && <Notice tone="sky">{jobSearchNotice}</Notice>}
+      </section>
 
-        <div className="mt-5 flex justify-end">
-          <button
-            type="button"
-            onClick={onAnalyze}
-            disabled={isLoading}
-            className="inline-flex items-center gap-2 rounded-md bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
+      <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_380px]">
+        <section>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-semibold text-ink">Search results</h3>
+            {jobResults.length > 0 && <span className="text-sm font-semibold text-slate-500">{jobResults.length} jobs on page {jobSearch.page}</span>}
+          </div>
+          <div className="mt-3 space-y-3">
+            {isSearchingJobs ? (
+              <LoadingResults />
+            ) : jobResults.length ? (
+              jobResults.map((job) => (
+                <JobCard key={job.id || `${job.title}-${job.company}`} job={job} selected={selectedJob?.id === job.id} onSelect={() => onSelectJob(job)} onSave={() => onSaveJob(job)} />
+              ))
+            ) : (
+              <div className="rounded-md border border-dashed border-slate-300 bg-white p-8 text-center">
+                <BriefcaseBusiness size={25} className="mx-auto text-slate-400" />
+                <p className="mt-3 font-semibold text-slate-700">Search for a role to see job postings</p>
+                <p className="mt-1 text-sm text-slate-500">You can also load a sample job or paste a description manually.</p>
+              </div>
+            )}
+          </div>
+
+          {jobResults.length > 0 && !isSearchingJobs && (
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button type="button" disabled={jobSearch.page <= 1} onClick={() => onPageChange(jobSearch.page - 1)} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300">Previous</button>
+              <span className="text-sm font-semibold text-slate-500">Page {jobSearch.page}</span>
+              <button type="button" onClick={() => onPageChange(jobSearch.page + 1)} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700">Next</button>
+            </div>
+          )}
+        </section>
+
+        <aside className="h-fit rounded-md border border-slate-200 bg-white p-5 shadow-panel">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-md bg-sky-50 text-sky-700">
+              <FileSearch size={18} />
+            </span>
+            <div>
+              <h3 className="font-semibold text-ink">Selected job</h3>
+              <p className="text-sm text-slate-500">Review or edit before analysis.</p>
+            </div>
+          </div>
+
+          {selectedJob && (
+            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-600" />
+                <div>
+                  <p className="text-sm font-semibold text-emerald-900">{selectedJob.title}</p>
+                  <p className="mt-1 text-xs leading-5 text-emerald-700">{selectedJob.company || "Selected posting"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <textarea value={jobDescription} onChange={(event) => onChange(event.target.value)} className="mt-4 min-h-[360px] w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm leading-6 focus:border-teal focus:outline-none" placeholder="Select a job posting or paste its description here..." />
+
+          {error && <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+
+          <label className="mt-4 flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+            <input type="checkbox" checked={useAiCoaching} onChange={(event) => onAiCoachingChange(event.target.checked)} className="mt-1 h-4 w-4 accent-teal" />
+            <span>
+              <span className="block text-sm font-semibold text-slate-700">Add optional AI coaching</span>
+              <span className="mt-1 block text-xs leading-5 text-slate-500">Sends the resume and selected job text to OpenAI for tailored suggestions. The readiness score works without it.</span>
+            </span>
+          </label>
+
+          <button type="button" onClick={onAnalyze} disabled={isLoading || !hasJobDescription} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-300">
             <Sparkles size={16} />
-            {isLoading ? "Analyzing..." : "Generate report"}
+            {isLoading ? "Analyzing..." : "Generate readiness report"}
           </button>
-        </div>
+        </aside>
       </div>
     </section>
   );
+}
+
+function SearchField({ label, value, onChange, placeholder }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal focus:outline-none" placeholder={placeholder} />
+    </label>
+  );
+}
+
+function JobCard({ job, selected, onSelect, onSave }) {
+  return (
+    <article className={`rounded-md border bg-white p-4 shadow-panel ${selected ? "border-teal" : "border-slate-200"}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="font-semibold text-ink">{job.title}</h4>
+            <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{job.source}</span>
+          </div>
+          <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><Building2 size={15} />{job.company || "Company not listed"}</p>
+          <p className="mt-1 flex items-center gap-2 text-sm text-slate-600"><MapPin size={15} />{job.location || "Location not listed"}</p>
+        </div>
+        <div className="flex gap-2">
+          {job.url && <a href={job.url} target="_blank" rel="noreferrer" title="Open posting" className="rounded-md border border-slate-300 p-2 text-slate-600 hover:border-teal hover:text-teal"><ExternalLink size={16} /></a>}
+          <button type="button" title="Save job" onClick={onSave} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:border-teal hover:text-teal"><Bookmark size={16} /></button>
+        </div>
+      </div>
+      <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">{job.description}</p>
+      <button type="button" onClick={onSelect} className={`mt-4 inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${selected ? "bg-emerald-50 text-teal" : "bg-teal text-white hover:bg-teal/90"}`}>
+        {selected ? <CheckCircle2 size={16} /> : <ArrowRight size={16} />}
+        {selected ? "Selected for analysis" : "Use this job"}
+      </button>
+    </article>
+  );
+}
+
+function LoadingResults() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map((item) => <div key={item} className="h-40 animate-pulse rounded-md border border-slate-200 bg-white p-4"><div className="h-4 w-48 rounded bg-slate-200" /><div className="mt-4 h-3 w-64 rounded bg-slate-100" /><div className="mt-6 h-3 w-full rounded bg-slate-100" /></div>)}
+    </div>
+  );
+}
+
+function Notice({ tone, children }) {
+  const className = tone === "sky" ? "border-sky-200 bg-sky-50 text-sky-800" : "border-amber-200 bg-amber-50 text-amber-800";
+  return <p className={`mt-4 rounded-md border px-3 py-2 text-sm ${className}`}>{children}</p>;
 }

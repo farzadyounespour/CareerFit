@@ -44,6 +44,20 @@ ADZUNA_APP_KEY=your_app_key
 
 If these credentials are not set, CareerFit still works locally by returning sample job postings for the search flow.
 
+If an Adzuna key has been shared publicly, revoke it in the Adzuna dashboard, create a new key, and update `backend/.env`.
+
+To enable optional AI resume coaching, add an OpenAI API key and explicitly enable the feature:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-5.4-mini
+CAREERFIT_ENABLE_LLM=True
+```
+
+AI coaching is opt-in for each scan. The explainable CareerFit score, ATS checks, and deterministic recommendations still work when the OpenAI key is missing, the feature is disabled, or the provider is unavailable.
+
+For deployment, set `DJANGO_DEBUG=False`, use a long random `DJANGO_SECRET_KEY`, and configure your real host and CORS origin. HTTPS redirect, secure cookies, and HSTS are enabled by default when debug mode is off.
+
 ## Frontend Setup
 
 ```bash
@@ -59,6 +73,28 @@ The frontend connects to the Django API through Vite's local `/api` proxy. For l
 ```bash
 VITE_API_BASE_URL=/api
 ```
+
+## Current Features
+
+- Token-based sign up, login, logout, and saved workspace access.
+- PDF, DOCX, TXT, and pasted resume text input.
+- Live Adzuna job search with a sample-data fallback when keys are not configured.
+- Job saving, remote-role filtering, and report history for signed-in users.
+- ATS checks for contact details, resume sections, bullet formatting, and resume length.
+- Explainable skill matching, TF-IDF cosine similarity, missing-skill analysis, and recommendations.
+- Optional OpenAI-powered coaching with explicit user consent and deterministic fallback.
+
+## Evaluation
+
+Run the small labeled baseline evaluation:
+
+```bash
+cd backend
+source .venv/bin/activate
+python -m scripts.evaluate_matching
+```
+
+The script prints precision, recall, and F1-score for the included resume/job cases.
 
 ## MVP API
 
@@ -95,11 +131,12 @@ CareerFit uses Adzuna for job search. Supported country values are `us`, `ca`, a
     "target_role": "Junior Data Analyst"
   },
   "resume_text": "Python, SQL, dashboards, projects...",
-  "job_description": "We need Python, SQL, Tableau, communication..."
+  "job_description": "We need Python, SQL, Tableau, communication...",
+  "use_llm": false
 }
 ```
 
-The response includes score summaries, matched and missing skills, requirement-level evidence, and a TF-IDF cosine similarity signal for each reviewed requirement.
+The response includes score summaries, matched and missing skills, requirement-level evidence, a TF-IDF cosine similarity signal for each reviewed requirement, and the optional AI coaching status.
 
 ### Upload Resume
 

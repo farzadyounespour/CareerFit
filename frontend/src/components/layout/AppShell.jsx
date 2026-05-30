@@ -2,6 +2,7 @@ import {
   BriefcaseBusiness,
   FileText,
   Gauge,
+  History,
   Home,
   LogIn,
   UserPlus,
@@ -14,9 +15,10 @@ const navItems = [
   { id: "resume", label: "Resume", icon: FileText },
   { id: "job", label: "Jobs", icon: BriefcaseBusiness },
   { id: "report", label: "Report", icon: Gauge },
+  { id: "history", label: "Saved", icon: History },
 ];
 
-export default function AppShell({ activeScreen, onNavigate, isSignedIn, onAuthOpen, onSignOut, children }) {
+export default function AppShell({ activeScreen, onNavigate, isSignedIn, currentUser, onAuthOpen, onSignOut, onHistory, children }) {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur lg:px-8">
@@ -41,7 +43,7 @@ export default function AppShell({ activeScreen, onNavigate, isSignedIn, onAuthO
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => onNavigate(item.id)}
+                    onClick={() => item.id === "history" ? onHistory() : onNavigate(item.id)}
                     className={`inline-flex h-10 items-center gap-2 rounded px-3 text-sm font-semibold ${
                       isActive
                         ? "bg-teal text-white shadow-sm"
@@ -58,13 +60,18 @@ export default function AppShell({ activeScreen, onNavigate, isSignedIn, onAuthO
 
           <div className="order-2 flex flex-wrap items-center gap-2 lg:order-3">
             {isSignedIn ? (
-              <button
-                type="button"
-                onClick={onSignOut}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal"
-              >
-                Sign out
-              </button>
+              <>
+                <span className="hidden text-sm font-semibold text-slate-600 sm:inline">
+                  {currentUser?.name || currentUser?.email}
+                </span>
+                <button
+                  type="button"
+                  onClick={onSignOut}
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal"
+                >
+                  Sign out
+                </button>
+              </>
             ) : (
               <>
                 <button

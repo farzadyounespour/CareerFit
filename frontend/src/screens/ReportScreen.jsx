@@ -1,11 +1,13 @@
 import {
   AlertCircle,
+  ArrowUpRight,
   CheckCircle2,
   Lightbulb,
   Printer,
   RotateCcw,
   Sparkles,
 } from "lucide-react";
+import { useState } from "react";
 
 const categoryLabels = {
   matched: "Matched",
@@ -21,7 +23,8 @@ const categoryStyles = {
   missing: "bg-rose-400",
 };
 
-export default function ReportScreen({ report }) {
+export default function ReportScreen({ report, resumeText, jobDescription, onNavigate }) {
+  const [activeDocument, setActiveDocument] = useState("report");
   if (!report) {
     return (
       <section className="mx-auto max-w-4xl rounded-md border border-slate-200 bg-white p-8 text-center shadow-panel">
@@ -31,15 +34,17 @@ export default function ReportScreen({ report }) {
     );
   }
 
-  const { summary, skills, requirements, recommendations } = report;
+  const { summary, skills, requirements, recommendations, ats, ai_coaching: aiCoaching } = report;
   const issues = {
     searchability: requirements.missing.length,
     hardSkills: skills.missing.length,
     softSkills: countMissingSoftSkills(skills.missing),
     recruiterTips: recommendations.length,
-    formatting: summary.readiness_score >= 70 ? 1 : 3,
+    formatting: ats?.issues.length || 0,
   };
   const score = summary.readiness_score;
+  const atsScore = ats?.score || 0;
+  const totalIssues = (ats?.issues.length || 0) + skills.missing.length + requirements.missing.length;
 
   return (
     <section className="mx-auto max-w-7xl">
@@ -57,6 +62,7 @@ export default function ReportScreen({ report }) {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              onClick={() => onNavigate("job")}
               className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal"
             >
               <RotateCcw size={16} />
@@ -79,12 +85,12 @@ export default function ReportScreen({ report }) {
             <div className="mt-5 flex justify-center">
               <ScoreDial value={score} />
             </div>
-            <button className="mt-6 w-full rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90">
+            <button onClick={() => onNavigate("resume")} className="mt-6 w-full rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90">
               Upload & rescan
             </button>
-            <button className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-50 px-4 py-3 text-sm font-semibold text-teal hover:bg-emerald-100">
+            <button onClick={() => document.getElementById("recommended-fixes")?.scrollIntoView({ behavior: "smooth" })} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-50 px-4 py-3 text-sm font-semibold text-teal hover:bg-emerald-100">
               <Sparkles size={16} />
-              One-click optimize
+              View recommended fixes
             </button>
 
             <div className="mt-7 space-y-5">
@@ -97,16 +103,41 @@ export default function ReportScreen({ report }) {
           </aside>
 
           <main className="bg-slate-50">
-            <div className="grid grid-cols-2 border-b border-slate-200 text-center text-sm font-semibold text-slate-600">
-              <button type="button" className="bg-white px-4 py-4 text-ink">
+            <div className="grid grid-cols-3 border-b border-slate-200 text-center text-sm font-semibold text-slate-600">
+              <button type="button" onClick={() => setActiveDocument("report")} className={`${activeDocument === "report" ? "bg-white text-ink" : "bg-slate-200"} px-4 py-4`}>
+                Scan report
+              </button>
+              <button type="button" onClick={() => setActiveDocument("resume")} className={`${activeDocument === "resume" ? "bg-white text-ink" : "bg-slate-200"} px-4 py-4`}>
                 Resume
               </button>
-              <button type="button" className="bg-slate-200 px-4 py-4">
+              <button type="button" onClick={() => setActiveDocument("job")} className={`${activeDocument === "job" ? "bg-white text-ink" : "bg-slate-200"} px-4 py-4`}>
                 Job Description
               </button>
             </div>
 
             <div className="p-5 lg:p-8">
+              {activeDocument !== "report" && (
+                <section className="mb-6 rounded-md border border-slate-200 bg-white p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="font-semibold text-ink">
+                      {activeDocument === "resume" ? "Resume text" : "Job description"}
+                    </h3>
+                    <button type="button" onClick={() => setActiveDocument("report")} className="text-sm font-semibold text-teal">
+                      Back to scan
+                    </button>
+                  </div>
+                  <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                    {activeDocument === "resume" ? resumeText : jobDescription}
+                  </pre>
+                </section>
+              )}
+              {activeDocument === "report" && (
+                <>
+              <div className="grid gap-3 md:grid-cols-3">
+                <OverviewCard label="Readiness score" value={`${score}%`} detail={readinessLabel(score)} tone="teal" />
+                <OverviewCard label="ATS structure" value={`${atsScore}%`} detail={`${ats?.issues.length || 0} formatting issues`} tone="sky" />
+                <OverviewCard label="Priority fixes" value={String(totalIssues)} detail="Review before applying" tone="amber" />
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-white px-4 py-4 shadow-sm">
                 <div className="flex items-center gap-3">
                   <Lightbulb className="text-amber" size={20} />
@@ -117,42 +148,30 @@ export default function ReportScreen({ report }) {
                     </p>
                   </div>
                 </div>
-                <button className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber hover:bg-amber-100">
-                  Get ATS tip
+                <button onClick={() => document.getElementById("ats-checks")?.scrollIntoView({ behavior: "smooth" })} className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber hover:bg-amber-100">
+                  View ATS checks
                 </button>
               </div>
 
+              <div id="ats-checks">
               <ScanSection
                 title="Searchability"
                 badge="Important"
                 intro="CareerFit checks whether your resume is easy to match against the job posting and highlights gaps that can reduce recruiter visibility."
                 tip="Fix missing or weak requirements to make your resume easier to find and understand."
               >
-                <CheckRow
-                  label="ATS tip"
-                  status={issues.searchability === 0 ? "pass" : "warn"}
-                  text={
-                    issues.searchability === 0
-                      ? "Your resume covers the core requirements found in this job posting."
-                      : `${issues.searchability} requirement${issues.searchability === 1 ? "" : "s"} need stronger resume evidence.`
-                  }
-                />
-                <CheckRow
-                  label="Contact information"
-                  status="pass"
-                  text="Add your email, phone, and location in the resume header before applying."
-                />
-                <CheckRow
-                  label="Summary"
-                  status={summary.target_role ? "pass" : "warn"}
-                  text={
-                    summary.target_role
-                      ? `Use a summary that clearly targets ${summary.target_role}.`
-                      : "Add a focused summary that names your target role."
-                  }
-                />
+                {(ats?.checks || []).map((check) => (
+                  <CheckRow
+                    key={check.id}
+                    label={check.label}
+                    status={check.passed ? "pass" : "warn"}
+                    text={check.passed ? `${check.label} detected.` : `Add or improve your ${check.label.toLowerCase()}.`}
+                  />
+                ))}
               </ScanSection>
+              </div>
 
+              <div id="recommended-fixes">
               <ScanSection
                 title="Skills match"
                 badge={`${skills.missing.length} gaps`}
@@ -186,6 +205,32 @@ export default function ReportScreen({ report }) {
                   ))}
                 </div>
               </ScanSection>
+              {aiCoaching?.status === "completed" && (
+                <ScanSection
+                  title="AI coaching"
+                  badge="Optional"
+                  intro={aiCoaching.headline}
+                  tip={aiCoaching.summary}
+                >
+                  <div className="space-y-3 p-4">
+                    {aiCoaching.recommendations.map((item) => (
+                      <article key={`${item.priority}-${item.title}`} className="rounded-md border border-slate-200 bg-white p-4">
+                        <p className="text-xs font-bold uppercase tracking-wide text-teal">{item.priority} priority</p>
+                        <p className="mt-1 text-sm font-semibold text-ink">{item.title}</p>
+                        <p className="mt-1 text-sm leading-6 text-slate-600">{item.detail}</p>
+                      </article>
+                    ))}
+                  </div>
+                </ScanSection>
+              )}
+              {aiCoaching && !["completed", "skipped"].includes(aiCoaching.status) && (
+                <p className="mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  {aiCoaching.detail}
+                </p>
+              )}
+              </div>
+              </>
+              )}
             </div>
           </main>
         </div>
@@ -206,6 +251,17 @@ function ScoreDial({ value }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function OverviewCard({ label, value, detail, tone }) {
+  const color = tone === "teal" ? "text-teal" : tone === "sky" ? "text-sky-700" : "text-amber";
+  return (
+    <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-sm font-semibold text-slate-500">{label}</p>
+      <p className={`mt-2 text-3xl font-bold ${color}`}>{value}</p>
+      <p className="mt-1 flex items-center gap-1 text-sm text-slate-600">{detail}<ArrowUpRight size={14} /></p>
+    </article>
   );
 }
 
@@ -338,4 +394,10 @@ function meterValue(issueCount) {
 function countMissingSoftSkills(missingSkills) {
   const softSkills = new Set(["communication", "teamwork", "leadership", "problem solving"]);
   return missingSkills.filter((skill) => softSkills.has(skill)).length;
+}
+
+function readinessLabel(score) {
+  if (score >= 75) return "Strong fit";
+  if (score >= 50) return "Promising, tailor it";
+  return "Needs focused improvement";
 }

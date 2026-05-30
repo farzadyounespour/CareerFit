@@ -11,11 +11,22 @@ import { useState } from "react";
 
 export default function AuthScreen({ initialMode = "create", onContinue, onClose }) {
   const [mode, setMode] = useState(initialMode);
+  const [form, setForm] = useState({ name: "", email: "", password: "", target_role: "" });
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isCreateMode = mode === "create";
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    onContinue();
+    setError("");
+    setIsSubmitting(true);
+    try {
+      await onContinue(mode, form);
+    } catch (submitError) {
+      setError(submitError.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -73,12 +84,12 @@ export default function AuthScreen({ initialMode = "create", onContinue, onClose
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {isCreateMode && (
-            <Field icon={UserRound} label="Full name" placeholder="Your name" />
+            <Field icon={UserRound} label="Full name" placeholder="Your name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
           )}
-          <Field icon={Mail} label="Email" type="email" placeholder="name@example.com" />
-          <Field icon={Lock} label="Password" type="password" placeholder="Password" hasAction />
+          <Field icon={Mail} label="Email" type="email" placeholder="name@example.com" value={form.email} onChange={(value) => setForm({ ...form, email: value })} />
+          <Field icon={Lock} label="Password" type="password" placeholder="Password" value={form.password} onChange={(value) => setForm({ ...form, password: value })} />
           {isCreateMode && (
-            <Field icon={BriefcaseBusiness} label="Target role" placeholder="Junior Data Analyst" />
+            <Field icon={BriefcaseBusiness} label="Target role" placeholder="Junior Data Analyst" value={form.target_role} onChange={(value) => setForm({ ...form, target_role: value })} />
           )}
 
           <label className="flex items-center gap-3 text-sm font-semibold text-slate-500">
@@ -88,12 +99,19 @@ export default function AuthScreen({ initialMode = "create", onContinue, onClose
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="flex h-12 w-full items-center justify-center gap-3 rounded-md bg-teal text-sm font-bold text-white shadow-[0_10px_18px_rgba(15,118,110,0.22)] hover:bg-teal/90"
           >
-            {isCreateMode ? "Create account" : "Login"}
+            {isSubmitting ? "Please wait..." : isCreateMode ? "Create account" : "Login"}
             <ArrowRight size={18} />
           </button>
         </form>
+
+        {error && (
+          <p className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {error}
+          </p>
+        )}
 
         <div className="mt-5 border-t border-slate-200 pt-5 text-center text-sm font-semibold text-slate-500">
           {isCreateMode ? "Already have an account?" : "New user?"}
@@ -114,7 +132,7 @@ export default function AuthScreen({ initialMode = "create", onContinue, onClose
   );
 }
 
-function Field({ icon: Icon, label, type = "text", placeholder, hasAction = false }) {
+function Field({ icon: Icon, label, type = "text", placeholder, value, onChange }) {
   return (
     <label className="block">
       <span className="text-sm font-semibold text-slate-600">{label}</span>
@@ -122,14 +140,13 @@ function Field({ icon: Icon, label, type = "text", placeholder, hasAction = fals
         <Icon className="text-slate-500" size={18} />
         <input
           type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          required
           className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
           placeholder={placeholder}
         />
-        {hasAction && (
-          <button type="button" title="Show password" className="text-slate-500 hover:text-teal">
-            <Eye size={18} />
-          </button>
-        )}
+        {type === "password" && <Eye className="text-slate-400" size={18} />}
       </div>
     </label>
   );
