@@ -10,7 +10,7 @@
 6. Backend extracts requirement-style phrases and skills from the job description.
 7. Backend compares each requirement with resume evidence and TF-IDF cosine similarity.
 8. Backend checks ATS-oriented resume structure and contact information.
-9. With explicit user consent, the backend may request structured OpenAI coaching suggestions.
+9. With explicit user consent, the backend may request structured coaching suggestions from local Ollama or OpenAI.
 10. Frontend displays an explainable report, ATS preparation checks, and interview prompts.
 11. Signed-in users save resume versions, search alerts, and application-tracker details.
 

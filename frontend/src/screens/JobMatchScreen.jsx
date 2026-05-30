@@ -194,7 +194,7 @@ export default function JobMatchScreen({
             <input type="checkbox" checked={useAiCoaching} onChange={(event) => onAiCoachingChange(event.target.checked)} className="mt-1 h-4 w-4 accent-teal" />
             <span>
               <span className="block text-sm font-semibold text-slate-700">Add optional AI coaching</span>
-              <span className="mt-1 block text-xs leading-5 text-slate-500">Sends the resume and selected job text to OpenAI for tailored suggestions. The readiness score works without it.</span>
+              <span className="mt-1 block text-xs leading-5 text-slate-500">Uses your configured AI coach for tailored suggestions. The readiness score works without it.</span>
             </span>
           </label>
 

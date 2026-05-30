@@ -1,4 +1,6 @@
+import json
 import logging
+from urllib.request import Request, urlopen
 
 from django.conf import settings
 from pydantic import BaseModel, Field
@@ -7,6 +9,12 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 MAX_LLM_TEXT_LENGTH = 12000
+SYSTEM_PROMPT = (
+    "You are a careful career coach. Use only the provided resume, job posting, "
+    "and deterministic CareerFit findings. Do not invent experience, credentials, "
+    "or skills. Give concise, actionable resume-tailoring advice. Avoid guarantees "
+    "about hiring outcomes."
+)
 
 
 class LLMRecommendation(BaseModel):
@@ -28,55 +36,86 @@ def enrich_match_report(match_result, resume_text, job_description, requested=Fa
     if not authorized:
         return _status("sign_in_required", "Sign in to request optional AI coaching.")
 
-    if not settings.CAREERFIT_ENABLE_LLM or not settings.OPENAI_API_KEY:
+    if not settings.CAREERFIT_ENABLE_LLM:
         return _status("not_configured", "AI coaching is not configured. Deterministic matching is still available.")
 
     try:
-        from openai import OpenAI
-
-        client = OpenAI(
-            api_key=settings.OPENAI_API_KEY,
-            timeout=settings.OPENAI_TIMEOUT_SECONDS,
-            max_retries=settings.OPENAI_MAX_RETRIES,
-        )
-        response = client.responses.parse(
-            model=settings.OPENAI_MODEL,
-            input=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a careful career coach. Use only the provided resume, job posting, "
-                        "and deterministic CareerFit findings. Do not invent experience, credentials, "
-                        "or skills. Give concise, actionable resume-tailoring advice. Avoid guarantees "
-                        "about hiring outcomes."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": _build_prompt(match_result, resume_text, job_description),
-                },
-            ],
-            text_format=LLMCoachingResult,
-            max_output_tokens=settings.OPENAI_MAX_OUTPUT_TOKENS,
-        )
-        coaching = response.output_parsed
+        if settings.CAREERFIT_LLM_PROVIDER == "ollama":
+            coaching = _request_ollama_coaching(match_result, resume_text, job_description)
+            model = settings.OLLAMA_MODEL
+        elif settings.CAREERFIT_LLM_PROVIDER == "openai":
+            if not settings.OPENAI_API_KEY:
+                return _status("not_configured", "OpenAI coaching requires an API key. Deterministic matching is still available.")
+            coaching = _request_openai_coaching(match_result, resume_text, job_description)
+            model = settings.OPENAI_MODEL
+        else:
+            return _status("not_configured", "The configured AI coaching provider is not supported.")
         if not coaching:
             return _status("unavailable", "AI coaching returned no usable result.")
-        usage = getattr(response, "usage", None)
         logger.info(
-            "Optional AI coaching completed model=%s input_tokens=%s output_tokens=%s",
-            settings.OPENAI_MODEL,
-            getattr(usage, "input_tokens", None),
-            getattr(usage, "output_tokens", None),
+            "Optional AI coaching completed provider=%s model=%s",
+            settings.CAREERFIT_LLM_PROVIDER,
+            model,
         )
         return {
             "status": "completed",
-            "model": settings.OPENAI_MODEL,
+            "provider": settings.CAREERFIT_LLM_PROVIDER,
+            "model": model,
             **coaching.model_dump(),
         }
     except Exception:
         logger.exception("Optional AI coaching request failed")
+        if settings.CAREERFIT_LLM_PROVIDER == "ollama":
+            return _status("unavailable", "Local Ollama is unavailable. Start Ollama and download the configured model, then try again. The deterministic report is complete.")
         return _status("unavailable", "AI coaching is temporarily unavailable. The deterministic report is complete.")
+
+
+def _request_openai_coaching(match_result, resume_text, job_description):
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=settings.OPENAI_API_KEY,
+        timeout=settings.OPENAI_TIMEOUT_SECONDS,
+        max_retries=settings.OPENAI_MAX_RETRIES,
+    )
+    response = client.responses.parse(
+        model=settings.OPENAI_MODEL,
+        input=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": _build_prompt(match_result, resume_text, job_description)},
+        ],
+        text_format=LLMCoachingResult,
+        max_output_tokens=settings.OPENAI_MAX_OUTPUT_TOKENS,
+    )
+    usage = getattr(response, "usage", None)
+    logger.info(
+        "OpenAI coaching usage input_tokens=%s output_tokens=%s",
+        getattr(usage, "input_tokens", None),
+        getattr(usage, "output_tokens", None),
+    )
+    return response.output_parsed
+
+
+def _request_ollama_coaching(match_result, resume_text, job_description):
+    request = Request(
+        f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/chat",
+        data=json.dumps(
+            {
+                "model": settings.OLLAMA_MODEL,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": _build_prompt(match_result, resume_text, job_description)},
+                ],
+                "format": LLMCoachingResult.model_json_schema(),
+                "stream": False,
+            }
+        ).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urlopen(request, timeout=settings.OLLAMA_TIMEOUT_SECONDS) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return LLMCoachingResult.model_validate_json(payload["message"]["content"])
 
 
 def _build_prompt(match_result, resume_text, job_description):
@@ -102,7 +141,8 @@ def _build_prompt(match_result, resume_text, job_description):
 def _status(status, detail):
     return {
         "status": status,
-        "model": settings.OPENAI_MODEL,
+        "provider": settings.CAREERFIT_LLM_PROVIDER,
+        "model": settings.OLLAMA_MODEL if settings.CAREERFIT_LLM_PROVIDER == "ollama" else settings.OPENAI_MODEL,
         "detail": detail,
         "recommendations": [],
     }

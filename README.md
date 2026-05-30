@@ -52,15 +52,29 @@ If live providers are unavailable, CareerFit still works locally by returning sa
 
 If an Adzuna key has been shared publicly, revoke it in the Adzuna dashboard, create a new key, and update `backend/.env`.
 
-To enable optional AI resume coaching, add an OpenAI API key and explicitly enable the feature:
+To enable free optional AI resume coaching locally, install [Ollama](https://ollama.com/download), download a model, and enable the feature:
 
 ```bash
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-5.4-mini
-CAREERFIT_ENABLE_LLM=True
+ollama pull gemma3:4b
 ```
 
-AI coaching is opt-in for each scan. The explainable CareerFit score, ATS checks, and deterministic recommendations still work when the OpenAI key is missing, the feature is disabled, or the provider is unavailable.
+Add these values to `backend/.env`:
+
+```bash
+CAREERFIT_ENABLE_LLM=True
+CAREERFIT_LLM_PROVIDER=ollama
+OLLAMA_MODEL=gemma3:4b
+```
+
+Ollama runs on the same computer as CareerFit, so this option does not require a paid API key. You can still use OpenAI instead:
+
+```bash
+CAREERFIT_LLM_PROVIDER=openai
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-5.4-mini
+```
+
+AI coaching is opt-in for each scan. The explainable CareerFit score, ATS checks, and deterministic recommendations still work when AI is disabled or the configured provider is unavailable.
 
 For deployment, set `DJANGO_DEBUG=False`, use a long random `DJANGO_SECRET_KEY`, and configure your real host and CORS origin. HTTPS redirect, secure cookies, and HSTS are enabled by default when debug mode is off.
 
@@ -103,7 +117,7 @@ VITE_API_BASE_URL=/api
 - Explainable skill matching, TF-IDF cosine similarity, missing-skill analysis, and recommendations.
 - Role-specific interview questions, STAR answer prompts, and a progress dashboard.
 - Persistent light and dark appearance modes across the public site and private workspace.
-- Optional OpenAI-powered coaching with explicit user consent and deterministic fallback.
+- Optional local Ollama or OpenAI-powered coaching with explicit user consent and deterministic fallback.
 - Expiring sessions, email verification, password reset, account deletion, and saved-data cleanup.
 
 ## Evaluation
