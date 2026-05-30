@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import JobMatchScreen from "./JobMatchScreen.jsx";
 
@@ -103,5 +103,54 @@ describe("JobMatchScreen", () => {
     expect(screen.getByText("python")).toBeVisible();
     expect(screen.getByText("tableau")).toBeVisible();
     expect(screen.getByRole("button", { name: "Generate full readiness report" })).toBeVisible();
+  });
+
+  it("offers a resume upload action when a job is selected without a resume", () => {
+    const onUploadResume = vi.fn();
+    render(
+      <JobMatchScreen
+        jobDescription="Build dashboards with Python and Tableau."
+        onChange={() => {}}
+        onLoadSample={() => {}}
+        jobSearch={{
+          title: "Data Analyst",
+          location: "",
+          country: "ca",
+          workplace: "any",
+          skills: "",
+          experience_level: "any",
+          employment_type: "any",
+          salary_min: "",
+          salary_max: "",
+          page: 1,
+        }}
+        onJobSearchChange={() => {}}
+        jobResults={[]}
+        onJobSearch={() => {}}
+        onSelectJob={() => {}}
+        isSearchingJobs={false}
+        jobSearchError=""
+        jobSearchNotice=""
+        onSaveJob={() => {}}
+        onCreateSearchAlert={() => {}}
+        onPageChange={() => {}}
+        pagination={{ page: 1, count: 0, total_pages: 0, has_previous: false, has_next: false }}
+        selectedJob={{ id: "job-1", title: "Data Analyst", company: "Example Co" }}
+        matchPreview={null}
+        isPreviewingMatch={false}
+        matchPreviewError="Upload or select a resume to calculate your match score."
+        hasResume={false}
+        onUploadResume={onUploadResume}
+        onAnalyze={() => {}}
+        isLoading={false}
+        error=""
+        useAiCoaching={false}
+        onAiCoachingChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Compare this job with your resume")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Upload resume" }));
+    expect(onUploadResume).toHaveBeenCalledOnce();
   });
 });

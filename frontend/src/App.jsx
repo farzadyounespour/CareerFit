@@ -604,6 +604,8 @@ export default function App() {
           matchPreview={matchPreview}
           isPreviewingMatch={isPreviewingMatch}
           matchPreviewError={matchPreviewError}
+          hasResume={resumeText.trim().length > 0}
+          onUploadResume={() => handleNavigate("resume")}
           onAnalyze={handleAnalyze}
           isLoading={isLoading}
           error={error}
