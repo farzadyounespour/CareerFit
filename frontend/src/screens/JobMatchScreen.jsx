@@ -94,17 +94,13 @@ export default function JobMatchScreen({
           </button>
         </form>
 
-        <div className="mt-5 border-t border-slate-100 pt-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <details className="mt-5 border-t border-slate-100 pt-4">
+          <summary className="cursor-pointer list-none">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
               <SlidersHorizontal size={16} className="text-teal" />
-              Refine results
+              Filters and alerts
             </div>
-            <button type="button" onClick={onCreateSearchAlert} className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal">
-              <BellPlus size={16} />
-              Save search alert
-            </button>
-          </div>
+          </summary>
           <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <SelectField label="Workplace" value={jobSearch.workplace} onChange={(value) => onJobSearchChange({ ...jobSearch, workplace: value, page: 1 })} options={[
               ["any", "Any workplace"],
@@ -132,7 +128,11 @@ export default function JobMatchScreen({
               <NumberField label="Salary max" value={jobSearch.salary_max} onChange={(value) => onJobSearchChange({ ...jobSearch, salary_max: value, page: 1 })} placeholder="90000" />
             </div>
           </div>
-        </div>
+          <button type="button" onClick={onCreateSearchAlert} className="mt-3 inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal">
+            <BellPlus size={16} />
+            Save search alert
+          </button>
+        </details>
 
         {jobSearchError && <Notice tone="amber">{jobSearchError}</Notice>}
         {jobSearchNotice && <Notice tone="sky">{jobSearchNotice}</Notice>}
@@ -175,8 +175,8 @@ export default function JobMatchScreen({
               <FileSearch size={18} />
             </span>
             <div>
-              <h3 className="font-semibold text-ink">Selected job</h3>
-              <p className="text-sm text-slate-500">Review or edit before analysis.</p>
+              <h3 className="font-semibold text-ink">Resume comparison</h3>
+              <p className="text-sm text-slate-500">Select a job to check your fit.</p>
             </div>
           </div>
 
@@ -225,17 +225,23 @@ export default function JobMatchScreen({
             <MatchPreview preview={matchPreview} />
           )}
 
-          <textarea value={jobDescription} onChange={(event) => onChange(event.target.value)} className="mt-4 min-h-[360px] w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm leading-6 focus:border-teal focus:outline-none" placeholder="Select a job posting or paste its description here..." />
+          <details className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3" open={!selectedJob}>
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">Job description</summary>
+            <textarea value={jobDescription} onChange={(event) => onChange(event.target.value)} className="mt-3 min-h-[240px] w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-3 text-sm leading-6 focus:border-teal focus:outline-none" placeholder="Select a job posting or paste its description here..." />
+          </details>
 
           {error && <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
-          <label className="mt-4 flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-            <input type="checkbox" checked={useAiCoaching} onChange={(event) => onAiCoachingChange(event.target.checked)} className="mt-1 h-4 w-4 accent-teal" />
-            <span>
-              <span className="block text-sm font-semibold text-slate-700">Add optional AI coaching</span>
-              <span className="mt-1 block text-xs leading-5 text-slate-500">Uses your configured AI coach for tailored suggestions. The readiness score works without it.</span>
-            </span>
-          </label>
+          <details className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">Full report options</summary>
+            <label className="mt-3 flex items-start gap-3 border-t border-slate-200 pt-3">
+              <input type="checkbox" checked={useAiCoaching} onChange={(event) => onAiCoachingChange(event.target.checked)} className="mt-1 h-4 w-4 accent-teal" />
+              <span>
+                <span className="block text-sm font-semibold text-slate-700">Add optional AI coaching</span>
+                <span className="mt-1 block text-xs leading-5 text-slate-500">Uses your configured AI coach for tailored suggestions.</span>
+              </span>
+            </label>
+          </details>
 
           <button type="button" onClick={onAnalyze} disabled={isLoading || !hasJobDescription} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-300">
             <Sparkles size={16} />
@@ -337,7 +343,7 @@ function JobCard({ job, selected, onSelect, onSave }) {
       <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">{job.description}</p>
       <button type="button" onClick={onSelect} className={`mt-4 inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${selected ? "bg-emerald-50 text-teal" : "bg-teal text-white hover:bg-teal/90"}`}>
         {selected ? <CheckCircle2 size={16} /> : <ArrowRight size={16} />}
-        {selected ? "Selected for analysis" : "Use this job"}
+        {selected ? "Selected for comparison" : "Compare with resume"}
       </button>
     </article>
   );

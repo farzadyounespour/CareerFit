@@ -5,7 +5,6 @@ import {
   FileCheck2,
   FileText,
   FolderOpen,
-  Info,
   Save,
   ShieldCheck,
   Trash2,
@@ -58,40 +57,8 @@ export default function ResumeUploadScreen({
         </button>
       </div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[340px_1fr]">
+      <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
-          <section className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
-            <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-md bg-sky-50 text-sky-700"><FolderOpen size={20} /></span>
-              <div>
-                <h3 className="font-semibold text-ink">Resume versions</h3>
-                <p className="text-sm text-slate-500">Reuse tailored copies for each application.</p>
-              </div>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <input value={versionTitle} onChange={(event) => setVersionTitle(event.target.value)} className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal focus:outline-none" placeholder="Version name" />
-              <button type="button" title="Save resume version" disabled={!hasResume || !versionTitle.trim()} onClick={() => {
-                onSaveVersion(versionTitle.trim());
-                setVersionTitle("");
-              }} className="rounded-md bg-teal p-2 text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-300">
-                <Save size={17} />
-              </button>
-            </div>
-            <div className="mt-3 max-h-44 space-y-2 overflow-auto">
-              {resumeVersions.length ? resumeVersions.map((resume) => (
-                <div key={resume.id} className="flex items-center gap-1 rounded-md border border-slate-200 px-1 py-1 hover:border-teal hover:bg-emerald-50">
-                  <button type="button" title={`Load ${resume.title}`} onClick={() => onLoadVersion(resume)} className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded px-2 py-1 text-left text-sm">
-                    <span className="truncate font-semibold text-slate-700">{resume.title}</span>
-                    <FolderOpen size={15} className="shrink-0 text-teal" />
-                  </button>
-                  <button type="button" title={`Remove ${resume.title}`} onClick={() => onDeleteVersion(resume.id)} className="shrink-0 rounded p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              )) : <p className="text-sm leading-6 text-slate-500">Save the edited text when you want to keep a reusable version.</p>}
-            </div>
-          </section>
-
           <section className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
             <div className="flex items-center gap-3">
               <span className="grid h-11 w-11 place-items-center rounded-md bg-emerald-50 text-teal">
@@ -103,13 +70,15 @@ export default function ResumeUploadScreen({
               </div>
             </div>
 
-            <label className="mt-5 flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center hover:border-teal hover:bg-emerald-50/40">
-              <Upload size={25} className="text-teal" />
-              <span className="mt-3 text-sm font-semibold text-slate-700">
-                {isUploading ? "Extracting resume text..." : "Choose a resume file"}
+            <label className="mt-4 flex cursor-pointer items-center gap-4 rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-4 hover:border-teal hover:bg-emerald-50/40">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-md bg-white text-teal">
+                <Upload size={22} />
               </span>
-              <span className="mt-1 text-xs leading-5 text-slate-500">
-                CareerFit keeps the extracted text visible so you can check it before analysis.
+              <span>
+                <span className="block text-sm font-semibold text-slate-700">
+                {isUploading ? "Extracting resume text..." : "Choose a resume file"}
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-slate-500">PDF, DOCX, or TXT up to 5 MB</span>
               </span>
               <input
                 type="file"
@@ -139,71 +108,95 @@ export default function ResumeUploadScreen({
           </section>
 
           <section className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={18} className="text-teal" />
-              <h3 className="font-semibold text-ink">ATS preparation</h3>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-md bg-sky-50 text-sky-700">
+                  <FileText size={19} />
+                </span>
+                <div>
+                  <h3 className="font-semibold text-ink">Resume text</h3>
+                  <p className="text-sm text-slate-500">Review the extracted text or paste your resume.</p>
+                </div>
+              </div>
+              <ResumeBadge status={resumeStatus} />
             </div>
-            <p className="mt-2 text-xs font-semibold text-slate-500">{passedChecks} of {atsChecks.length} checks ready</p>
-            <div className="mt-4 space-y-3">
-              {atsChecks.map((item) => <ChecklistItem key={item.label} {...item} />)}
+
+            <textarea
+              value={resumeText}
+              onChange={(event) => onChange(event.target.value)}
+              className="mt-5 min-h-[420px] w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm leading-6 focus:border-teal focus:outline-none"
+              placeholder="Paste your resume content here..."
+            />
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+              <div className="flex flex-wrap gap-4 text-sm text-slate-500">
+                <span>{wordCount.toLocaleString()} words</span>
+                <span>{resumeText.length.toLocaleString()} characters</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {hasResume && (
+                  <button type="button" onClick={onDelete} className="inline-flex items-center gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">
+                    <Trash2 size={15} />
+                    Clear resume
+                  </button>
+                )}
+                <button type="button" onClick={onNext} disabled={!hasResume} className="inline-flex items-center gap-2 rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-300">
+                  Continue to jobs
+                  <ArrowRight size={15} />
+                </button>
+              </div>
             </div>
           </section>
         </div>
 
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-5">
+          <section className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
             <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 place-items-center rounded-md bg-sky-50 text-sky-700">
-                <FileText size={19} />
-              </span>
+              <span className="grid h-10 w-10 place-items-center rounded-md bg-sky-50 text-sky-700"><FolderOpen size={18} /></span>
               <div>
-                <h3 className="font-semibold text-ink">Resume text preview</h3>
-                <p className="text-sm text-slate-500">Review, edit, or remove all extracted text before matching.</p>
+                <h3 className="font-semibold text-ink">Saved versions</h3>
+                <p className="text-sm text-slate-500">Tailored resume copies</p>
               </div>
             </div>
-            <ResumeBadge status={resumeStatus} />
-          </div>
-
-          <textarea
-            value={resumeText}
-            onChange={(event) => onChange(event.target.value)}
-            className="mt-5 min-h-[460px] w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm leading-6 focus:border-teal focus:outline-none"
-            placeholder="Paste your resume content here, or choose a PDF, DOCX, or TXT file to extract the text automatically..."
-          />
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-            <div className="flex flex-wrap gap-4 text-sm text-slate-500">
-              <span>{wordCount.toLocaleString()} words</span>
-              <span>{resumeText.length.toLocaleString()} characters</span>
+            <div className="mt-4 flex gap-2">
+              <input value={versionTitle} onChange={(event) => setVersionTitle(event.target.value)} className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal focus:outline-none" placeholder="Version name" />
+              <button type="button" title="Save resume version" disabled={!hasResume || !versionTitle.trim()} onClick={() => {
+                onSaveVersion(versionTitle.trim());
+                setVersionTitle("");
+              }} className="rounded-md bg-teal p-2 text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-300">
+                <Save size={17} />
+              </button>
             </div>
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <Info size={15} />
-              Text remains editable before matching
+            <div className="mt-3 max-h-48 space-y-2 overflow-auto">
+              {resumeVersions.length ? resumeVersions.map((resume) => (
+                <div key={resume.id} className="flex items-center gap-1 rounded-md border border-slate-200 px-1 py-1 hover:border-teal hover:bg-emerald-50">
+                  <button type="button" title={`Load ${resume.title}`} onClick={() => onLoadVersion(resume)} className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded px-2 py-1 text-left text-sm">
+                    <span className="truncate font-semibold text-slate-700">{resume.title}</span>
+                    <FolderOpen size={15} className="shrink-0 text-teal" />
+                  </button>
+                  <button type="button" title={`Remove ${resume.title}`} onClick={() => onDeleteVersion(resume.id)} className="shrink-0 rounded p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              )) : <p className="text-sm leading-6 text-slate-500">No saved versions yet.</p>}
             </div>
-          </div>
-        </section>
-      </div>
+          </section>
 
-      <div className="mt-6 flex justify-end">
-        {hasResume && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="mr-3 inline-flex items-center gap-2 rounded-md border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-rose-700 hover:bg-rose-50"
-          >
-            <Trash2 size={16} />
-            Clear resume
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={!hasResume}
-          className="inline-flex items-center gap-2 rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          Continue to jobs
-          <ArrowRight size={16} />
-        </button>
+          <details className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
+            <summary className="cursor-pointer list-none">
+              <div className="flex items-center gap-3">
+                <ShieldCheck size={18} className="text-teal" />
+                <div>
+                  <h3 className="font-semibold text-ink">ATS preparation</h3>
+                  <p className="text-xs font-semibold text-slate-500">{passedChecks} of {atsChecks.length} checks ready</p>
+                </div>
+              </div>
+            </summary>
+            <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+              {atsChecks.map((item) => <ChecklistItem key={item.label} {...item} />)}
+            </div>
+          </details>
+        </div>
       </div>
     </section>
   );
