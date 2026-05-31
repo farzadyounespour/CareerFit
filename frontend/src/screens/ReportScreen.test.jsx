@@ -80,6 +80,11 @@ describe("ReportScreen", () => {
     expect(screen.getByText("65% of job match")).toBeVisible();
     expect(screen.getByText("optional")).toBeVisible();
     expect(screen.getByText("Want more specific improvements?")).toBeVisible();
+    expect(screen.getByText("Resume section examples")).toBeVisible();
+    expect(screen.getByText("Professional summary header")).toBeVisible();
+    expect(screen.getByText("Experience bullet example")).toBeVisible();
+    expect(screen.getByText("Optional certifications header")).toBeVisible();
+    expect(screen.getByText(/Data Analyst with experience using python, sql/)).toBeVisible();
 
     fireEvent.click(screen.getByLabelText("Mark priority 1: Add evidence for missing skills complete"));
     expect(screen.getByText(/1 of \d+ complete/)).toBeVisible();

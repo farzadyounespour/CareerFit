@@ -4,6 +4,7 @@ import {
   Calculator,
   CheckCircle2,
   ChevronDown,
+  Copy,
   FileText,
   ListChecks,
   MessagesSquare,
@@ -66,6 +67,7 @@ export default function ReportScreen({
   const atsIssues = ats.issues || [];
   const requirementGaps = requirements.missing.length + requirements.weak.length;
   const priorityActions = buildPriorityActions(skills, requirements, atsIssues, recommendations);
+  const resumeExamples = buildResumeExamples(summary, skills, atsIssues);
   const completedActionCount = priorityActions.filter((item) => completedActions.has(actionKey(item))).length;
   const aiCompleted = aiCoaching?.status === "completed";
   const scoreBreakdown = summary.score_breakdown || {
@@ -164,6 +166,8 @@ export default function ReportScreen({
               ))}
             </div>
           </section>
+
+          <ResumeExamples examples={resumeExamples} />
 
           <section className="rounded-md border border-slate-200 bg-white shadow-panel">
             <div className="border-b border-slate-200 p-5">
@@ -283,6 +287,45 @@ export default function ReportScreen({
             <SummaryRow label="ATS improvements" value={atsIssues.length} />
           </dl>
         </aside>
+      </div>
+    </section>
+  );
+}
+
+function ResumeExamples({ examples }) {
+  const [copiedId, setCopiedId] = useState("");
+  if (!examples.length) return null;
+
+  async function copyExample(example) {
+    await navigator.clipboard?.writeText(example.content);
+    setCopiedId(example.id);
+    window.setTimeout(() => setCopiedId(""), 1800);
+  }
+
+  return (
+    <section className="rounded-md border border-sky-200 bg-white shadow-panel">
+      <div className="border-b border-sky-200 bg-sky-50 p-5">
+        <h3 className="text-lg font-semibold text-ink">Resume section examples</h3>
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          Use these as fill-in templates. Keep only sections that are true for you and replace every bracketed placeholder with your real details.
+        </p>
+      </div>
+      <div className="grid divide-y divide-slate-100 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+        {examples.map((example) => (
+          <article key={example.id} className="min-w-0 p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-ink">{example.title}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{example.detail}</p>
+              </div>
+              <button type="button" title={`Copy ${example.title}`} onClick={() => copyExample(example)} className="shrink-0 rounded p-2 text-slate-500 hover:bg-sky-50 hover:text-sky-700">
+                <Copy size={16} />
+              </button>
+            </div>
+            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700">{example.content}</pre>
+            {copiedId === example.id && <p className="mt-2 text-xs font-semibold text-emerald-700">Copied example</p>}
+          </article>
+        ))}
       </div>
     </section>
   );
@@ -589,6 +632,66 @@ function buildPriorityActions(skills, requirements, atsIssues, recommendations) 
   recommendations.forEach((item) => actions.push({ ...item, priority: item.priority || "medium" }));
 
   return uniqueActions(actions).slice(0, 5);
+}
+
+function buildResumeExamples(summary, skills, atsIssues) {
+  const issues = new Set(atsIssues);
+  const targetRole = summary.target_role || "Target Role";
+  const detectedSkills = skills.matched.slice(0, 5);
+  const skillText = detectedSkills.length ? detectedSkills.join(", ") : "[relevant skills you genuinely use]";
+  const strongestSkill = detectedSkills[0] || "[relevant skill]";
+  const examples = [];
+
+  if (issues.has("Summary section") || issues.has("Target-role language")) {
+    examples.push({
+      id: "summary",
+      title: "Professional summary header",
+      detail: "Add a short section near the top and connect it to your real background.",
+      content: `PROFESSIONAL SUMMARY\n${targetRole} with experience using ${skillText}. [Add one truthful strength or measurable result relevant to the role.]`,
+    });
+  }
+  if (["Experience section", "Experience dates", "Readable bullet points", "Measurable achievements"].some((issue) => issues.has(issue))) {
+    examples.push({
+      id: "experience",
+      title: "Experience or project structure",
+      detail: "A consistent header, dates, and outcome-focused bullets are easier for recruiters and ATS tools to scan.",
+      content: `EXPERIENCE\n[Role or project name] | [Organization] | [Month Year - Month Year]\n- Used ${strongestSkill} to [describe your real action], resulting in [truthful outcome or number].\n- Collaborated with [team or stakeholder] to [describe a real contribution].`,
+    });
+  }
+  if (issues.has("Skills section")) {
+    examples.push({
+      id: "skills",
+      title: "Skills header",
+      detail: "Group the skills already supported by your resume. Add other skills only when they reflect your real experience.",
+      content: `SKILLS\n${skillText}`,
+    });
+  }
+  if (issues.has("Education section")) {
+    examples.push({
+      id: "education",
+      title: "Education header",
+      detail: "Use a recognizable section label and keep the format simple.",
+      content: "EDUCATION\n[Degree or diploma] | [School name] | [Graduation year]\n[Relevant coursework, honors, or academic project if applicable]",
+    });
+  }
+  if (!examples.some((example) => example.id === "experience")) {
+    examples.push({
+      id: "experience-bullet",
+      title: "Experience bullet example",
+      detail: "Use this structure to make one real project or work contribution easier to understand.",
+      content: `EXPERIENCE\n[Role or project name] | [Organization] | [Dates]\n- Used ${strongestSkill} to [describe your real action], resulting in [truthful outcome or number].`,
+    });
+  }
+  if (examples.length < 4) {
+    examples.push({
+      id: "certifications",
+      title: "Optional certifications header",
+      detail: "Include this section only when you have a relevant certification, course credential, or license.",
+      content: "CERTIFICATIONS\n[Certification or credential name] | [Issuing organization] | [Year]\n[Credential URL or expiration date if relevant]",
+    });
+  }
+
+  return examples.slice(0, 4);
 }
 
 function comparePriority(first, second) {
