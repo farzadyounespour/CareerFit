@@ -18,6 +18,10 @@ button {
   font: inherit;
 }
 
+.careerfit-hero-scrim {
+  background: rgb(255 255 255 / 0.84);
+}
+
 .dark {
   color-scheme: dark;
 }
@@ -25,6 +29,10 @@ button {
 .dark body {
   background: #101722;
   color: #e7edf5;
+}
+
+.dark .careerfit-hero-scrim {
+  background: rgb(16 23 34 / 0.88);
 }
 
 .dark .bg-white,

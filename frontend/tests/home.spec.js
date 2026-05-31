@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 
 test("protected resume workflow prompts guests to sign in", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Find jobs that fit your experience." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Turn each job posting into a stronger application." })).toBeVisible();
   await page.getByRole("button", { name: "Check your resume fit" }).click();
   await expect(page.getByRole("dialog", { name: "CareerFit account" })).toBeVisible();
 });

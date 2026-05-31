@@ -1,7 +1,7 @@
 import {
   ArrowRight,
   BadgeCheck,
-  Bookmark,
+  BellRing,
   BriefcaseBusiness,
   CheckCircle2,
   ClipboardCheck,
@@ -14,32 +14,63 @@ import {
 } from "lucide-react";
 
 const workflowItems = [
-  { label: "Add your resume", detail: "Upload PDF, DOCX, or TXT and review the extracted text.", icon: ClipboardCheck },
-  { label: "Choose a job", detail: "Search postings or paste a job description you already found.", icon: Search },
-  { label: "Improve your fit", detail: "Review ATS checks, skill gaps, and requirement evidence.", icon: Gauge },
+  { label: "Add your resume", detail: "Upload your current resume once.", icon: ClipboardCheck },
+  { label: "Choose a job", detail: "Search live postings or paste one.", icon: Search },
+  { label: "Review your fit", detail: "See ATS checks, evidence, and gaps.", icon: Gauge },
+  { label: "Improve and track", detail: "Tailor your resume and follow up.", icon: BriefcaseBusiness },
 ];
 
 const reportItems = [
   "ATS structure checks",
   "Matched and missing skills",
   "Requirement-by-requirement evidence",
-  "Practical resume recommendations",
+  "Prioritized resume improvements",
+];
+
+const connectedItems = [
+  {
+    icon: Search,
+    title: "Find relevant postings",
+    detail: "Search by role, location, workplace preference, salary, and experience level.",
+    action: "Search jobs",
+    destination: "job",
+  },
+  {
+    icon: Target,
+    title: "Tailor with clear evidence",
+    detail: "Understand why requirements match and focus your edits on the gaps that matter.",
+    action: "Check a resume",
+    destination: "resume",
+  },
+  {
+    icon: BellRing,
+    title: "Keep applications moving",
+    detail: "Save roles, organize each stage, and catch overdue follow-ups before they slip.",
+    action: "Open tracker",
+    destination: "history",
+  },
 ];
 
 export default function HomeScreen({ onNavigate, onAuthOpen }) {
   return (
     <section>
-      <div className="mx-auto grid max-w-7xl overflow-hidden rounded-md border border-slate-200 bg-white shadow-panel lg:grid-cols-[0.95fr_1.3fr]">
-        <div className="flex min-h-[520px] flex-col justify-center px-5 py-8 md:px-8 lg:px-12 lg:py-12">
+      <section className="relative mx-auto min-h-[560px] max-w-7xl overflow-hidden rounded-md border border-slate-200 bg-white shadow-panel">
+        <img
+          src="/images/careerfit-hero.png"
+          alt="CareerFit workspace showing a resume, job postings, and readiness score"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div className="careerfit-hero-scrim absolute inset-y-0 left-0 w-full lg:w-[62%]" />
+        <div className="relative flex min-h-[560px] max-w-2xl flex-col justify-center px-5 py-10 md:px-10 lg:px-14">
           <p className="text-sm font-semibold uppercase tracking-wide text-teal">Job search and resume readiness</p>
-          <h1 className="mt-4 text-4xl font-semibold leading-tight text-ink lg:text-6xl">
-            Find jobs that fit your experience.
+          <h1 className="mt-4 text-4xl font-semibold leading-tight text-ink md:text-5xl lg:text-6xl">
+            Turn each job posting into a stronger application.
           </h1>
-          <p className="mt-5 max-w-lg text-lg leading-8 text-slate-700">
-            Search real postings, compare your resume, and understand exactly what to improve before you apply.
+          <p className="mt-5 max-w-xl text-lg leading-8 text-slate-700">
+            Upload your resume, find real roles, and see the most useful improvements before you apply.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <button type="button" onClick={() => onNavigate("profile")} className="inline-flex items-center gap-2 rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90">
+            <button type="button" onClick={() => onNavigate("resume")} className="inline-flex items-center gap-2 rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90">
               Check your resume fit
               <ArrowRight size={16} />
             </button>
@@ -51,28 +82,24 @@ export default function HomeScreen({ onNavigate, onAuthOpen }) {
           <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-slate-700">
             <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-600" />Private workspace</span>
             <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-600" />Explainable scores</span>
-            <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-600" />Real job search</span>
+            <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-600" />Free to start</span>
           </div>
         </div>
-        <img
-          src="/images/careerfit-hero.png"
-          alt="CareerFit workspace showing a resume, job postings, and readiness score"
-          className="h-full min-h-[360px] w-full object-cover object-center lg:min-h-[520px]"
-        />
-      </div>
+      </section>
 
-      <section className="mx-auto max-w-7xl py-10">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-teal">How it works</p>
-          <h2 className="mt-2 text-3xl font-semibold text-ink">From job search to a stronger application</h2>
+      <section className="mx-auto max-w-7xl py-12">
+        <div className="max-w-2xl">
+          <p className="text-sm font-semibold uppercase tracking-wide text-teal">One connected workflow</p>
+          <h2 className="mt-2 text-3xl font-semibold text-ink">Know what to do next at every step</h2>
+          <p className="mt-3 leading-7 text-slate-600">Start with the resume you already have. CareerFit helps you use it more intentionally for each opportunity.</p>
         </div>
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
+        <div className="mt-7 grid border-y border-slate-200 bg-white md:grid-cols-4">
           {workflowItems.map((item, index) => {
             const Icon = item.icon;
             return (
-              <article key={item.label} className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
+              <article key={item.label} className="border-b border-slate-200 p-5 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="grid h-11 w-11 place-items-center rounded-md bg-emerald-50 text-teal"><Icon size={20} /></span>
+                  <span className="grid h-10 w-10 place-items-center rounded-md bg-emerald-50 text-teal"><Icon size={19} /></span>
                   <span className="text-sm font-bold text-slate-300">0{index + 1}</span>
                 </div>
                 <h3 className="mt-4 font-semibold text-ink">{item.label}</h3>
@@ -84,12 +111,12 @@ export default function HomeScreen({ onNavigate, onAuthOpen }) {
       </section>
 
       <section className="border-y border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 lg:grid-cols-[1fr_0.9fr] lg:px-0">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-teal">Resume scan report</p>
-            <h2 className="mt-2 text-3xl font-semibold text-ink">See what a recruiter and ATS may notice first</h2>
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 lg:grid-cols-[0.95fr_1.05fr] lg:px-0">
+          <div className="self-center">
+            <p className="text-sm font-semibold uppercase tracking-wide text-teal">Useful, not mysterious</p>
+            <h2 className="mt-2 text-3xl font-semibold text-ink">See what your score means and what to improve first</h2>
             <p className="mt-4 max-w-2xl leading-7 text-slate-600">
-              CareerFit does more than show one percentage. It explains which requirements are supported, where your evidence is weak, and which resume details need attention.
+              CareerFit keeps the report practical. Review the evidence behind your match, work through a prioritized checklist, and rescan after you update your resume.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {reportItems.map((item) => (
@@ -105,46 +132,102 @@ export default function HomeScreen({ onNavigate, onAuthOpen }) {
             </button>
           </div>
 
-          <div className="grid content-center gap-3 sm:grid-cols-2">
-            <InsightCard icon={ShieldCheck} label="ATS structure" value="9 checks" detail="Contact details, sections, bullets, and length" tone="emerald" />
-            <InsightCard icon={Target} label="Skills coverage" value="Clear gaps" detail="Matched and missing job-specific skills" tone="amber" />
-            <InsightCard icon={FileSearch} label="Evidence" value="Per requirement" detail="See why each requirement earned its score" tone="sky" />
-            <InsightCard icon={Sparkles} label="Next steps" value="Actionable" detail="Focus your next resume edits where they matter" tone="indigo" />
-          </div>
+          <ReportPreview />
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-5 py-10 lg:grid-cols-[1fr_1fr]">
-        <article className="rounded-md border border-slate-200 bg-white p-6 shadow-panel">
-          <span className="grid h-11 w-11 place-items-center rounded-md bg-sky-50 text-sky-700"><BriefcaseBusiness size={20} /></span>
-          <h2 className="mt-4 text-xl font-semibold text-ink">Search jobs without leaving CareerFit</h2>
-          <p className="mt-2 leading-7 text-slate-600">Search by title, location, country, and remote preference. Select any result and start a resume comparison immediately.</p>
-          <button type="button" onClick={() => onNavigate("job")} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-teal hover:text-teal/80">Explore job postings <ArrowRight size={15} /></button>
-        </article>
-        <article className="rounded-md border border-slate-200 bg-white p-6 shadow-panel">
-          <span className="grid h-11 w-11 place-items-center rounded-md bg-amber-50 text-amber"><Bookmark size={20} /></span>
-          <h2 className="mt-4 text-xl font-semibold text-ink">Keep the jobs and reports that matter</h2>
-          <p className="mt-2 leading-7 text-slate-600">Create an account to search postings, save your resume workspace, revisit scans, and compare how your readiness improves as you tailor your resume.</p>
-          <button type="button" onClick={() => onAuthOpen("create")} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-teal hover:text-teal/80">Create a free workspace <ArrowRight size={15} /></button>
-        </article>
+      <section className="mx-auto max-w-7xl py-12">
+        <div className="max-w-2xl">
+          <p className="text-sm font-semibold uppercase tracking-wide text-teal">More than a single score</p>
+          <h2 className="mt-2 text-3xl font-semibold text-ink">Keep the whole search in one place</h2>
+        </div>
+        <div className="mt-7 grid gap-8 lg:grid-cols-3">
+          {connectedItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <article key={item.title} className="border-t-2 border-slate-200 pt-5">
+                <span className="grid h-10 w-10 place-items-center rounded-md bg-sky-50 text-sky-700"><Icon size={19} /></span>
+                <h3 className="mt-4 text-lg font-semibold text-ink">{item.title}</h3>
+                <p className="mt-2 leading-7 text-slate-600">{item.detail}</p>
+                <button type="button" onClick={() => onNavigate(item.destination)} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-teal hover:text-teal/80">
+                  {item.action}
+                  <ArrowRight size={15} />
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="border-y border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-5 px-4 py-9 md:flex-row md:items-center lg:px-0">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-teal">Your job search workspace</p>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">Save resumes, reports, jobs, and follow-ups together.</h2>
+          </div>
+          <button type="button" onClick={() => onAuthOpen("create")} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90">
+            Create a free workspace
+            <ArrowRight size={16} />
+          </button>
+        </div>
       </section>
     </section>
   );
 }
 
-function InsightCard({ icon: Icon, label, value, detail, tone }) {
+function ReportPreview() {
+  return (
+    <article className="overflow-hidden rounded-md border border-slate-200 bg-slate-50 shadow-panel">
+      <header className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Readiness report</p>
+          <p className="mt-1 font-semibold text-ink">Data Analyst</p>
+        </div>
+        <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-teal">Resume compared</span>
+      </header>
+      <div className="grid gap-5 p-5 sm:grid-cols-[auto_1fr]">
+        <div className="flex flex-col items-center justify-center rounded-md border border-slate-200 bg-white p-5">
+          <div className="grid h-28 w-28 place-items-center rounded-full bg-[conic-gradient(#0f766e_0deg,#0f766e_280deg,#dbe5ec_280deg,#dbe5ec_360deg)]">
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-white">
+              <span className="text-2xl font-bold text-ink">78%</span>
+            </div>
+          </div>
+          <p className="mt-3 text-sm font-semibold text-ink">Readiness score</p>
+          <p className="mt-1 text-center text-xs leading-5 text-slate-500">A useful starting point for your next edit.</p>
+        </div>
+        <div className="space-y-3">
+          <PreviewMetric label="ATS structure" value="8 of 9 checks" width="88%" tone="emerald" />
+          <PreviewMetric label="Skills coverage" value="12 of 16 matched" width="75%" tone="sky" />
+          <PreviewMetric label="Requirement evidence" value="6 of 8 supported" width="75%" tone="amber" />
+          <div className="rounded-md border border-slate-200 bg-white p-3">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Sparkles size={14} className="text-teal" />Next priority</p>
+            <p className="mt-2 text-sm font-semibold text-ink">Add evidence for Tableau and stakeholder reporting.</p>
+          </div>
+        </div>
+      </div>
+      <footer className="flex flex-wrap gap-x-5 gap-y-2 border-t border-slate-200 bg-white px-5 py-3 text-xs font-semibold text-slate-600">
+        <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-emerald-600" />Explainable match</span>
+        <span className="inline-flex items-center gap-1.5"><FileSearch size={14} className="text-sky-700" />Specific improvements</span>
+      </footer>
+    </article>
+  );
+}
+
+function PreviewMetric({ label, value, width, tone }) {
   const colors = {
-    emerald: "bg-emerald-50 text-emerald-700",
-    amber: "bg-amber-50 text-amber",
-    sky: "bg-sky-50 text-sky-700",
-    indigo: "bg-indigo-50 text-indigo-700",
+    emerald: "bg-emerald-500",
+    sky: "bg-sky-500",
+    amber: "bg-amber-500",
   };
   return (
-    <article className="rounded-md border border-slate-200 bg-slate-50 p-4">
-      <span className={`grid h-9 w-9 place-items-center rounded-md ${colors[tone]}`}><Icon size={17} /></span>
-      <p className="mt-4 text-sm font-semibold text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-ink">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
-    </article>
+    <div className="rounded-md border border-slate-200 bg-white p-3">
+      <div className="flex items-center justify-between gap-3 text-xs font-semibold">
+        <span className="text-slate-600">{label}</span>
+        <span className="text-ink">{value}</span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div className={`h-full rounded-full ${colors[tone]}`} style={{ width }} />
+      </div>
+    </div>
   );
 }
