@@ -1,10 +1,12 @@
 import {
+  AlertTriangle,
   ArrowRight,
   BriefcaseBusiness,
   CalendarDays,
   FileClock,
   Gauge,
   Pencil,
+  Search,
   Trash2,
   X,
 } from "lucide-react";
@@ -25,6 +27,12 @@ export default function HistoryScreen({ history, savedJobs, resumeVersions, onOp
   const [draft, setDraft] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [query, setQuery] = useState("");
+  const [attentionOnly, setAttentionOnly] = useState(false);
+  const attentionJobs = savedJobs.filter(needsAttention);
+  const visibleJobs = savedJobs
+    .filter((job) => matchesQuery(job, query))
+    .filter((job) => !attentionOnly || needsAttention(job));
 
   function openEditor(job) {
     setEditingJobId(job.id);
@@ -70,10 +78,30 @@ export default function HistoryScreen({ history, savedJobs, resumeVersions, onOp
         <p className="mt-2 max-w-3xl text-slate-600">Track your stage, next follow-up, recruiter details, notes, and the tailored resume used for each application.</p>
       </div>
 
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <TrackerMetric label="Tracked jobs" value={savedJobs.length} />
+        <TrackerMetric label="Needs attention" value={attentionJobs.length} tone={attentionJobs.length ? "amber" : "teal"} />
+        <TrackerMetric label="Interviews" value={savedJobs.filter((job) => job.status === "interview").length} />
+      </div>
+
+      <section className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-panel">
+        <label className="flex min-w-[240px] flex-1 items-center gap-2 rounded-md border border-slate-300 px-3 focus-within:border-teal">
+          <Search size={16} className="shrink-0 text-slate-400" />
+          <span className="sr-only">Search tracked jobs</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full bg-transparent py-2 text-sm outline-none" placeholder="Search title, company, recruiter, or notes" />
+        </label>
+        <label className="flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 hover:border-teal hover:text-teal">
+          <input type="checkbox" checked={attentionOnly} onChange={(event) => setAttentionOnly(event.target.checked)} className="h-4 w-4 accent-teal" />
+          <AlertTriangle size={15} />
+          Needs attention
+        </label>
+        {(query || attentionOnly) && <button type="button" onClick={() => { setQuery(""); setAttentionOnly(false); }} className="inline-flex items-center gap-1 rounded px-2 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 hover:text-ink"><X size={15} />Clear</button>}
+      </section>
+
       <section className="mt-6 overflow-x-auto pb-3">
         <div className="grid min-w-[1320px] grid-cols-7 gap-3">
           {stages.map(([stage, label]) => {
-            const jobs = savedJobs.filter((job) => job.status === stage);
+            const jobs = visibleJobs.filter((job) => job.status === stage).sort(compareNextAction);
             return (
               <div key={stage} className="rounded-md border border-slate-200 bg-slate-100/70 p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -85,12 +113,8 @@ export default function HistoryScreen({ history, savedJobs, resumeVersions, onOp
                     <article key={job.id} className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
                       <p className="text-sm font-semibold leading-5 text-ink">{job.title}</p>
                       <p className="mt-1 truncate text-xs text-slate-500">{job.company || "Company not listed"}</p>
-                      {(job.follow_up_date || job.interview_date) && (
-                        <p className="mt-3 flex items-center gap-1 text-xs font-semibold text-teal">
-                          <CalendarDays size={13} />
-                          {job.interview_date ? `Interview ${formatDate(job.interview_date)}` : `Follow up ${formatDate(job.follow_up_date)}`}
-                        </p>
-                      )}
+                      <JobNextAction job={job} />
+                      {(job.recruiter_name || job.resume_version_title) && <p className="mt-2 truncate text-xs text-slate-500">{job.recruiter_name ? `Recruiter: ${job.recruiter_name}` : `Resume: ${job.resume_version_title}`}</p>}
                       <select value={job.status} onChange={(event) => onUpdateJob(job.id, { status: event.target.value })} className="mt-3 w-full rounded border border-slate-300 px-2 py-2 text-xs font-semibold text-slate-600 focus:border-teal focus:outline-none">
                         {stages.map(([value, stageLabel]) => <option key={value} value={value}>{stageLabel}</option>)}
                       </select>
@@ -101,7 +125,7 @@ export default function HistoryScreen({ history, savedJobs, resumeVersions, onOp
                       </div>
                     </article>
                   ))}
-                  {!jobs.length && <p className="rounded-md border border-dashed border-slate-300 bg-white/70 px-3 py-5 text-center text-xs leading-5 text-slate-400">No applications</p>}
+                  {!jobs.length && <p className="rounded-md border border-dashed border-slate-300 bg-white/70 px-3 py-5 text-center text-xs leading-5 text-slate-400">{query || attentionOnly ? "No matching applications" : "No applications"}</p>}
                 </div>
               </div>
             );
@@ -179,6 +203,76 @@ export default function HistoryScreen({ history, savedJobs, resumeVersions, onOp
       </section>
     </section>
   );
+}
+
+function TrackerMetric({ label, value, tone = "teal" }) {
+  const className = tone === "amber" ? "text-amber" : "text-teal";
+  return (
+    <article className="rounded-md border border-slate-200 bg-white px-4 py-3 shadow-panel">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className={`mt-1 text-2xl font-bold ${className}`}>{value}</p>
+    </article>
+  );
+}
+
+function JobNextAction({ job }) {
+  const action = nextAction(job);
+  if (!action) return null;
+  if (action.missing) {
+    return <p className="mt-3 flex items-center gap-1 text-xs font-semibold text-amber"><AlertTriangle size={13} />Add a follow-up date</p>;
+  }
+  return (
+    <p className={`mt-3 flex items-center gap-1 text-xs font-semibold ${action.overdue ? "text-rose-600" : "text-teal"}`}>
+      {action.overdue ? <AlertTriangle size={13} /> : <CalendarDays size={13} />}
+      {action.overdue ? "Overdue: " : ""}{action.label} {formatDate(action.date)}
+    </p>
+  );
+}
+
+function matchesQuery(job, query) {
+  if (!query.trim()) return true;
+  const searchableText = [job.title, job.company, job.location, job.recruiter_name, job.notes].join(" ").toLowerCase();
+  return searchableText.includes(query.trim().toLowerCase());
+}
+
+function needsAttention(job) {
+  const action = nextAction(job);
+  return Boolean(action && (action.missing || action.date <= dateDaysFromNow(7)));
+}
+
+function compareNextAction(first, second) {
+  return sortableNextActionDate(first).localeCompare(sortableNextActionDate(second));
+}
+
+function nextAction(job) {
+  if (job.interview_date) return { label: "Interview", date: job.interview_date, overdue: job.interview_date < today() };
+  if (job.follow_up_date) return { label: "Follow up", date: job.follow_up_date, overdue: job.follow_up_date < today() };
+  if (["applied", "interview"].includes(job.status)) return { label: "Follow up", date: "", missing: true };
+  return null;
+}
+
+function sortableNextActionDate(job) {
+  const action = nextAction(job);
+  if (action?.missing) return "0000-00-00";
+  return action?.date || "9999-12-31";
+}
+
+function today() {
+  const date = new Date();
+  return formatLocalDate(date);
+}
+
+function dateDaysFromNow(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return formatLocalDate(date);
+}
+
+function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function TextField({ label, value, onChange, type = "text", placeholder = "" }) {

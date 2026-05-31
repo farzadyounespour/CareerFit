@@ -85,7 +85,7 @@ describe("JobMatchScreen", () => {
         selectedJob={{ id: "job-1", title: "Data Analyst", company: "Example Co" }}
         matchPreview={{
           summary: { match_score: 76, readiness_score: 68 },
-          skills: { matched: ["python", "sql"], missing: ["tableau"] },
+          skills: { matched: ["python", "sql"], missing: ["tableau"], missing_details: [{ name: "tableau", priority: "low" }] },
         }}
         isPreviewingMatch={false}
         matchPreviewError=""
@@ -101,8 +101,62 @@ describe("JobMatchScreen", () => {
     expect(screen.getByText("76%")).toBeVisible();
     expect(screen.getByText("68%")).toBeVisible();
     expect(screen.getByText("python")).toBeVisible();
-    expect(screen.getByText("tableau")).toBeVisible();
+    expect(screen.getByText("tableau · optional")).toBeVisible();
     expect(screen.getByRole("button", { name: "Generate full readiness report" })).toBeVisible();
+  });
+
+  it("shows active filters and clears them without changing the role or location", () => {
+    const onJobSearchChange = vi.fn();
+    render(
+      <JobMatchScreen
+        jobDescription=""
+        onChange={() => {}}
+        onLoadSample={() => {}}
+        jobSearch={{
+          title: "Data Analyst",
+          location: "Montreal",
+          country: "ca",
+          workplace: "hybrid",
+          skills: "Python SQL",
+          experience_level: "entry",
+          employment_type: "full_time",
+          salary_min: "60000",
+          salary_max: "",
+          page: 2,
+        }}
+        onJobSearchChange={onJobSearchChange}
+        jobResults={[]}
+        onJobSearch={() => {}}
+        onSelectJob={() => {}}
+        isSearchingJobs={false}
+        jobSearchError=""
+        jobSearchNotice=""
+        onSaveJob={() => {}}
+        onCreateSearchAlert={() => {}}
+        onPageChange={() => {}}
+        pagination={{ page: 2, count: 0, total_pages: 0, has_previous: false, has_next: false }}
+        selectedJob={null}
+        onAnalyze={() => {}}
+        isLoading={false}
+        error=""
+        useAiCoaching={false}
+        onAiCoachingChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Active filters")).toBeVisible();
+    expect(screen.getAllByText("Hybrid")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(onJobSearchChange).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Data Analyst",
+      location: "Montreal",
+      workplace: "any",
+      skills: "",
+      experience_level: "any",
+      employment_type: "any",
+      salary_min: "",
+      page: 1,
+    }));
   });
 
   it("offers a resume upload action when a job is selected without a resume", () => {

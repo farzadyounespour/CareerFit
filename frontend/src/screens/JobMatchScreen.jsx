@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Upload,
+  X,
 } from "lucide-react";
 
 export default function JobMatchScreen({
@@ -45,6 +46,20 @@ export default function JobMatchScreen({
 }) {
   const hasJobDescription = jobDescription.trim().length > 0;
   const totalPages = pagination.total_pages || 1;
+  const activeFilters = getActiveFilters(jobSearch);
+
+  function clearFilters() {
+    onJobSearchChange({
+      ...jobSearch,
+      workplace: "any",
+      skills: "",
+      experience_level: "any",
+      employment_type: "any",
+      salary_min: "",
+      salary_max: "",
+      page: 1,
+    });
+  }
 
   return (
     <section className="mx-auto max-w-7xl">
@@ -134,6 +149,19 @@ export default function JobMatchScreen({
           </button>
         </details>
 
+        {activeFilters.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Active filters</span>
+            {activeFilters.map((filter) => (
+              <span key={filter} className="rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-teal">{filter}</span>
+            ))}
+            <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-ink">
+              <X size={13} />
+              Clear filters
+            </button>
+          </div>
+        )}
+
         {jobSearchError && <Notice tone="amber">{jobSearchError}</Notice>}
         {jobSearchNotice && <Notice tone="sky">{jobSearchNotice}</Notice>}
       </section>
@@ -142,7 +170,7 @@ export default function JobMatchScreen({
         <section>
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-semibold text-ink">Search results</h3>
-            {jobResults.length > 0 && <span className="text-sm font-semibold text-slate-500">{jobResults.length} jobs on page {jobSearch.page}</span>}
+            {jobResults.length > 0 && <span className="text-sm font-semibold text-slate-500">{pagination.count || jobResults.length} results · page {jobSearch.page}</span>}
           </div>
           <div className="mt-3 space-y-3">
             {isSearchingJobs ? (
@@ -169,7 +197,7 @@ export default function JobMatchScreen({
           )}
         </section>
 
-        <aside className="h-fit rounded-md border border-slate-200 bg-white p-5 shadow-panel">
+        <aside className="h-fit rounded-md border border-slate-200 bg-white p-5 shadow-panel xl:sticky xl:top-24">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-md bg-sky-50 text-sky-700">
               <FileSearch size={18} />
@@ -256,6 +284,7 @@ export default function JobMatchScreen({
 function MatchPreview({ preview }) {
   const matchedSkills = preview.skills.matched.slice(0, 5);
   const missingSkills = preview.skills.missing.slice(0, 5);
+  const missingPriorities = new Map((preview.skills.missing_details || []).map((item) => [item.name, item.priority]));
 
   return (
     <section className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3">
@@ -265,7 +294,7 @@ function MatchPreview({ preview }) {
         <ScoreSummary label="Readiness" value={preview.summary.readiness_score} />
       </div>
       <SkillSummary label="Matched skills" skills={matchedSkills} emptyText="No clear matches yet" tone="emerald" />
-      <SkillSummary label="Missing skills" skills={missingSkills} emptyText="No missing skills found" tone="amber" />
+      <SkillSummary label="Missing skills" skills={missingSkills} priorities={missingPriorities} emptyText="No missing skills found" tone="amber" />
     </section>
   );
 }
@@ -279,14 +308,14 @@ function ScoreSummary({ label, value }) {
   );
 }
 
-function SkillSummary({ label, skills, emptyText, tone }) {
+function SkillSummary({ label, skills, priorities = new Map(), emptyText, tone }) {
   const className = tone === "emerald" ? "bg-white text-teal" : "bg-amber-100 text-amber-900";
   return (
     <div className="mt-3">
       <p className="text-xs font-semibold text-slate-600">{label}</p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {skills.length
-          ? skills.map((skill) => <span key={skill} className={`rounded px-2 py-1 text-xs font-semibold ${className}`}>{skill}</span>)
+          ? skills.map((skill) => <span key={skill} className={`rounded px-2 py-1 text-xs font-semibold ${className}`}>{skill}{priorities.get(skill) === "low" ? " · optional" : ""}</span>)
           : <span className="text-xs text-slate-500">{emptyText}</span>}
       </div>
     </div>
@@ -334,6 +363,12 @@ function JobCard({ job, selected, onSelect, onSave }) {
           <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><Building2 size={15} />{job.company || "Company not listed"}</p>
           <p className="mt-1 flex items-center gap-2 text-sm text-slate-600"><MapPin size={15} />{job.location || "Location not listed"}</p>
           {(job.salary_min || job.salary_max) && <p className="mt-1 text-sm font-semibold text-emerald-700">{formatSalary(job.salary_min, job.salary_max)}</p>}
+          {job.salary_text && !job.salary_min && !job.salary_max && <p className="mt-1 text-sm font-semibold text-emerald-700">{job.salary_text}</p>}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {job.workplace && <JobTag>{formatLabel(job.workplace)}</JobTag>}
+            {job.employment_type && <JobTag>{formatLabel(job.employment_type)}</JobTag>}
+            {job.experience_level && <JobTag>{formatLabel(job.experience_level)}</JobTag>}
+          </div>
         </div>
         <div className="flex gap-2">
           {job.url && <a href={job.url} target="_blank" rel="noreferrer" title="Open posting" className="rounded-md border border-slate-300 p-2 text-slate-600 hover:border-teal hover:text-teal"><ExternalLink size={16} /></a>}
@@ -347,6 +382,25 @@ function JobCard({ job, selected, onSelect, onSave }) {
       </button>
     </article>
   );
+}
+
+function JobTag({ children }) {
+  return <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{children}</span>;
+}
+
+function formatLabel(value) {
+  return value.replaceAll("_", "-").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getActiveFilters(jobSearch) {
+  return [
+    jobSearch.workplace !== "any" ? formatLabel(jobSearch.workplace) : "",
+    jobSearch.skills ? `Skills: ${jobSearch.skills}` : "",
+    jobSearch.experience_level !== "any" ? formatLabel(jobSearch.experience_level) : "",
+    jobSearch.employment_type !== "any" ? formatLabel(jobSearch.employment_type) : "",
+    jobSearch.salary_min ? `Min salary: ${jobSearch.salary_min}` : "",
+    jobSearch.salary_max ? `Max salary: ${jobSearch.salary_max}` : "",
+  ].filter(Boolean);
 }
 
 function formatSalary(minimum, maximum) {

@@ -76,6 +76,9 @@ describe("ReportScreen", () => {
     expect(screen.getByText("optional")).toBeVisible();
     expect(screen.getByText("Want more specific improvements?")).toBeVisible();
 
+    fireEvent.click(screen.getByLabelText("Mark priority 1: Add evidence for missing skills complete"));
+    expect(screen.getByText(/1 of \d+ complete/)).toBeVisible();
+
     fireEvent.click(screen.getByRole("button", { name: "Get specific improvements" }));
     expect(onRequestAiCoaching).toHaveBeenCalledOnce();
   });

@@ -38,6 +38,7 @@ export default function ReportScreen({
   aiCoachingError = "",
 }) {
   const [activeDocument, setActiveDocument] = useState("resume");
+  const [completedActions, setCompletedActions] = useState(new Set());
   if (!report) {
     return (
       <section className="mx-auto max-w-4xl rounded-md border border-slate-200 bg-white p-8 text-center shadow-panel">
@@ -62,6 +63,7 @@ export default function ReportScreen({
   const atsIssues = ats.issues || [];
   const requirementGaps = requirements.missing.length + requirements.weak.length;
   const priorityActions = buildPriorityActions(skills, requirements, atsIssues, recommendations);
+  const completedActionCount = priorityActions.filter((item) => completedActions.has(actionKey(item))).length;
   const aiCompleted = aiCoaching?.status === "completed";
   const scoreBreakdown = summary.score_breakdown || {
     requirement_evidence: { score: matchScore, weight: 65 },
@@ -125,17 +127,28 @@ export default function ReportScreen({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-ink">Improve these first</h3>
-                  <p className="mt-1 text-sm text-slate-600">A short action plan for the biggest gaps in this application.</p>
+                  <p className="mt-1 text-sm text-slate-600">Mark each fix as you tailor your resume, then update the resume and rescan.</p>
                 </div>
-                <span className="rounded bg-amber-50 px-2 py-1 text-xs font-bold text-amber-900">
-                  {priorityActions.length} priorit{priorityActions.length === 1 ? "y" : "ies"}
+                <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-teal">
+                  {completedActionCount} of {priorityActions.length} complete
                 </span>
+              </div>
+              <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-teal transition-all" style={{ width: `${priorityActions.length ? (completedActionCount / priorityActions.length) * 100 : 100}%` }} />
               </div>
             </div>
             <div className="divide-y divide-slate-100">
               {priorityActions.map((item, index) => (
-                <article key={`${item.title}-${index}`} className="grid gap-3 p-5 sm:grid-cols-[32px_1fr]">
-                  <span className="grid h-7 w-7 place-items-center rounded bg-slate-100 text-xs font-bold text-slate-600">{index + 1}</span>
+                <article key={`${item.title}-${index}`} className={`grid gap-3 p-5 sm:grid-cols-[32px_1fr] ${completedActions.has(actionKey(item)) ? "bg-emerald-50/40" : ""}`}>
+                  <label className="grid h-7 w-7 cursor-pointer place-items-center rounded bg-slate-100 text-xs font-bold text-slate-600">
+                    <input
+                      type="checkbox"
+                      aria-label={`Mark priority ${index + 1}: ${item.title} complete`}
+                      checked={completedActions.has(actionKey(item))}
+                      onChange={() => toggleCompletedAction(item, setCompletedActions)}
+                      className="h-4 w-4 accent-teal"
+                    />
+                  </label>
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold text-ink">{item.title}</p>
@@ -269,6 +282,23 @@ export default function ReportScreen({
       </div>
     </section>
   );
+}
+
+function actionKey(item) {
+  return `${item.title}-${item.detail}`;
+}
+
+function toggleCompletedAction(item, setCompletedActions) {
+  const key = actionKey(item);
+  setCompletedActions((currentActions) => {
+    const nextActions = new Set(currentActions);
+    if (nextActions.has(key)) {
+      nextActions.delete(key);
+    } else {
+      nextActions.add(key);
+    }
+    return nextActions;
+  });
 }
 
 function ScoreCard({ label, value, detail }) {
