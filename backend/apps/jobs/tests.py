@@ -2,12 +2,15 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, override_settings
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from .services import (
     JobSearchError,
+    import_job_from_url,
     search_adzuna_jobs,
     search_arbeitnow_jobs,
     search_jobs,
@@ -160,11 +163,38 @@ class AdditionalJobProviderTests(SimpleTestCase):
         self.assertEqual(result["provider_errors"][0]["provider"], "Arbeitnow")
 
 
+class JobUrlImportTests(SimpleTestCase):
+    @patch("apps.jobs.services.socket.getaddrinfo", return_value=[(None, None, None, None, ("93.184.216.34", 443))])
+    @patch("apps.jobs.services.build_opener")
+    def test_imports_schema_org_job_posting(self, mock_build_opener, _mock_getaddrinfo):
+        mock_build_opener.return_value.open.return_value.__enter__.return_value.headers = {"Content-Type": "text/html"}
+        mock_build_opener.return_value.open.return_value.__enter__.return_value.read.return_value = b"""
+        <script type="application/ld+json">
+        {"@type":"JobPosting","title":"Data Analyst","description":"Build dashboards with Python.",
+         "hiringOrganization":{"name":"Example Co"},
+         "jobLocation":{"address":{"addressLocality":"Montreal","addressRegion":"QC","addressCountry":"CA"}}}
+        </script>
+        """
+
+        job = import_job_from_url("https://example.com/jobs/analyst")
+
+        self.assertEqual(job["title"], "Data Analyst")
+        self.assertEqual(job["company"], "Example Co")
+        self.assertEqual(job["location"], "Montreal, QC, CA")
+
+    def test_rejects_local_job_url(self):
+        with self.assertRaisesMessage(ValueError, "public web URLs"):
+            import_job_from_url("http://127.0.0.1/jobs/analyst")
+
+
 class JobSearchApiTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="search@example.com", password="careerfit-pass")
         token = Token.objects.create(user=self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+    def tearDown(self):
+        cache.clear()
 
     @patch("apps.jobs.views.search_jobs")
     def test_search_returns_results(self, mock_search):
@@ -315,6 +345,72 @@ class JobSearchApiTests(APITestCase):
         self.assertEqual(response.data["job"]["status"], "interview")
         self.assertEqual(response.data["job"]["excitement"], 5)
         self.assertEqual(response.data["job"]["follow_up_date"].isoformat(), "2026-06-04")
+
+    def test_saved_job_packet_keeps_tasks_drafts_and_interview_notes(self):
+        create_response = self.client.post(
+            "/api/jobs/saved/",
+            {"title": "Data Analyst", "company": "Example Co", "description": "Build dashboards."},
+            format="json",
+        )
+        job_id = create_response.data["id"]
+
+        patch_response = self.client.patch(
+            f"/api/jobs/saved/{job_id}/",
+            {
+                "personal_pitch": "I build useful dashboards.",
+                "interview_notes": "Ask about the analytics team.",
+                "tasks": [{"id": "task-1", "title": "Send follow-up", "due_date": "2026-06-04", "completed": False}],
+                "star_stories": [{"id": "story-1", "title": "Dashboard project", "notes": "Reduced manual reporting."}],
+            },
+            format="json",
+        )
+        drafts_response = self.client.post(f"/api/jobs/saved/{job_id}/drafts/", {}, format="json")
+
+        self.assertEqual(patch_response.status_code, 200)
+        self.assertEqual(patch_response.data["job"]["tasks"][0]["title"], "Send follow-up")
+        self.assertIn("Data Analyst", drafts_response.data["job"]["cover_letter"])
+        self.assertIn("Follow-up", drafts_response.data["job"]["follow_up_email"])
+
+    @patch("apps.jobs.views.generate_application_packet")
+    def test_saved_job_packet_can_use_optional_ai_drafts(self, mock_generate):
+        mock_generate.return_value = {
+            "cover_letter": "AI-assisted truthful cover letter.",
+            "follow_up_email": "AI-assisted follow-up email.",
+        }
+        create_response = self.client.post(
+            "/api/jobs/saved/",
+            {"title": "Data Analyst", "description": "Build dashboards."},
+            format="json",
+        )
+
+        response = self.client.post(
+            f"/api/jobs/saved/{create_response.data['id']}/drafts/",
+            {"use_ai": True},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["ai_enhanced"])
+        self.assertEqual(response.data["job"]["cover_letter"], "AI-assisted truthful cover letter.")
+
+    def test_tracker_csv_export_and_import(self):
+        self.client.post(
+            "/api/jobs/saved/",
+            {"title": "Data Analyst", "company": "Example Co", "description": "Build dashboards."},
+            format="json",
+        )
+
+        export_response = self.client.get("/api/jobs/saved/csv/")
+        import_response = self.client.post(
+            "/api/jobs/saved/csv/",
+            {"file": SimpleUploadedFile("tracker.csv", b"title,company,status\nDesigner,Studio Co,applied\n", content_type="text/csv")},
+            format="multipart",
+        )
+
+        self.assertEqual(export_response.status_code, 200)
+        self.assertIn(b"Data Analyst", export_response.content)
+        self.assertEqual(import_response.status_code, 201)
+        self.assertEqual(import_response.data["created"], 1)
 
     def test_search_alert_can_be_created_paused_and_deleted(self):
         create_response = self.client.post(

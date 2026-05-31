@@ -1,14 +1,21 @@
 import json
+import ipaddress
 import re
+import socket
 from html import unescape
+from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.parse import urlencode, urlparse
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 from django.conf import settings
 
 
 class JobSearchError(ValueError):
+    pass
+
+
+class JobImportError(ValueError):
     pass
 
 
@@ -69,6 +76,150 @@ SAMPLE_JOBS = [
         "source": "Sample",
     },
 ]
+
+
+def import_job_from_url(url):
+    _validate_public_url(url)
+    request = Request(url, headers={"User-Agent": "CareerFit job importer/1.0"})
+    opener = build_opener(_SafeRedirectHandler())
+    try:
+        with opener.open(request, timeout=10) as response:
+            content_type = response.headers.get("Content-Type", "")
+            if content_type and "html" not in content_type.lower():
+                raise JobImportError("The job URL did not return an HTML page.")
+            html = response.read(1_000_001)
+    except JobImportError:
+        raise
+    except (HTTPError, URLError, TimeoutError, ValueError) as exc:
+        raise JobImportError("Unable to load that job posting URL.") from exc
+    if len(html) > 1_000_000:
+        raise JobImportError("The job posting page is too large to import.")
+
+    parser = _JobPageParser()
+    try:
+        parser.feed(html.decode("utf-8", errors="replace"))
+    except Exception as exc:
+        raise JobImportError("Unable to read that job posting page.") from exc
+    payload = parser.job_posting()
+    description = _strip_html(payload.get("description") or parser.description or "")
+    if not description:
+        raise JobImportError("No readable job description was found. Paste the description manually.")
+    hiring_organization = payload.get("hiringOrganization") or {}
+    location = _format_imported_location(payload.get("jobLocation"))
+    return {
+        "id": "",
+        "title": payload.get("title") or parser.title or "Imported job posting",
+        "company": hiring_organization.get("name", "") if isinstance(hiring_organization, dict) else "",
+        "location": location,
+        "description": description,
+        "url": url,
+        "source": urlparse(url).netloc,
+        "employment_type": _normalize_employment_type(payload.get("employmentType") or ""),
+    }
+
+
+def build_packet_drafts(job, candidate_name=""):
+    name = candidate_name or "Candidate"
+    role = job.title or "the role"
+    company = job.company or "your team"
+    return {
+        "cover_letter": (
+            f"Dear Hiring Team,\n\n"
+            f"I am interested in the {role} opportunity at {company}. My background includes experience that "
+            f"connects with the responsibilities in this posting. I would welcome the opportunity to discuss "
+            f"how my skills can support your team.\n\n"
+            f"Sincerely,\n{name}"
+        ),
+        "follow_up_email": (
+            f"Subject: Follow-up on {role} application\n\n"
+            f"Hello,\n\nI am following up on my application for the {role} position at {company}. "
+            f"I remain interested in the opportunity and would be glad to provide any additional information.\n\n"
+            f"Thank you,\n{name}"
+        ),
+    }
+
+
+class _SafeRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _validate_public_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+class _JobPageParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.title = ""
+        self.description = ""
+        self.json_ld = []
+        self._capture_title = False
+        self._capture_json = False
+        self._text = []
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        if tag == "title":
+            self._capture_title = True
+            self._text = []
+        if tag == "meta":
+            name = (attributes.get("name") or attributes.get("property") or "").lower()
+            if name in {"description", "og:description"} and not self.description:
+                self.description = attributes.get("content", "")
+        if tag == "script" and (attributes.get("type") or "").lower() == "application/ld+json":
+            self._capture_json = True
+            self._text = []
+
+    def handle_endtag(self, tag):
+        if tag == "title" and self._capture_title:
+            self.title = "".join(self._text).strip()
+            self._capture_title = False
+            self._text = []
+        if tag == "script" and self._capture_json:
+            try:
+                self.json_ld.append(json.loads("".join(self._text)))
+            except json.JSONDecodeError:
+                pass
+            self._capture_json = False
+            self._text = []
+
+    def handle_data(self, data):
+        if self._capture_title or self._capture_json:
+            self._text.append(data)
+
+    def job_posting(self):
+        for item in self.json_ld:
+            candidates = item.get("@graph", []) if isinstance(item, dict) and "@graph" in item else [item]
+            for candidate in candidates:
+                if isinstance(candidate, dict) and candidate.get("@type") == "JobPosting":
+                    return candidate
+        return {}
+
+
+def _validate_public_url(url):
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise JobImportError("Enter a valid public HTTP or HTTPS job URL.")
+    try:
+        addresses = socket.getaddrinfo(parsed.hostname, parsed.port or 443, type=socket.SOCK_STREAM)
+    except socket.gaierror as exc:
+        raise JobImportError("Unable to resolve that job posting URL.") from exc
+    for address in addresses:
+        ip = ipaddress.ip_address(address[4][0])
+        if not ip.is_global:
+            raise JobImportError("Job imports only support public web URLs.")
+
+
+def _format_imported_location(value):
+    if not value:
+        return ""
+    locations = value if isinstance(value, list) else [value]
+    parts = []
+    for location in locations:
+        address = location.get("address", {}) if isinstance(location, dict) else {}
+        if isinstance(address, str):
+            parts.append(address)
+        elif isinstance(address, dict):
+            parts.append(", ".join(filter(None, [address.get("addressLocality"), address.get("addressRegion"), address.get("addressCountry")])))
+    return "; ".join(filter(None, parts))
 
 
 def search_jobs(

@@ -73,6 +73,24 @@ class AccountApiTests(APITestCase):
         self.assertEqual(response.status_code, 204)
         self.assertFalse(User.objects.filter(username="delete@example.com").exists())
 
+    def test_signed_in_user_can_download_workspace_data(self):
+        register_response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "name": "Export User",
+                "email": "export@example.com",
+                "password": "careerfit-pass",
+            },
+            format="json",
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {register_response.data['token']}")
+
+        response = self.client.get("/api/accounts/me/export/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["profile"]["email"], "export@example.com")
+        self.assertIn("applications", response.json())
+
     @override_settings(DEBUG=True, EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_password_reset_updates_password_and_invalidates_tokens(self):
         register_response = self.client.post(

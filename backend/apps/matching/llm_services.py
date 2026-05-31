@@ -29,6 +29,11 @@ class LLMCoachingResult(BaseModel):
     recommendations: list[LLMRecommendation] = Field(min_length=1, max_length=5)
 
 
+class LLMPacketDraftResult(BaseModel):
+    cover_letter: str = Field(min_length=1, max_length=5000)
+    follow_up_email: str = Field(min_length=1, max_length=2500)
+
+
 def enrich_match_report(match_result, resume_text, job_description, requested=False, authorized=False):
     if not requested:
         return _status("skipped", "AI coaching was not requested.")
@@ -116,6 +121,74 @@ def _request_ollama_coaching(match_result, resume_text, job_description):
     with urlopen(request, timeout=settings.OLLAMA_TIMEOUT_SECONDS) as response:
         payload = json.loads(response.read().decode("utf-8"))
     return LLMCoachingResult.model_validate_json(payload["message"]["content"])
+
+
+def generate_application_packet(job, resume_text, requested=False, authorized=False):
+    if not requested or not authorized or not settings.CAREERFIT_ENABLE_LLM:
+        return {}
+    try:
+        if settings.CAREERFIT_LLM_PROVIDER == "ollama":
+            drafts = _request_ollama_packet(job, resume_text)
+        elif settings.CAREERFIT_LLM_PROVIDER == "openai" and settings.OPENAI_API_KEY:
+            drafts = _request_openai_packet(job, resume_text)
+        else:
+            return {}
+        return drafts.model_dump()
+    except Exception:
+        logger.exception("Optional AI application packet request failed")
+        return {}
+
+
+def _request_openai_packet(job, resume_text):
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=settings.OPENAI_API_KEY,
+        timeout=settings.OPENAI_TIMEOUT_SECONDS,
+        max_retries=settings.OPENAI_MAX_RETRIES,
+    )
+    response = client.responses.parse(
+        model=settings.OPENAI_MODEL,
+        input=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": _build_packet_prompt(job, resume_text)},
+        ],
+        text_format=LLMPacketDraftResult,
+        max_output_tokens=settings.OPENAI_MAX_OUTPUT_TOKENS,
+    )
+    return response.output_parsed
+
+
+def _request_ollama_packet(job, resume_text):
+    request = Request(
+        f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/chat",
+        data=json.dumps(
+            {
+                "model": settings.OLLAMA_MODEL,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": _build_packet_prompt(job, resume_text)},
+                ],
+                "format": LLMPacketDraftResult.model_json_schema(),
+                "stream": False,
+            }
+        ).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urlopen(request, timeout=settings.OLLAMA_TIMEOUT_SECONDS) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return LLMPacketDraftResult.model_validate_json(payload["message"]["content"])
+
+
+def _build_packet_prompt(job, resume_text):
+    return (
+        "Draft a concise, editable cover letter and a brief follow-up email. Use only truthful details "
+        "from the resume and job posting. Do not invent accomplishments.\\n\\n"
+        f"ROLE: {job.title}\\nCOMPANY: {job.company or 'Not listed'}\\n"
+        f"JOB POSTING:\\n{job.raw_text[:MAX_LLM_TEXT_LENGTH]}\\n\\n"
+        f"RESUME:\\n{resume_text[:MAX_LLM_TEXT_LENGTH]}"
+    )
 
 
 def _build_prompt(match_result, resume_text, job_description):

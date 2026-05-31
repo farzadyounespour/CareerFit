@@ -47,6 +47,31 @@ class SavedJobSerializer(serializers.Serializer):
     location = serializers.CharField(max_length=220, required=False, allow_blank=True)
     url = serializers.URLField(required=False, allow_blank=True)
     source = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    workplace = serializers.CharField(max_length=24, required=False, allow_blank=True)
+    employment_type = serializers.CharField(max_length=24, required=False, allow_blank=True)
+    experience_level = serializers.CharField(max_length=24, required=False, allow_blank=True)
+    salary_text = serializers.CharField(max_length=120, required=False, allow_blank=True)
+
+
+class JobUrlImportSerializer(serializers.Serializer):
+    url = serializers.URLField()
+
+
+class PacketDraftRequestSerializer(serializers.Serializer):
+    use_ai = serializers.BooleanField(default=False, required=False)
+
+
+class TrackerTaskSerializer(serializers.Serializer):
+    id = serializers.CharField(max_length=80)
+    title = serializers.CharField(max_length=180)
+    due_date = serializers.DateField(required=False, allow_null=True)
+    completed = serializers.BooleanField(default=False, required=False)
+
+
+class StarStorySerializer(serializers.Serializer):
+    id = serializers.CharField(max_length=80)
+    title = serializers.CharField(max_length=180)
+    notes = serializers.CharField(max_length=3000, required=False, allow_blank=True)
 
 
 class TrackedJobUpdateSerializer(serializers.Serializer):
@@ -63,6 +88,12 @@ class TrackedJobUpdateSerializer(serializers.Serializer):
     applied_at = serializers.DateField(required=False, allow_null=True)
     excitement = serializers.IntegerField(min_value=1, max_value=5, required=False)
     resume_version_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    cover_letter = serializers.CharField(max_length=12000, required=False, allow_blank=True)
+    follow_up_email = serializers.CharField(max_length=6000, required=False, allow_blank=True)
+    interview_notes = serializers.CharField(max_length=6000, required=False, allow_blank=True)
+    personal_pitch = serializers.CharField(max_length=3000, required=False, allow_blank=True)
+    tasks = TrackerTaskSerializer(many=True, required=False)
+    star_stories = StarStorySerializer(many=True, required=False)
 
 
 class SearchAlertSerializer(JobSearchSerializer):

@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.http import JsonResponse
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework.authtoken.models import Token
@@ -81,6 +82,40 @@ class MeView(APIView):
     def delete(self, request):
         request.user.delete()
         return Response(status=204)
+
+
+class WorkspaceExportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.jobs.views import serialize_search_alert, serialize_tracked_job
+        from apps.matching.models import MatchReport
+        from apps.resumes.views import serialize_resume
+
+        payload = {
+            "profile": serialize_user(request.user),
+            "resumes": [serialize_resume(resume) for resume in request.user.resume_set.order_by("-created_at")],
+            "applications": [
+                serialize_tracked_job(job)
+                for job in request.user.jobdescription_set.filter(is_saved=True).order_by("-created_at")
+            ],
+            "search_alerts": [
+                serialize_search_alert(alert)
+                for alert in request.user.search_alerts.order_by("-created_at")
+            ],
+            "reports": [
+                {
+                    "id": report.id,
+                    "target_role": report.target_role,
+                    "created_at": report.created_at,
+                    "summary": report.result.get("summary", {}),
+                }
+                for report in MatchReport.objects.filter(user=request.user).order_by("-created_at")
+            ],
+        }
+        response = JsonResponse(payload, json_dumps_params={"indent": 2})
+        response["Content-Disposition"] = 'attachment; filename="careerfit-workspace.json"'
+        return response
 
 
 class LogoutView(APIView):
