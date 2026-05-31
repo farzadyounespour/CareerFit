@@ -9,8 +9,8 @@ export function applyProfileToJobSearch(currentSearch, profile) {
   };
 }
 
-export function applyResumeToJobSearch(currentSearch, resumeText, profile = {}) {
-  const resumeDefaults = extractResumeJobSearchDefaults(resumeText);
+export function applyResumeToJobSearch(currentSearch, resumeText, profile = {}, sourceName = "") {
+  const resumeDefaults = extractResumeJobSearchDefaults(resumeText, sourceName);
   const profileLocation = profile.location?.trim() || "";
   const location = resumeDefaults.location || profileLocation || currentSearch.location;
   return {
@@ -22,8 +22,8 @@ export function applyResumeToJobSearch(currentSearch, resumeText, profile = {}) 
   };
 }
 
-export function extractResumeJobSearchDefaults(resumeText) {
-  const title = extractResumeTitle(resumeText);
+export function extractResumeJobSearchDefaults(resumeText, sourceName = "") {
+  const title = extractResumeTitle(resumeText) || extractResumeTitle(sourceName, true);
   const location = extractResumeLocation(resumeText);
   return {
     title,
@@ -46,49 +46,55 @@ export function inferSearchCountry(location, fallback = "us") {
   return fallback || "us";
 }
 
-const ROLE_NAMES = [
-  "artificial intelligence engineer",
-  "business intelligence analyst",
-  "full stack developer",
-  "machine learning engineer",
-  "mechanical engineer",
-  "product manager",
-  "project manager",
-  "software engineer",
-  "software developer",
-  "business analyst",
-  "data engineer",
-  "data scientist",
-  "database administrator",
-  "financial analyst",
-  "frontend developer",
-  "front end developer",
-  "human resources specialist",
-  "marketing specialist",
-  "network administrator",
-  "quality assurance engineer",
-  "systems administrator",
-  "ux designer",
-  "web developer",
-  "data analyst",
-  "graphic designer",
-  "sales representative",
+const ROLE_VARIANTS = [
+  { title: "Artificial Intelligence Engineer", aliases: ["artificial intelligence engineer", "ai engineer"] },
+  { title: "Business Intelligence Analyst", aliases: ["business intelligence analyst", "bi analyst"] },
+  { title: "Full Stack Developer", aliases: ["full stack developer", "full-stack developer"] },
+  { title: "Machine Learning Engineer", aliases: ["machine learning engineer", "ml engineer"] },
+  { title: "Mechanical Engineer", aliases: ["mechanical design engineer", "mechanical engineer", "mechanical engineering", "mechanical designer"] },
+  { title: "Electrical Engineer", aliases: ["electrical engineer", "electrical engineering"] },
+  { title: "Civil Engineer", aliases: ["civil engineer", "civil engineering"] },
+  { title: "Chemical Engineer", aliases: ["chemical engineer", "chemical engineering"] },
+  { title: "Industrial Engineer", aliases: ["industrial engineer", "industrial engineering"] },
+  { title: "Product Manager", aliases: ["product manager", "product management"] },
+  { title: "Project Manager", aliases: ["project manager", "project management"] },
+  { title: "Software Engineer", aliases: ["software engineer", "software engineering"] },
+  { title: "Software Developer", aliases: ["software developer", "application developer"] },
+  { title: "Business Analyst", aliases: ["business analyst", "business analysis"] },
+  { title: "Data Engineer", aliases: ["data engineer", "data engineering"] },
+  { title: "Data Scientist", aliases: ["data scientist", "data science"] },
+  { title: "Database Administrator", aliases: ["database administrator", "database administration"] },
+  { title: "Financial Analyst", aliases: ["financial analyst", "financial analysis"] },
+  { title: "Frontend Developer", aliases: ["frontend developer", "front end developer", "front-end developer"] },
+  { title: "Human Resources Specialist", aliases: ["human resources specialist", "hr specialist"] },
+  { title: "Marketing Specialist", aliases: ["marketing specialist"] },
+  { title: "Network Administrator", aliases: ["network administrator", "network administration"] },
+  { title: "Quality Assurance Engineer", aliases: ["quality assurance engineer", "qa engineer"] },
+  { title: "Systems Administrator", aliases: ["systems administrator", "system administrator"] },
+  { title: "UX Designer", aliases: ["ux designer", "user experience designer"] },
+  { title: "Web Developer", aliases: ["web developer", "web development"] },
+  { title: "Data Analyst", aliases: ["data analyst", "data analytics", "data analysis"] },
+  { title: "Graphic Designer", aliases: ["graphic designer", "graphic design"] },
+  { title: "Sales Representative", aliases: ["sales representative"] },
 ];
 
 const SENIORITY = "(?:junior|senior|lead|principal|staff|entry[- ]level|intermediate|associate)";
 
-function extractResumeTitle(resumeText) {
-  const explicitTitle = resumeText.match(/^(?:target role|job title|professional title|desired role)\s*[:|-]\s*(.{2,80})$/im)?.[1];
+function extractResumeTitle(resumeText, isFilename = false) {
+  const searchableText = isFilename ? resumeText.replace(/[-_.]+/g, " ") : resumeText;
+  const explicitTitle = searchableText.match(/^(?:target role|job title|professional title|desired role)\s*[:|-]\s*(.{2,80})$/im)?.[1];
   if (explicitTitle) {
-    return cleanTitle(explicitTitle);
+    return canonicalizeTitle(explicitTitle) || cleanTitle(explicitTitle);
   }
 
-  const firstResumeSection = resumeText.split(/\b(?:experience|education|skills|projects)\b/i)[0];
-  for (const role of ROLE_NAMES) {
-    const rolePattern = new RegExp(`\\b((?:${SENIORITY}\\s+)?${escapeRegExp(role)})\\b`, "i");
-    const match = firstResumeSection.match(rolePattern);
-    if (match) {
-      return cleanTitle(match[1]);
+  const firstResumeSection = searchableText.split(/\b(?:experience|education|skills|projects)\b/i)[0];
+  for (const role of ROLE_VARIANTS) {
+    for (const alias of role.aliases) {
+      const rolePattern = new RegExp(`\\b(${SENIORITY}\\s+)?${escapeRegExp(alias)}\\b`, "i");
+      const match = firstResumeSection.match(rolePattern);
+      if (match) {
+        return cleanTitle(`${match[1] || ""}${role.title}`);
+      }
     }
   }
   return "";
@@ -118,6 +124,18 @@ function cleanTitle(title) {
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function canonicalizeTitle(title) {
+  for (const role of ROLE_VARIANTS) {
+    for (const alias of role.aliases) {
+      if (new RegExp(`\\b${escapeRegExp(alias)}\\b`, "i").test(title)) {
+        const seniority = title.match(new RegExp(`\\b${SENIORITY}\\b`, "i"))?.[0] || "";
+        return cleanTitle(`${seniority} ${role.title}`);
+      }
+    }
+  }
+  return "";
 }
 
 function cleanLocation(location) {

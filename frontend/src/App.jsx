@@ -74,6 +74,7 @@ export default function App() {
   const matchPreviewCache = useRef(new Map());
   const matchPreviewRequest = useRef(0);
   const appliedResumeSearchDefaults = useRef("");
+  const resumeSearchSourceName = useRef("");
   const [jobSearch, setJobSearch] = useState({
     title: "Junior Data Analyst",
     location: "",
@@ -270,7 +271,7 @@ export default function App() {
     try {
       const result = await uploadResume(file);
       setResumeText(result.text);
-      applyFreshResumeSearchDefaults(result.text);
+      applyFreshResumeSearchDefaults(result.text, result.filename);
       setUploadedResumeId(result.resume_id || null);
       if (result.resume_id) {
         setResumeVersions((currentVersions) => [
@@ -286,14 +287,21 @@ export default function App() {
     }
   }
 
-  function applyFreshResumeSearchDefaults(text) {
-    setJobSearch((currentSearch) => applyResumeToJobSearch(currentSearch, text, profile));
+  function applyFreshResumeSearchDefaults(text, sourceName = resumeSearchSourceName.current) {
+    setJobSearch((currentSearch) => applyResumeToJobSearch(currentSearch, text, profile, sourceName));
     appliedResumeSearchDefaults.current = text;
+    resumeSearchSourceName.current = sourceName;
   }
 
   function handleContinueToJobs() {
     applyFreshResumeSearchDefaults(resumeText);
     setActiveScreen("job");
+  }
+
+  function handleResumeTextChange(text) {
+    setResumeText(text);
+    appliedResumeSearchDefaults.current = "";
+    resumeSearchSourceName.current = "";
   }
 
   function handleDismissResumeError() {
@@ -498,7 +506,7 @@ export default function App() {
 
   function handleLoadResumeVersion(resume) {
     setResumeText(resume.text);
-    applyFreshResumeSearchDefaults(resume.text);
+    applyFreshResumeSearchDefaults(resume.text, resume.title);
     setUploadedResumeId(resume.id);
     setResumeUploadStatus(`Loaded ${resume.title}.`);
   }
@@ -516,6 +524,7 @@ export default function App() {
     setUploadedResumeId(null);
     setResumeText("");
     appliedResumeSearchDefaults.current = "";
+    resumeSearchSourceName.current = "";
     setResumeUploadError("");
     setResumeUploadStatus("");
   }
@@ -541,6 +550,7 @@ export default function App() {
     setReport(null);
     setResumeText("");
     appliedResumeSearchDefaults.current = "";
+    resumeSearchSourceName.current = "";
     setUploadedResumeId(null);
     setProfile(initialProfile);
     setActiveScreen("home");
@@ -614,10 +624,10 @@ export default function App() {
       return (
         <ResumeUploadScreen
           resumeText={resumeText}
-          onChange={setResumeText}
+          onChange={handleResumeTextChange}
           onLoadSample={() => {
             setResumeText(sampleResume);
-            applyFreshResumeSearchDefaults(sampleResume);
+            applyFreshResumeSearchDefaults(sampleResume, "");
             setUploadedResumeId(null);
           }}
           onUpload={handleResumeUpload}

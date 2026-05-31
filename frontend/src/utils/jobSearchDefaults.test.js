@@ -77,6 +77,26 @@ Designed mechanical systems.`);
       country: "ca",
     });
   });
+
+  it("normalizes mechanical engineering student text to the searchable role", () => {
+    const result = extractResumeJobSearchDefaults(`Mostafa Fotoohi
+mostafa@example.com | Montreal, QC
+Mechanical Engineering Student
+
+Experience
+Designed mechanical components.`);
+
+    expect(result.title).toBe("Mechanical Engineer");
+  });
+
+  it("uses the uploaded filename when the parsed body does not contain a role", () => {
+    const result = extractResumeJobSearchDefaults(
+      "Mostafa Fotoohi\nmostafa@example.com | Montreal, QC",
+      "Mostafa_Fotoohi-mechanical-engineer-resume.pdf",
+    );
+
+    expect(result.title).toBe("Mechanical Engineer");
+  });
 });
 
 
@@ -98,5 +118,17 @@ Junior data analyst with reporting experience.`,
       workplace: "hybrid",
       page: 1,
     });
+  });
+
+  it("replaces a stale software profile role with the role inferred from the resume", () => {
+    const result = applyResumeToJobSearch(
+      { title: "Junior Software Engineer", location: "", country: "us", page: 1 },
+      `Mostafa Fotoohi
+mostafa@example.com | Montreal, QC
+Mechanical Engineering Student`,
+      { target_role: "Junior Software Engineer" },
+    );
+
+    expect(result.title).toBe("Mechanical Engineer");
   });
 });
