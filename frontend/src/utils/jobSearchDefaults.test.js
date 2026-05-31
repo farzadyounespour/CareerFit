@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { applyProfileToJobSearch, inferSearchCountry } from "./jobSearchDefaults.js";
+import {
+  applyProfileToJobSearch,
+  applyResumeToJobSearch,
+  extractResumeJobSearchDefaults,
+  inferSearchCountry,
+} from "./jobSearchDefaults.js";
 
 
 describe("applyProfileToJobSearch", () => {
@@ -39,5 +44,59 @@ describe("inferSearchCountry", () => {
     expect(inferSearchCountry("London, UK", "us")).toBe("gb");
     expect(inferSearchCountry("Toronto, ON", "us")).toBe("ca");
     expect(inferSearchCountry("Paris, France", "ca")).toBe("ca");
+  });
+});
+
+
+describe("extractResumeJobSearchDefaults", () => {
+  it("extracts a role, location, and country from the resume header and summary", () => {
+    const result = extractResumeJobSearchDefaults(`Alex Morgan
+alex.morgan@example.com | +1 514 555 1212 | Montreal, Canada
+
+Summary
+Junior data analyst with dashboard reporting experience.`);
+
+    expect(result).toEqual({
+      title: "Junior Data Analyst",
+      location: "Montreal, Canada",
+      country: "ca",
+    });
+  });
+
+  it("supports an explicitly labeled professional title", () => {
+    const result = extractResumeJobSearchDefaults(`Taylor Student
+Location: Toronto, ON
+Professional title: Mechanical Engineer
+
+Experience
+Designed mechanical systems.`);
+
+    expect(result).toEqual({
+      title: "Mechanical Engineer",
+      location: "Toronto, ON",
+      country: "ca",
+    });
+  });
+});
+
+
+describe("applyResumeToJobSearch", () => {
+  it("fills the jobs form from resume text and keeps the other selected filters", () => {
+    const result = applyResumeToJobSearch(
+      { title: "Old role", location: "", country: "us", workplace: "hybrid", page: 4 },
+      `Alex Morgan
+alex.morgan@example.com | +1 514 555 1212 | Montreal, Canada
+Summary
+Junior data analyst with reporting experience.`,
+      {},
+    );
+
+    expect(result).toEqual({
+      title: "Junior Data Analyst",
+      location: "Montreal, Canada",
+      country: "ca",
+      workplace: "hybrid",
+      page: 1,
+    });
   });
 });

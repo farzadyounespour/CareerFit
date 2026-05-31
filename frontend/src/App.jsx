@@ -43,7 +43,7 @@ import JobMatchScreen from "./screens/JobMatchScreen.jsx";
 import ReportScreen from "./screens/ReportScreen.jsx";
 import ResumeUploadScreen from "./screens/ResumeUploadScreen.jsx";
 import UserProfileScreen from "./screens/UserProfileScreen.jsx";
-import { applyProfileToJobSearch } from "./utils/jobSearchDefaults.js";
+import { applyProfileToJobSearch, applyResumeToJobSearch } from "./utils/jobSearchDefaults.js";
 
 const initialProfile = {
   name: "",
@@ -73,6 +73,7 @@ export default function App() {
   const [matchPreviewError, setMatchPreviewError] = useState("");
   const matchPreviewCache = useRef(new Map());
   const matchPreviewRequest = useRef(0);
+  const appliedResumeSearchDefaults = useRef("");
   const [jobSearch, setJobSearch] = useState({
     title: "Junior Data Analyst",
     location: "",
@@ -193,7 +194,11 @@ export default function App() {
       setResumeVersions(result.results);
     }
     if (screen === "job") {
-      setJobSearch((currentSearch) => applyProfileToJobSearch(currentSearch, profile));
+      if (resumeText.trim() && appliedResumeSearchDefaults.current !== resumeText) {
+        applyFreshResumeSearchDefaults(resumeText);
+      } else if (!resumeText.trim()) {
+        setJobSearch((currentSearch) => applyProfileToJobSearch(currentSearch, profile));
+      }
     }
     setActiveScreen(screen);
   }
@@ -265,6 +270,7 @@ export default function App() {
     try {
       const result = await uploadResume(file);
       setResumeText(result.text);
+      applyFreshResumeSearchDefaults(result.text);
       setUploadedResumeId(result.resume_id || null);
       if (result.resume_id) {
         setResumeVersions((currentVersions) => [
@@ -278,6 +284,16 @@ export default function App() {
     } finally {
       setIsUploadingResume(false);
     }
+  }
+
+  function applyFreshResumeSearchDefaults(text) {
+    setJobSearch((currentSearch) => applyResumeToJobSearch(currentSearch, text, profile));
+    appliedResumeSearchDefaults.current = text;
+  }
+
+  function handleContinueToJobs() {
+    applyFreshResumeSearchDefaults(resumeText);
+    setActiveScreen("job");
   }
 
   function handleDismissResumeError() {
@@ -482,6 +498,7 @@ export default function App() {
 
   function handleLoadResumeVersion(resume) {
     setResumeText(resume.text);
+    applyFreshResumeSearchDefaults(resume.text);
     setUploadedResumeId(resume.id);
     setResumeUploadStatus(`Loaded ${resume.title}.`);
   }
@@ -498,6 +515,7 @@ export default function App() {
     }
     setUploadedResumeId(null);
     setResumeText("");
+    appliedResumeSearchDefaults.current = "";
     setResumeUploadError("");
     setResumeUploadStatus("");
   }
@@ -522,6 +540,7 @@ export default function App() {
     setSearchAlerts([]);
     setReport(null);
     setResumeText("");
+    appliedResumeSearchDefaults.current = "";
     setUploadedResumeId(null);
     setProfile(initialProfile);
     setActiveScreen("home");
@@ -598,6 +617,7 @@ export default function App() {
           onChange={setResumeText}
           onLoadSample={() => {
             setResumeText(sampleResume);
+            applyFreshResumeSearchDefaults(sampleResume);
             setUploadedResumeId(null);
           }}
           onUpload={handleResumeUpload}
@@ -605,7 +625,7 @@ export default function App() {
           uploadStatus={resumeUploadStatus}
           uploadError={resumeUploadError}
           onDismissError={handleDismissResumeError}
-          onNext={() => handleNavigate("job")}
+          onNext={handleContinueToJobs}
           onDelete={handleDeleteUploadedResume}
           resumeVersions={resumeVersions}
           onSaveVersion={handleCreateResumeVersion}

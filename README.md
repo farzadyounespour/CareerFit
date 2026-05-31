@@ -109,6 +109,7 @@ VITE_API_BASE_URL=/api
 
 - Public home page with a private, login-required workspace for profile, resume, job, report, and saved-data editing.
 - PDF, DOCX, TXT, and pasted resume text input with a fully editable preview, clear action, and dismissible upload errors.
+- Resume-aware job-search autofill for inferred role, location, and supported country defaults.
 - Multi-provider job search with Adzuna, no-key Arbeitnow, optional Jooble, deduplication, and sample-data fallback.
 - Instant deterministic resume comparison when a user selects a job, with match score, readiness score, and skill gaps before generating a full report.
 - Job saving, workplace, skill, experience-level, employment-type, salary filtering, and report history.
