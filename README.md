@@ -116,6 +116,10 @@ VITE_API_BASE_URL=/api
 - Visible active job filters, richer posting summaries, and optional-gap labels during quick comparison.
 - Application tracker with stages, notes, recruiter details, follow-up dates, interview dates, salary notes, and tailored resume links.
 - Tracker attention mode with search, overdue follow-up signals, pipeline counts, and next-action sorting.
+- Application packets with linked resume versions, editable cover-letter and follow-up drafts, reminders, personal pitch notes, and reusable STAR stories.
+- Optional AI-assisted application-packet drafts through the configured Ollama or OpenAI coach, with offline starter-template fallback.
+- Public job-URL import with guarded fetching, saved-role comparison, tracker CSV import/export, and downloadable workspace JSON.
+- Interactive report suggestions with accept, edit, and dismiss actions plus readiness-score history across rescans.
 - Reusable resume versions and saved daily or weekly job-search alerts.
 - Interactive ATS preparation checks for contact details, resume sections, bullet formatting, dates, measurable achievements, paragraph length, and resume length.
 - Explainable weighted requirement matching, best-segment TF-IDF evidence, skill coverage, missing-skill analysis, and recommendations.

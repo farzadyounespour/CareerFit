@@ -136,6 +136,10 @@ export async function searchJobs({
   return response.json();
 }
 
+export async function importJobUrl(url) {
+  return postJson("/jobs/import-url/", { url });
+}
+
 export async function registerAccount(payload) {
   return postJson("/accounts/register/", payload);
 }
@@ -189,6 +193,10 @@ export async function saveJob(job) {
     description: job.description,
     url: job.url,
     source: job.source,
+    workplace: job.workplace,
+    employment_type: job.employment_type,
+    experience_level: job.experience_level,
+    salary_text: job.salary_text || formatSalary(job.salary_min, job.salary_max),
   });
 }
 
@@ -202,6 +210,25 @@ export async function deleteSavedJob(jobId) {
 
 export async function updateTrackedJob(jobId, payload) {
   return patchJson(`/jobs/saved/${jobId}/`, payload);
+}
+
+export async function generatePacketDrafts(jobId, useAi = false) {
+  return postJson(`/jobs/saved/${jobId}/drafts/`, { use_ai: useAi });
+}
+
+export async function exportTrackedJobs() {
+  return downloadFile("/jobs/saved/csv/", "careerfit-applications.csv");
+}
+
+export async function importTrackedJobs(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(`${API_BASE_URL}/jobs/saved/csv/`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: formData,
+  });
+  return handleResponse(response);
 }
 
 export async function fetchSearchAlerts() {
@@ -244,6 +271,10 @@ export async function deleteAccount() {
   return deleteJson("/accounts/me/");
 }
 
+export async function exportWorkspace() {
+  return downloadFile("/accounts/me/export/", "careerfit-workspace.json");
+}
+
 async function getJson(path) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: authHeaders(),
@@ -283,6 +314,24 @@ async function deleteJson(path) {
   return handleResponse(response);
 }
 
+async function downloadFile(path, filename) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    return handleResponse(response);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function handleResponse(response) {
   if (!response.ok) {
     const details = await response.json().catch(() => ({}));
@@ -296,4 +345,10 @@ async function handleResponse(response) {
     return {};
   }
   return response.json();
+}
+
+function formatSalary(minimum, maximum) {
+  if (!minimum && !maximum) return "";
+  const format = (value) => value ? `$${Number(value).toLocaleString()}` : "";
+  return [format(minimum), format(maximum)].filter(Boolean).join(" - ");
 }

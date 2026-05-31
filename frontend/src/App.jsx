@@ -14,14 +14,19 @@ import {
   deleteResume,
   deleteSavedJob,
   deleteSearchAlert,
+  exportTrackedJobs,
+  exportWorkspace,
   fetchCurrentUser,
   fetchReportHistory,
   fetchResumeVersions,
   fetchSavedJobs,
   fetchSearchAlerts,
+  generatePacketDrafts,
   getStoredToken,
   loginAccount,
   logoutAccount,
+  importJobUrl,
+  importTrackedJobs,
   previewMatch,
   registerAccount,
   requestAiCoaching,
@@ -229,6 +234,18 @@ export default function App() {
         use_llm: useAiCoaching,
       });
       setReport(result);
+      setHistory((currentHistory) => [
+        {
+          id: result.report_id,
+          target_role: result.summary?.target_role,
+          created_at: new Date().toISOString(),
+          summary: result.summary || {},
+          resume_text: resumeText,
+          job_description: jobDescription,
+          result,
+        },
+        ...currentHistory.filter((item) => item.id !== result.report_id),
+      ]);
       setActiveScreen("report");
     } catch (apiError) {
       setError(apiError.message);
@@ -459,6 +476,13 @@ export default function App() {
     setJobSearchNotice("Job saved to your account.");
   }
 
+  async function handleImportJobUrl(url) {
+    const result = await importJobUrl(url);
+    await handleSelectJob(result.job);
+    setJobSearchNotice("Imported the job posting. Review the description, then compare or save it.");
+    return result.job;
+  }
+
   async function handleCreateSearchAlert() {
     const alertSearch = { ...jobSearch };
     if (!alertSearch.salary_min) delete alertSearch.salary_min;
@@ -480,6 +504,19 @@ export default function App() {
   async function handleUpdateTrackedJob(jobId, values) {
     const result = await updateTrackedJob(jobId, values);
     setSavedJobs((currentJobs) => currentJobs.map((job) => job.id === jobId ? result.job : job));
+  }
+
+  async function handleGeneratePacketDrafts(jobId, useAi) {
+    const result = await generatePacketDrafts(jobId, useAi);
+    setSavedJobs((currentJobs) => currentJobs.map((job) => job.id === jobId ? result.job : job));
+    return result;
+  }
+
+  async function handleImportTrackedJobs(file) {
+    const result = await importTrackedJobs(file);
+    const savedJobResult = await fetchSavedJobs();
+    setSavedJobs(savedJobResult.results);
+    return result;
   }
 
   async function handleDeleteSearchAlert(alertId) {
@@ -602,6 +639,7 @@ export default function App() {
           currentUser={currentUser}
           accountNotice={accountNotice}
           onRequestEmailVerification={handleRequestEmailVerification}
+          onExportWorkspace={exportWorkspace}
         />
       );
     }
@@ -656,6 +694,7 @@ export default function App() {
           jobResults={jobResults}
           onJobSearch={handleJobSearch}
           onSelectJob={handleSelectJob}
+          onImportJobUrl={handleImportJobUrl}
           isSearchingJobs={isSearchingJobs}
           jobSearchError={jobSearchError}
           jobSearchNotice={jobSearchNotice}
@@ -694,6 +733,9 @@ export default function App() {
           onDeleteJob={handleDeleteSavedJob}
           onDeleteReport={handleDeleteReport}
           onUpdateJob={handleUpdateTrackedJob}
+          onGeneratePacketDrafts={handleGeneratePacketDrafts}
+          onExportJobs={exportTrackedJobs}
+          onImportJobs={handleImportTrackedJobs}
           resumeVersions={resumeVersions}
         />
       );
@@ -708,6 +750,7 @@ export default function App() {
         onRequestAiCoaching={handleRequestAiCoaching}
         isLoadingAiCoaching={isLoadingAiCoaching}
         aiCoachingError={aiCoachingError}
+        history={history}
       />
     );
   }

@@ -65,6 +65,10 @@ describe("ReportScreen", () => {
         jobDescription="Job description text"
         onNavigate={() => {}}
         onRequestAiCoaching={onRequestAiCoaching}
+        history={[
+          { id: 2, target_role: "Data Analyst", summary: { readiness_score: 56 } },
+          { id: 1, target_role: "Data Analyst", summary: { readiness_score: 48 } },
+        ]}
       />,
     );
 
@@ -72,6 +76,7 @@ describe("ReportScreen", () => {
     expect(screen.getByText("Improve these first")).toBeVisible();
     expect(screen.getByText("Skills for this job")).toBeVisible();
     expect(screen.getByText("How CareerFit calculates the score")).toBeVisible();
+    expect(screen.getByText("Readiness improvement history")).toBeVisible();
     expect(screen.getByText("65% of job match")).toBeVisible();
     expect(screen.getByText("optional")).toBeVisible();
     expect(screen.getByText("Want more specific improvements?")).toBeVisible();
@@ -103,5 +108,13 @@ describe("ReportScreen", () => {
 
     expect(screen.getByText("Specific improvements")).toBeVisible();
     expect(screen.getByText("Add a Tableau bullet")).toBeVisible();
+
+    fireEvent.click(screen.getByTitle("Accept Add a Tableau bullet"));
+    expect(screen.getByText("Added to your tailoring checklist")).toBeVisible();
+    fireEvent.click(screen.getByTitle("Edit Add a Tableau bullet"));
+    fireEvent.change(screen.getByDisplayValue("Describe a real Tableau dashboard result."), { target: { value: "Add the measurable dashboard result." } });
+    expect(screen.getByDisplayValue("Add the measurable dashboard result.")).toBeVisible();
+    fireEvent.click(screen.getByTitle("Dismiss Add a Tableau bullet"));
+    expect(screen.queryByText("Add a Tableau bullet")).not.toBeInTheDocument();
   });
 });

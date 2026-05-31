@@ -7,10 +7,12 @@ import {
   FileText,
   ListChecks,
   MessagesSquare,
+  Pencil,
   Printer,
   RotateCcw,
   Sparkles,
   Target,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -36,6 +38,7 @@ export default function ReportScreen({
   onRequestAiCoaching,
   isLoadingAiCoaching = false,
   aiCoachingError = "",
+  history = [],
 }) {
   const [activeDocument, setActiveDocument] = useState("resume");
   const [completedActions, setCompletedActions] = useState(new Set());
@@ -120,6 +123,7 @@ export default function ReportScreen({
               <ScoreCard label="ATS preparation" value={atsScore} detail={`${atsIssues.length} check${atsIssues.length === 1 ? "" : "s"} to improve`} />
             </div>
             <ScoreExplanation breakdown={scoreBreakdown} />
+            <ScoreHistory history={history} targetRole={summary.target_role} />
           </section>
 
           <section id="priority-improvements" className="rounded-md border border-slate-200 bg-white shadow-panel">
@@ -380,6 +384,13 @@ function SkillBlock({ title, skills, details = [], tone, empty }) {
 }
 
 function SpecificImprovements({ coaching }) {
+  const [suggestions, setSuggestions] = useState(() => coaching.recommendations.map((item, index) => ({ ...item, id: `${index}-${item.title}`, status: "open" })));
+  const [editingId, setEditingId] = useState(null);
+
+  function updateSuggestion(id, values) {
+    setSuggestions((current) => current.map((item) => item.id === id ? { ...item, ...values } : item));
+  }
+
   return (
     <section className="rounded-md border border-emerald-200 bg-white shadow-panel">
       <div className="border-b border-emerald-200 bg-emerald-50 p-5">
@@ -393,12 +404,50 @@ function SpecificImprovements({ coaching }) {
         </div>
       </div>
       <div className="divide-y divide-slate-100">
-        {coaching.recommendations.map((item) => (
-          <article key={`${item.priority}-${item.title}`} className="p-5">
-            <p className="text-xs font-bold uppercase tracking-wide text-teal">{item.priority} priority</p>
-            <p className="mt-1 text-sm font-semibold text-ink">{item.title}</p>
-            <p className="mt-1 text-sm leading-6 text-slate-600">{item.detail}</p>
+        {suggestions.filter((item) => item.status !== "dismissed").map((item) => (
+          <article key={item.id} className={`p-5 ${item.status === "accepted" ? "bg-emerald-50/40" : ""}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wide text-teal">{item.priority} priority</p>
+                <p className="mt-1 text-sm font-semibold text-ink">{item.title}</p>
+              </div>
+              <div className="flex gap-1">
+                <button type="button" title={`Accept ${item.title}`} onClick={() => updateSuggestion(item.id, { status: item.status === "accepted" ? "open" : "accepted" })} className="rounded p-2 text-slate-500 hover:bg-emerald-50 hover:text-teal"><CheckCircle2 size={16} /></button>
+                <button type="button" title={`Edit ${item.title}`} onClick={() => setEditingId(editingId === item.id ? null : item.id)} className="rounded p-2 text-slate-500 hover:bg-sky-50 hover:text-sky-700"><Pencil size={16} /></button>
+                <button type="button" title={`Dismiss ${item.title}`} onClick={() => updateSuggestion(item.id, { status: "dismissed" })} className="rounded p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><X size={16} /></button>
+              </div>
+            </div>
+            {editingId === item.id ? (
+              <textarea value={item.detail} onChange={(event) => updateSuggestion(item.id, { detail: event.target.value })} className="mt-3 min-h-24 w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 focus:border-teal focus:outline-none" />
+            ) : (
+              <p className="mt-1 text-sm leading-6 text-slate-600">{item.detail}</p>
+            )}
+            {item.status === "accepted" && <p className="mt-2 text-xs font-semibold text-emerald-700">Added to your tailoring checklist</p>}
           </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ScoreHistory({ history, targetRole }) {
+  const relevantHistory = history
+    .filter((item) => !targetRole || item.target_role === targetRole)
+    .slice(0, 5)
+    .reverse();
+  if (relevantHistory.length < 2) return null;
+  return (
+    <section className="mt-4 border-t border-slate-200 pt-4">
+      <p className="text-sm font-semibold text-ink">Readiness improvement history</p>
+      <p className="mt-1 text-xs leading-5 text-slate-500">Rescan after tailoring your resume to see whether the evidence and ATS preparation improved.</p>
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        {relevantHistory.map((item) => (
+          <div key={item.id} className="min-w-16 flex-1">
+            <p className="text-xs font-bold text-teal">{item.summary.readiness_score || 0}%</p>
+            <div className="mt-1 flex h-16 items-end rounded bg-slate-100 px-2">
+              <div className="w-full rounded-t bg-teal" style={{ height: `${Math.max(item.summary.readiness_score || 0, 6)}%` }} />
+            </div>
+          </div>
         ))}
       </div>
     </section>

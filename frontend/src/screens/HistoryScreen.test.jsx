@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import HistoryScreen from "./HistoryScreen.jsx";
 
@@ -66,5 +66,34 @@ describe("HistoryScreen", () => {
     fireEvent.change(screen.getByLabelText("Search tracked jobs"), { target: { value: "Taylor Recruiter" } });
     expect(screen.getByText("Data Analyst")).toBeVisible();
     expect(screen.queryByText("Mechanical Engineer")).not.toBeInTheDocument();
+  });
+
+  it("compares roles and saves packet tasks", async () => {
+    const onUpdateJob = vi.fn().mockResolvedValue({});
+    render(
+      <HistoryScreen
+        history={[]}
+        savedJobs={savedJobs}
+        resumeVersions={[]}
+        onOpenReport={() => {}}
+        onUseJob={() => {}}
+        onDeleteJob={() => {}}
+        onDeleteReport={() => {}}
+        onUpdateJob={onUpdateJob}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Compare Data Analyst"));
+    fireEvent.click(screen.getByLabelText("Compare Mechanical Engineer"));
+    expect(screen.getByText("Compare opportunities")).toBeVisible();
+
+    fireEvent.click(screen.getAllByTitle("Open application packet")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Add task" }));
+    fireEvent.change(screen.getByPlaceholderText("Send follow-up email"), { target: { value: "Send portfolio follow-up" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save application packet" }));
+
+    await waitFor(() => expect(onUpdateJob).toHaveBeenCalledWith(2, expect.objectContaining({
+      tasks: [expect.objectContaining({ title: "Send portfolio follow-up", completed: false })],
+    })));
   });
 });

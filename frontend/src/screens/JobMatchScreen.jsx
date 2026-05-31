@@ -8,6 +8,7 @@ import {
   ClipboardPaste,
   ExternalLink,
   FileSearch,
+  Link2,
   MapPin,
   Search,
   SlidersHorizontal,
@@ -15,6 +16,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { useState } from "react";
 
 export default function JobMatchScreen({
   jobDescription,
@@ -25,6 +27,7 @@ export default function JobMatchScreen({
   jobResults,
   onJobSearch,
   onSelectJob,
+  onImportJobUrl,
   isSearchingJobs,
   jobSearchError,
   jobSearchNotice,
@@ -44,6 +47,9 @@ export default function JobMatchScreen({
   useAiCoaching,
   onAiCoachingChange,
 }) {
+  const [jobUrl, setJobUrl] = useState("");
+  const [isImportingUrl, setIsImportingUrl] = useState(false);
+  const [jobUrlError, setJobUrlError] = useState("");
   const hasJobDescription = jobDescription.trim().length > 0;
   const totalPages = pagination.total_pages || 1;
   const activeFilters = getActiveFilters(jobSearch);
@@ -59,6 +65,20 @@ export default function JobMatchScreen({
       salary_max: "",
       page: 1,
     });
+  }
+
+  async function handleImportUrl(event) {
+    event.preventDefault();
+    setJobUrlError("");
+    setIsImportingUrl(true);
+    try {
+      await onImportJobUrl(jobUrl);
+      setJobUrl("");
+    } catch (importError) {
+      setJobUrlError(importError.message);
+    } finally {
+      setIsImportingUrl(false);
+    }
   }
 
   return (
@@ -91,6 +111,22 @@ export default function JobMatchScreen({
             <p className="text-sm text-slate-500">Search by role and location, then choose a posting to analyze.</p>
           </div>
         </div>
+
+        <form onSubmit={handleImportUrl} className="mt-5 flex flex-col gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-end">
+          <label className="min-w-0 flex-1">
+            <span className="text-sm font-medium text-slate-700">Already found a posting?</span>
+            <span className="mt-1 block text-xs text-slate-500">Paste a public job URL to fill the comparison panel automatically.</span>
+            <div className="mt-2 flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 focus-within:border-teal">
+              <Link2 size={16} className="shrink-0 text-slate-400" />
+              <input type="url" required value={jobUrl} onChange={(event) => setJobUrl(event.target.value)} className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none" placeholder="https://company.example/jobs/data-analyst" />
+            </div>
+          </label>
+          <button type="submit" disabled={isImportingUrl || !jobUrl.trim()} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal disabled:cursor-not-allowed disabled:text-slate-300">
+            <Link2 size={16} />
+            {isImportingUrl ? "Importing..." : "Import URL"}
+          </button>
+        </form>
+        {jobUrlError && <Notice tone="amber">{jobUrlError}</Notice>}
 
         <form onSubmit={onJobSearch} className="mt-5 grid gap-3 lg:grid-cols-[1fr_1fr_150px_auto]">
           <SearchField label="Job title" value={jobSearch.title} onChange={(value) => onJobSearchChange({ ...jobSearch, title: value })} placeholder="Junior Data Analyst" />

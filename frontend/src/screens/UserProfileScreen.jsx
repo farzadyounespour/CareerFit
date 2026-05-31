@@ -3,6 +3,7 @@ import {
   BriefcaseBusiness,
   CheckCircle2,
   FileText,
+  Download,
   Mail,
   MapPin,
   Phone,
@@ -22,6 +23,7 @@ export default function UserProfileScreen({
   currentUser,
   accountNotice,
   onRequestEmailVerification,
+  onExportWorkspace,
 }) {
   const completedFields = trackedFields.filter((field) => profile[field]?.trim()).length;
   const completion = Math.round((completedFields / trackedFields.length) * 100);
@@ -125,8 +127,16 @@ export default function UserProfileScreen({
               </p>
               <button
                 type="button"
+                onClick={onExportWorkspace}
+                className="mt-4 inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal"
+              >
+                <Download size={16} />
+                Download workspace data
+              </button>
+              <button
+                type="button"
                 onClick={() => window.confirm("Delete your CareerFit account and all saved data?") && onDeleteAccount()}
-                className="mt-4 inline-flex items-center gap-2 rounded-md border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50"
+                className="ml-2 mt-4 inline-flex items-center gap-2 rounded-md border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50"
               >
                 <Trash2 size={16} />
                 Delete account

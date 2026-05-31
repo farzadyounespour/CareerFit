@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import JobMatchScreen from "./JobMatchScreen.jsx";
@@ -6,6 +6,7 @@ import JobMatchScreen from "./JobMatchScreen.jsx";
 
 describe("JobMatchScreen", () => {
   it("shows the current and total number of result pages", () => {
+    const onImportJobUrl = vi.fn().mockResolvedValue({});
     render(
       <JobMatchScreen
         jobDescription=""
@@ -34,6 +35,7 @@ describe("JobMatchScreen", () => {
         }]}
         onJobSearch={() => {}}
         onSelectJob={() => {}}
+        onImportJobUrl={onImportJobUrl}
         isSearchingJobs={false}
         jobSearchError=""
         jobSearchNotice=""
@@ -51,6 +53,10 @@ describe("JobMatchScreen", () => {
     );
 
     expect(screen.getByText("Page 2 of 3")).toBeVisible();
+
+    fireEvent.change(screen.getByPlaceholderText("https://company.example/jobs/data-analyst"), { target: { value: "https://example.com/jobs/analyst" } });
+    fireEvent.click(screen.getByRole("button", { name: "Import URL" }));
+    return waitFor(() => expect(onImportJobUrl).toHaveBeenCalledWith("https://example.com/jobs/analyst"));
   });
 
   it("shows a quick resume comparison for the selected job", () => {
