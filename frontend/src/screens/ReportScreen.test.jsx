@@ -122,4 +122,38 @@ describe("ReportScreen", () => {
     fireEvent.click(screen.getByTitle("Dismiss Add a Tableau bullet"));
     expect(screen.queryByText("Add a Tableau bullet")).not.toBeInTheDocument();
   });
+
+  it("builds an editable ATS-friendly draft from the uploaded resume", () => {
+    const onUseResumeTemplate = vi.fn();
+    render(
+      <ReportScreen
+        report={report}
+        resumeText={`Student User
+student@example.com | +1 514 555 1212 | Montreal
+
+Summary
+Data analyst with reporting experience.
+
+Skills
+Python, SQL
+
+Experience
+- Built a dashboard for a student project.
+
+Education
+Example University`}
+        jobDescription="Job description text"
+        onNavigate={() => {}}
+        onUseResumeTemplate={onUseResumeTemplate}
+      />,
+    );
+
+    const draft = screen.getByLabelText("ATS-friendly resume draft");
+    expect(draft.value).toContain("PROFESSIONAL SUMMARY\nData analyst with reporting experience.");
+    expect(draft.value).toContain("EXPERIENCE\n- Built a dashboard for a student project.");
+    expect(draft.value).toContain("CERTIFICATIONS\n[Add relevant certifications only if applicable.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Open in resume workspace" }));
+    expect(onUseResumeTemplate).toHaveBeenCalledWith(expect.stringContaining("EDUCATION\nExample University"));
+  });
 });

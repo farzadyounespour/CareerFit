@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Copy,
+  Download,
   FileText,
   ListChecks,
   MessagesSquare,
@@ -40,6 +41,7 @@ export default function ReportScreen({
   isLoadingAiCoaching = false,
   aiCoachingError = "",
   history = [],
+  onUseResumeTemplate = () => {},
 }) {
   const [activeDocument, setActiveDocument] = useState("resume");
   const [completedActions, setCompletedActions] = useState(new Set());
@@ -257,6 +259,14 @@ export default function ReportScreen({
               jobDescription={jobDescription}
             />
           </ReportDisclosure>
+
+          <TailoredResumeTemplate
+            key={`${summary.target_role}-${resumeText}`}
+            resumeText={resumeText}
+            summary={summary}
+            skills={skills}
+            onUseTemplate={onUseResumeTemplate}
+          />
         </main>
 
         <aside className="rounded-md border border-slate-200 bg-white p-5 shadow-panel lg:sticky lg:top-24">
@@ -287,6 +297,66 @@ export default function ReportScreen({
             <SummaryRow label="ATS improvements" value={atsIssues.length} />
           </dl>
         </aside>
+      </div>
+    </section>
+  );
+}
+
+function TailoredResumeTemplate({ resumeText, summary, skills, onUseTemplate }) {
+  const [draft, setDraft] = useState(() => buildAtsResumeTemplate(resumeText, summary, skills));
+  const [copied, setCopied] = useState(false);
+
+  async function copyDraft() {
+    await navigator.clipboard?.writeText(draft);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  function downloadDraft() {
+    const url = URL.createObjectURL(new Blob([draft], { type: "text/plain;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "careerfit-ats-resume-draft.txt";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <section className="rounded-md border border-teal/30 bg-white shadow-panel">
+      <div className="border-b border-teal/20 bg-emerald-50 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-ink">ATS-friendly resume draft</h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+              CareerFit reorganized your uploaded text into a clean starting template. Review every line and replace bracketed placeholders with truthful details before using it.
+            </p>
+          </div>
+          <span className="rounded bg-white px-2 py-1 text-xs font-bold text-teal">Editable draft</span>
+        </div>
+      </div>
+      <div className="p-5">
+        <textarea
+          aria-label="ATS-friendly resume draft"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          className="min-h-[540px] w-full resize-y rounded-md border border-slate-300 bg-slate-50 px-4 py-4 font-mono text-sm leading-6 text-slate-700 focus:border-teal focus:outline-none"
+        />
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" onClick={copyDraft} className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal">
+            <Copy size={16} />
+            {copied ? "Copied draft" : "Copy draft"}
+          </button>
+          <button type="button" onClick={downloadDraft} className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal">
+            <Download size={16} />
+            Download TXT
+          </button>
+          <button type="button" onClick={() => onUseTemplate(draft)} className="inline-flex items-center gap-2 rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal/90">
+            Open in resume workspace
+            <ArrowRight size={16} />
+          </button>
+        </div>
       </div>
     </section>
   );
@@ -692,6 +762,69 @@ function buildResumeExamples(summary, skills, atsIssues) {
   }
 
   return examples.slice(0, 4);
+}
+
+function buildAtsResumeTemplate(resumeText, summary, skills) {
+  const parsed = parseResumeSections(resumeText);
+  const candidateName = parsed.header[0] || summary.candidate_name || "[Your name]";
+  const contactLines = parsed.header.slice(1);
+  const targetRole = summary.target_role || "[Target role]";
+  const detectedSkills = skills.matched.length ? skills.matched.join(", ") : "[Add your relevant skills]";
+
+  return [
+    candidateName,
+    targetRole,
+    contactLines.length ? contactLines.join("\n") : "[Email] | [Phone] | [City, Province or State]",
+    "",
+    "PROFESSIONAL SUMMARY",
+    sectionText(parsed.sections.summary, `[Write 2-3 lines about your real experience relevant to ${targetRole}. Mention your strongest skills and one truthful result.]`),
+    "",
+    "SKILLS",
+    sectionText(parsed.sections.skills, detectedSkills),
+    "",
+    "EXPERIENCE",
+    sectionText(parsed.sections.experience, "[Role or project] | [Organization] | [Dates]\n- [Describe a real action and its result. Add a truthful number when possible.]"),
+    "",
+    "EDUCATION",
+    sectionText(parsed.sections.education, "[Degree or diploma] | [School] | [Graduation year]"),
+    "",
+    "CERTIFICATIONS",
+    sectionText(parsed.sections.certifications, "[Add relevant certifications only if applicable. Remove this section otherwise.]"),
+    parsed.sections.projects.length ? `\nPROJECTS\n${parsed.sections.projects.join("\n")}` : "",
+  ].join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function parseResumeSections(resumeText) {
+  const aliases = {
+    summary: ["summary", "professional summary", "profile", "objective"],
+    skills: ["skills", "technical skills", "core skills", "competencies"],
+    experience: ["experience", "work experience", "professional experience", "employment"],
+    education: ["education", "academic background"],
+    certifications: ["certifications", "certification", "licenses", "credentials"],
+    projects: ["projects", "selected projects", "academic projects"],
+  };
+  const sections = Object.fromEntries(Object.keys(aliases).map((key) => [key, []]));
+  const header = [];
+  let activeSection = "";
+
+  resumeText.split(/\r?\n/).forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) return;
+    const normalized = line.toLowerCase().replace(/:$/, "");
+    const section = Object.entries(aliases).find((entry) => entry[1].includes(normalized))?.[0];
+    if (section) {
+      activeSection = section;
+    } else if (activeSection) {
+      sections[activeSection].push(line);
+    } else {
+      header.push(line);
+    }
+  });
+  return { header, sections };
+}
+
+function sectionText(lines, fallback) {
+  return lines.length ? lines.join("\n") : fallback;
 }
 
 function comparePriority(first, second) {

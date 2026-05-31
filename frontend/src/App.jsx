@@ -321,6 +321,15 @@ export default function App() {
     resumeSearchSourceName.current = "";
   }
 
+  function handleUseResumeTemplate(text) {
+    setResumeText(text);
+    setUploadedResumeId(null);
+    appliedResumeSearchDefaults.current = "";
+    resumeSearchSourceName.current = "";
+    setResumeUploadStatus("Loaded your ATS-friendly draft. Review every placeholder, then save it as a new resume version.");
+    setActiveScreen("resume");
+  }
+
   function handleDismissResumeError() {
     setResumeUploadError("");
   }
@@ -751,6 +760,7 @@ export default function App() {
         isLoadingAiCoaching={isLoadingAiCoaching}
         aiCoachingError={aiCoachingError}
         history={history}
+        onUseResumeTemplate={handleUseResumeTemplate}
       />
     );
   }
