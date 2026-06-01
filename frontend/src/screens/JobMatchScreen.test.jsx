@@ -75,6 +75,8 @@ describe("JobMatchScreen", () => {
   });
 
   it("shows a quick resume comparison for the selected job", () => {
+    const onSaveJob = vi.fn();
+    const onOpenTracker = vi.fn();
     render(
       <JobMatchScreen
         jobDescription="Build dashboards with Python and Tableau."
@@ -99,7 +101,8 @@ describe("JobMatchScreen", () => {
         isSearchingJobs={false}
         jobSearchError=""
         jobSearchNotice=""
-        onSaveJob={() => {}}
+        onSaveJob={onSaveJob}
+        onOpenTracker={onOpenTracker}
         onCreateSearchAlert={() => {}}
         onPageChange={() => {}}
         pagination={{ page: 1, count: 0, total_pages: 0, has_previous: false, has_next: false }}
@@ -125,6 +128,10 @@ describe("JobMatchScreen", () => {
     expect(screen.getByText("tableau · optional")).toBeVisible();
     expect(screen.getByText("This provider shared a shortened excerpt")).toBeVisible();
     expect(screen.getByRole("button", { name: "Generate full readiness report" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Add to tracker" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open tracker" }));
+    expect(onSaveJob).toHaveBeenCalledWith(expect.objectContaining({ id: "job-1" }));
+    expect(onOpenTracker).toHaveBeenCalledOnce();
   });
 
   it("shows active filters and clears them without changing the role or location", () => {

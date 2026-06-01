@@ -1,7 +1,7 @@
 import {
   ArrowRight,
   BellPlus,
-  Bookmark,
+  BookmarkPlus,
   BriefcaseBusiness,
   Building2,
   CheckCircle2,
@@ -10,6 +10,7 @@ import {
   FileSearch,
   Link2,
   Layers3,
+  ListChecks,
   MapPin,
   Search,
   SlidersHorizontal,
@@ -34,6 +35,7 @@ export default function JobMatchScreen({
   jobSearchError,
   jobSearchNotice,
   onSaveJob,
+  onOpenTracker = () => {},
   onCreateSearchAlert,
   onPageChange,
   pagination,
@@ -256,6 +258,16 @@ export default function JobMatchScreen({
                   <p className="mt-1 text-xs leading-5 text-emerald-700">{selectedJob.company || "Selected posting"}</p>
                 </div>
               </div>
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-emerald-200 pt-3">
+                <button type="button" onClick={() => onSaveJob(selectedJob)} className="inline-flex items-center gap-2 rounded-md bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal/90">
+                  <BookmarkPlus size={15} />
+                  Add to tracker
+                </button>
+                <button type="button" onClick={onOpenTracker} className="inline-flex items-center gap-2 rounded-md border border-emerald-300 bg-white px-3 py-2 text-xs font-semibold text-teal hover:bg-emerald-100">
+                  <ListChecks size={15} />
+                  Open tracker
+                </button>
+              </div>
             </div>
           )}
 
@@ -469,7 +481,7 @@ function JobCard({ job, selected, onSelect, onSave }) {
         </div>
         <div className="flex gap-2">
           {job.url && <a href={job.url} target="_blank" rel="noreferrer" title="Open posting" className="rounded-md border border-slate-300 p-2 text-slate-600 hover:border-teal hover:text-teal"><ExternalLink size={16} /></a>}
-          <button type="button" title="Save job" onClick={onSave} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:border-teal hover:text-teal"><Bookmark size={16} /></button>
+          <button type="button" title="Add to tracker" onClick={onSave} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:border-teal hover:text-teal"><BookmarkPlus size={16} /></button>
         </div>
       </div>
       <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">{job.description}</p>

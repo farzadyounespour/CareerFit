@@ -502,7 +502,7 @@ export default function App() {
     }
     const result = await saveJob(job);
     setSavedJobs((currentJobs) => [result.job, ...currentJobs.filter((item) => item.id !== result.job.id)]);
-    setJobSearchNotice("Job saved to your account.");
+    setJobSearchNotice("Added to your tracker. Open the tracker to manage application progress.");
   }
 
   async function handleImportJobUrl(url) {
@@ -730,6 +730,7 @@ export default function App() {
           jobSearchError={jobSearchError}
           jobSearchNotice={jobSearchNotice}
           onSaveJob={handleSaveJob}
+          onOpenTracker={() => handleNavigate("history")}
           onCreateSearchAlert={handleCreateSearchAlert}
           onPageChange={handleJobPageChange}
           pagination={jobPagination}
