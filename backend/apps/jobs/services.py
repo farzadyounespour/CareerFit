@@ -578,6 +578,7 @@ def _format_jooble_job(job):
         "description": _strip_html(job.get("snippet") or ""),
         "url": job.get("link") or "",
         "source": "Jooble",
+        "description_is_partial": True,
     }
 
 

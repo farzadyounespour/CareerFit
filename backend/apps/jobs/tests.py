@@ -130,6 +130,7 @@ class AdditionalJobProviderTests(SimpleTestCase):
         self.assertEqual(jobs["results"][0]["source"], "Jooble")
         self.assertEqual(jobs["results"][0]["employment_type"], "full_time")
         self.assertEqual(jobs["results"][0]["description"], "Python SQL reporting")
+        self.assertTrue(jobs["results"][0]["description_is_partial"])
 
     @override_settings(ADZUNA_APP_ID="app-id", ADZUNA_APP_KEY="app-key", JOOBLE_API_KEY="")
     @patch("apps.jobs.services.search_arbeitnow_jobs")

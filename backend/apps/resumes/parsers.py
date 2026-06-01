@@ -1,4 +1,5 @@
 from io import BytesIO
+import re
 
 from docx import Document
 from pypdf import PdfReader
@@ -75,5 +76,29 @@ def _extract_plain_text(uploaded_file):
 
 
 def _normalize_extracted_text(text):
-    lines = [" ".join(line.split()) for line in text.splitlines()]
+    lines = [_normalize_extracted_line(line) for line in text.splitlines()]
     return "\n".join(line for line in lines if line).strip()
+
+
+def _normalize_extracted_line(line):
+    fragments = re.split(r"\s{2,}", line.strip())
+    return " ".join(
+        repaired
+        for fragment in fragments
+        if (repaired := _repair_spaced_fragment(fragment))
+    )
+
+
+def _repair_spaced_fragment(fragment):
+    tokens = fragment.split()
+    if len(tokens) < 2:
+        return " ".join(tokens)
+
+    single_character_tokens = sum(
+        len(token.strip("(),.%+/")) <= 1
+        for token in tokens
+    )
+    if single_character_tokens / len(tokens) < 0.7:
+        return " ".join(tokens)
+
+    return re.sub(r"\s+", "", fragment)

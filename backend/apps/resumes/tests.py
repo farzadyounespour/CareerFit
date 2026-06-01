@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 
-from .parsers import ResumeParseError, extract_resume_text
+from .parsers import ResumeParseError, _normalize_extracted_text, extract_resume_text
 
 
 class ResumeParserTests(SimpleTestCase):
@@ -29,6 +29,19 @@ class ResumeParserTests(SimpleTestCase):
 
         with self.assertRaises(ResumeParseError):
             extract_resume_text(resume_file)
+
+    def test_repairs_letter_spaced_pdf_text_without_changing_normal_text(self):
+        text = _normalize_extracted_text(
+            "S K I L L S\n"
+            "P o s t g r e S Q L  K a f k a  G o l a n g\n"
+            "L e d  a n  e v e n t - d r i v e n  G o  s e r v i c e .\n"
+            "Software engineer at Cisco"
+        )
+
+        self.assertIn("SKILLS", text)
+        self.assertIn("PostgreSQL Kafka Golang", text)
+        self.assertIn("Led an event-driven Go service.", text)
+        self.assertIn("Software engineer at Cisco", text)
 
 
 class ResumeUploadApiTests(APITestCase):

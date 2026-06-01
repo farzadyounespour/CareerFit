@@ -256,6 +256,13 @@ export default function JobMatchScreen({
             </div>
           )}
 
+          {selectedJob?.description_is_partial && (
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+              <p className="font-bold">This provider shared a shortened excerpt</p>
+              <p className="mt-1">The quick score is preliminary. Open the posting and paste the full description below before generating your final report.</p>
+            </div>
+          )}
+
           {isPreviewingMatch && (
             <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
               <p className="text-sm font-semibold text-slate-700">Comparing with your resume...</p>
@@ -422,6 +429,7 @@ function JobCard({ job, selected, onSelect, onSave }) {
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="font-semibold text-ink">{job.title}</h4>
             <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{job.source}</span>
+            {job.description_is_partial && <span className="rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">Excerpt</span>}
           </div>
           <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><Building2 size={15} />{job.company || "Company not listed"}</p>
           <p className="mt-1 flex items-center gap-2 text-sm text-slate-600"><MapPin size={15} />{job.location || "Location not listed"}</p>

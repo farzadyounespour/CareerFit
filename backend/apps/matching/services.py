@@ -73,14 +73,21 @@ SKILL_KEYWORDS = {
     "bigquery",
     "c#",
     "c++",
+    "clickhouse",
     "css",
     "data cleaning",
     "data modeling",
     "dashboards",
+    "devops",
     "etl",
+    "elasticsearch",
+    "event-driven architecture",
+    "golang",
     "html",
+    "kafka",
     "kubernetes",
     "linux",
+    "microservices",
     "mongodb",
     "node.js",
     "numpy",
@@ -88,6 +95,8 @@ SKILL_KEYWORDS = {
     "pytorch",
     "redis",
     "reporting",
+    "ruby on rails",
+    "scala",
     "scikit-learn",
     "scrum",
     "snowflake",
@@ -108,11 +117,14 @@ SKILL_ALIASES = {
     "restful": "rest",
     "js": "javascript",
     "github": "git",
+    "k8s": "kubernetes",
     "ml": "machine learning",
     "natural language processing": "nlp",
     "data analytics": "data analysis",
     "collaboration": "teamwork",
     "problem-solving": "problem solving",
+    "event-driven": "event-driven architecture",
+    "event driven": "event-driven architecture",
     "dashboard": "dashboards",
     "stakeholders": "stakeholder management",
 }
@@ -188,6 +200,8 @@ def extract_skills(text):
     for alias, canonical_skill in SKILL_ALIASES.items():
         if alias == "bi":
             alias_found = re.search(r"(?<!power )(?<!power-)\bbi\b", normalized) is not None
+        elif alias == "js":
+            alias_found = re.search(r"(?<![a-zA-Z0-9.])js(?![a-zA-Z0-9])", normalized) is not None
         else:
             alias_found = _contains_phrase(normalized, alias)
         if alias_found:
@@ -268,9 +282,11 @@ def score_requirement(requirement, resume_text):
     )
     requirement_skills = set(extract_skills(requirement))
     resume_skills = set(extract_skills(resume_text))
+    satisfied_alternatives = satisfied_skill_alternatives(requirement, resume_skills)
+    scored_requirement_skills = requirement_skills - (satisfied_alternatives - resume_skills)
     skill_score = (
-        (len(requirement_skills & resume_skills) / len(requirement_skills)) * 100
-        if requirement_skills
+        (len(scored_requirement_skills & resume_skills) / len(scored_requirement_skills)) * 100
+        if scored_requirement_skills
         else overlap_score
     )
     score = round((overlap_score * 0.5) + (similarity_score * 0.25) + (skill_score * 0.25))
@@ -365,15 +381,14 @@ def skill_priority(weight):
 def satisfied_skill_alternatives(job_description, resume_skills):
     normalized = normalize_text(job_description)
     satisfied = set()
-    skills = sorted(SKILL_KEYWORDS, key=len, reverse=True)
-    for first_skill in skills:
-        for second_skill in skills:
-            if first_skill == second_skill:
-                continue
-            if re.search(rf"\b{re.escape(first_skill)}\b\s+or\s+\b{re.escape(second_skill)}\b", normalized):
-                alternatives = {first_skill, second_skill}
-                if alternatives & resume_skills:
-                    satisfied.update(alternatives)
+    skill_term = "|".join(re.escape(skill) for skill in sorted(SKILL_KEYWORDS, key=len, reverse=True))
+    pattern = re.compile(
+        rf"(?P<alternatives>(?:{skill_term})(?:\s*,\s*(?:{skill_term}))*\s*,?\s+(?:and/)?or\s+(?:{skill_term}))"
+    )
+    for match in pattern.finditer(normalized):
+        alternatives = set(extract_skills(match.group("alternatives")))
+        if alternatives & resume_skills:
+            satisfied.update(alternatives)
     return satisfied
 
 

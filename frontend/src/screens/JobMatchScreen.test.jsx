@@ -95,7 +95,7 @@ describe("JobMatchScreen", () => {
         onCreateSearchAlert={() => {}}
         onPageChange={() => {}}
         pagination={{ page: 1, count: 0, total_pages: 0, has_previous: false, has_next: false }}
-        selectedJob={{ id: "job-1", title: "Data Analyst", company: "Example Co" }}
+        selectedJob={{ id: "job-1", title: "Data Analyst", company: "Example Co", description_is_partial: true }}
         matchPreview={{
           summary: { match_score: 76, readiness_score: 68 },
           skills: { matched: ["python", "sql"], missing: ["tableau"], missing_details: [{ name: "tableau", priority: "low" }] },
@@ -115,6 +115,7 @@ describe("JobMatchScreen", () => {
     expect(screen.getByText("68%")).toBeVisible();
     expect(screen.getByText("python")).toBeVisible();
     expect(screen.getByText("tableau · optional")).toBeVisible();
+    expect(screen.getByText("This provider shared a shortened excerpt")).toBeVisible();
     expect(screen.getByRole("button", { name: "Generate full readiness report" })).toBeVisible();
   });
 

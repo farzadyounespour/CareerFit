@@ -129,6 +129,17 @@ class AnalyzeResumeMatchTests(SimpleTestCase):
         self.assertIn("tableau", result["skills"]["matched"])
         self.assertNotIn("power bi", result["skills"]["missing"])
 
+    def test_and_or_skill_list_does_not_create_false_gaps(self):
+        result = analyze_resume_match(
+            {"target_role": "Software Engineer"},
+            "Built event-driven services with Golang.",
+            "Strong proficiency in TypeScript, Node.js, and/or Golang.",
+        )
+
+        self.assertEqual(result["skills"]["matched"], ["golang"])
+        self.assertEqual(result["skills"]["missing"], [])
+        self.assertNotIn("javascript", extract_skills("Node.js services"))
+
     def test_optional_skill_gap_is_labeled_low_priority(self):
         result = analyze_resume_match(
             {"target_role": "Data Analyst"},
@@ -156,3 +167,17 @@ class AnalyzeResumeMatchTests(SimpleTestCase):
         )
         self.assertEqual(result["skills"]["missing"], [])
         self.assertGreaterEqual(result["summary"]["match_score"], 60)
+
+    def test_backend_engineering_vocabulary_is_recognized(self):
+        self.assertEqual(
+            set(extract_skills("Golang Kafka microservices K8S Elasticsearch ClickHouse event-driven services")),
+            {
+                "golang",
+                "kafka",
+                "microservices",
+                "kubernetes",
+                "elasticsearch",
+                "clickhouse",
+                "event-driven architecture",
+            },
+        )
