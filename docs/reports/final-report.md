@@ -165,6 +165,20 @@ The evaluation module also supports semantic embeddings through Ollama. Ollama's
 | NFR-06 | Testability | Backend, frontend, browser, and evaluation-script coverage |
 | NFR-07 | Deployment readiness | PostgreSQL option, Gunicorn, WhiteNoise, environment configuration |
 
+### 5.3 Requirement Traceability
+
+The implementation was organized around a traceable workflow rather than isolated features:
+
+| User Need | Implemented Response | Verification Evidence |
+|---|---|---|
+| Correct an uploaded resume | Editable text preview, clear action, replacement upload, reusable versions | Resume component tests and upload API tests |
+| Avoid repeating profile information | Candidate profile and job-search autofill | Account API tests and browser workflow |
+| Decide whether a posting is worth deeper review | Immediate quick comparison after job selection | Matching preview API tests and job-screen tests |
+| Understand a score | Requirement categories, evidence mapping, ATS breakdown, and recommendations | Matching tests and report-screen tests |
+| Recover from incomplete provider text | Excerpt detection, Adzuna enrichment, warning, and manual paste path | Provider tests and manual case review |
+| Keep applications organized | Explicit add-to-tracker action, stages, tasks, dates, notes, and linked resume versions | Tracker API and UI tests |
+| Use AI only when desired | Opt-in local or cloud coaching separated from scoring | Coaching service tests |
+
 ## 6. System Architecture and Design
 
 ### 6.1 Architecture Overview
@@ -225,6 +239,53 @@ Django Backend
 | `ReportScreen` | Detailed report, recommendations, draft template, interview preparation |
 | `DashboardScreen` | Progress metrics and alerts |
 | `HistoryScreen` | Application tracker and report history |
+
+### 6.4 Data Model
+
+| Entity | Relationship | Purpose |
+|---|---|---|
+| `User` | Owns private workspace data | Django authentication identity |
+| `UserProfile` | One profile per user | Contact information, target role, experience level, workplace preference, and summary |
+| `Resume` | Multiple versions per user | Editable extracted text and tailored copies |
+| `JobDescription` | Multiple records per user | Imported roles, tracked applications, statuses, notes, dates, and drafts |
+| `MatchReport` | Links user, resume, and job | Preserved resume and job snapshots with JSON result |
+| `SearchAlert` | Multiple alerts per user | Reusable job-search criteria and frequency |
+
+Report snapshots matter because a user may modify a resume after generating a report. Storing the original analyzed text makes historical results interpretable.
+
+### 6.5 Main API Workflow
+
+```text
+Resume upload
+  -> POST /api/resumes/upload/
+  -> parse and normalize file
+  -> return editable text
+
+Job selection
+  -> POST /api/matches/preview/
+  -> lightweight deterministic comparison
+  -> return quick scores and skill summary
+
+Detailed report
+  -> POST /api/matches/analyze/
+  -> requirement mapping + ATS checks + recommendations
+  -> preserve report history
+
+Optional coaching
+  -> POST /api/matches/coach/
+  -> require explicit user action
+  -> call configured Ollama or OpenAI provider
+```
+
+### 6.6 Interface Information Architecture
+
+The horizontal navigation follows the user's task sequence:
+
+```text
+Home -> Profile -> Resume -> Jobs -> Report -> Tracker
+```
+
+Users are not forced to follow a rigid wizard. The navigation keeps previous work accessible while the screen-level actions suggest the most useful next step.
 
 ## 7. Implementation
 
@@ -453,6 +514,59 @@ For each case, include:
 
 CareerFit is designed around a visible, reversible workflow. Users can review and edit resume text, replace incorrect uploads, inspect job descriptions, see provider-excerpt warnings, and decide whether to request optional AI coaching.
 
+### 11.1 Design Goals
+
+| Goal | Interface Response |
+|---|---|
+| Make the next step obvious | Prominent page-level actions such as `Continue to jobs`, `Use this job`, and `Generate full report` |
+| Reduce repeated work | Profile autofill, reusable resume versions, saved search alerts, and tracker records |
+| Keep analysis understandable | Separate match, readiness, ATS preparation, evidence, and recommendation areas |
+| Support recovery | Editable text, clear resume action, replace upload, clear filters, and manual posting input |
+| Protect user choice | Explicit tracker save and opt-in AI coaching |
+
+### 11.2 Screen-by-Screen Design
+
+| Screen | Main Content | Primary Action | Important States |
+|---|---|---|---|
+| Home | Hero, workflow summary, report preview, connected features | Check resume fit | Public visitor and signed-in navigation |
+| Profile | Candidate preferences and contact information | Save profile | Validation and saved confirmation |
+| Resume | Upload, text editor, versions, ATS preview | Continue to jobs | Empty, uploading, parsed, invalid file, cleared |
+| Jobs | Import URL, search, filters, role insights, results, selected-job panel | Use this job | Loading, provider notice, excerpt warning, no resume, quick comparison |
+| Report | Scores, summary, evidence, ATS checks, improvements, template, interview preparation | Rescan after edits | Deterministic report, optional coaching loading and result |
+| Tracker | Application stages, details, tasks, drafts, dates, resume version | Save changes | Empty tracker, selected role, overdue follow-up |
+
+### 11.3 Progressive Disclosure
+
+The detailed report is intentionally layered:
+
+1. Executive summary and two scores.
+2. Highest-priority improvements.
+3. Requirement categories and resume evidence.
+4. ATS preparation checks.
+5. Resume-specific examples and template draft.
+6. Interview preparation.
+7. Optional AI coaching.
+
+This order helps users act on the report without reading every technical detail first.
+
+### 11.4 Responsive Behavior
+
+The application primarily targets the web desktop experience while preserving mobile usability:
+
+- Horizontal navigation becomes compact on smaller screens.
+- Two-column resume and jobs layouts stack vertically.
+- The selected-job comparison moves below results on narrow screens.
+- Tables and dense tracker areas use scrolling or stacked summaries.
+- Important actions remain visible after layout changes.
+
+### 11.5 Accessibility Considerations
+
+- Inputs retain visible labels rather than relying on placeholders alone.
+- Status messages use text and icons in addition to color.
+- Buttons use familiar icons and descriptive accessible titles where needed.
+- Contrast separates primary text, secondary text, warnings, errors, and positive states.
+- Keyboard users can reach inputs, buttons, expandable sections, and links.
+
 The interface reflects common usability principles [8]:
 
 | Principle | CareerFit Example |
@@ -474,6 +588,8 @@ The interface reflects common usability principles [8]:
 **Figure 7 placeholder:** Quick resume comparison.  
 **Figure 8 placeholder:** Detailed readiness report.  
 **Figure 9 placeholder:** Application tracker.
+
+The editable Word appendix contains the original annotated screen mockups. `[FINALIZE: add final application screenshots beside the corresponding mockups and discuss design changes made during implementation.]`
 
 ## 12. Security, Privacy, and Deployment Considerations
 
@@ -586,3 +702,13 @@ OLLAMA_EMBEDDING_MODEL=embeddinggemma
 - [ ] Detailed report screenshot
 - [ ] Tracker screenshot
 
+### Appendix E: Planned Mockup-to-Screenshot Comparison
+
+| Screen | Midterm Mockup Available | Final Screenshot Required | Discussion Needed |
+|---|---|---|---|
+| Home | Yes | Yes | Explain hero, workflow, and report-preview refinements |
+| Profile | Yes | Yes | Explain autofill fields and validation |
+| Resume workspace | Yes | Yes | Explain error recovery, editable preview, ATS checks, and saved versions |
+| Jobs | Yes | Yes | Explain filters, role insights, quick comparison, and excerpt warnings |
+| Report | Yes | Yes | Explain information hierarchy and actionable guidance |
+| Tracker | Yes | Yes | Explain status stages, tasks, drafts, and follow-up management |

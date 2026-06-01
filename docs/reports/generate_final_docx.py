@@ -9,8 +9,11 @@ from generate_midterm_docx import (
     SLATE,
     TEAL,
     add_architecture_diagram,
+    add_data_model_diagram,
     add_markdown_content,
+    add_navigation_diagram,
     add_toc,
+    add_wireframes,
     add_workflow_diagram,
     configure_document,
     set_cell_text,
@@ -85,8 +88,11 @@ def main():
     document.add_page_break()
     add_markdown_content(document, markdown)
     document.add_page_break()
-    add_architecture_diagram(document)
-    add_workflow_diagram(document)
+    add_architecture_diagram(document, appendix="F")
+    add_workflow_diagram(document, appendix="G")
+    add_navigation_diagram(document, appendix="H")
+    add_data_model_diagram(document, appendix="I")
+    add_wireframes(document, appendix="J")
     document.save(OUTPUT_PATH)
     print(f"Generated {OUTPUT_PATH}")
 

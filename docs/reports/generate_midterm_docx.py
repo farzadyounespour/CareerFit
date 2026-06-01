@@ -21,6 +21,8 @@ LIGHT_TEAL = "ECFDF5"
 LIGHT_BLUE = "EFF6FF"
 LIGHT_SLATE = "F8FAFC"
 LIGHT_AMBER = "FFFBEB"
+LIGHT_ROSE = "FFF1F2"
+LIGHT_PURPLE = "F5F3FF"
 
 
 def set_cell_shading(cell, fill):
@@ -212,9 +214,9 @@ def add_cover_page(document):
     document.add_page_break()
 
 
-def add_architecture_diagram(document):
-    document.add_heading("Appendix A: Editable Architecture Diagram", level=1)
-    document.add_paragraph("Figure A1. Proposed CareerFit client-server architecture. The diagram is editable in Word.")
+def add_architecture_diagram(document, appendix="A"):
+    document.add_heading(f"Appendix {appendix}: Editable Architecture Diagram", level=1)
+    document.add_paragraph(f"Figure {appendix}1. Proposed CareerFit client-server architecture. The diagram is editable in Word.")
     table = document.add_table(rows=7, cols=3)
     style_table(table)
     cells = [row.cells for row in table.rows]
@@ -242,9 +244,9 @@ def add_architecture_diagram(document):
     document.add_paragraph()
 
 
-def add_workflow_diagram(document):
-    document.add_heading("Appendix B: Editable User Workflow", level=1)
-    document.add_paragraph("Figure B1. Proposed CareerFit workflow. Each box is editable in Word.")
+def add_workflow_diagram(document, appendix="B"):
+    document.add_heading(f"Appendix {appendix}: Editable User Workflow", level=1)
+    document.add_paragraph(f"Figure {appendix}1. Proposed CareerFit workflow. Each box is editable in Word.")
     steps = [
         "1. Create account or sign in",
         "2. Complete candidate profile",
@@ -264,6 +266,70 @@ def add_workflow_diagram(document):
         set_cell_shading(table.cell(row_index, 0), LIGHT_TEAL if index % 2 == 0 else LIGHT_BLUE)
         if row_index + 1 < len(table.rows):
             set_cell_text(table.cell(row_index + 1, 0), "v", bold=True, color=TEAL, size=10)
+    document.add_paragraph()
+
+
+def add_navigation_diagram(document, appendix="C"):
+    document.add_heading(f"Appendix {appendix}: Editable Navigation Map", level=1)
+    document.add_paragraph(f"Figure {appendix}1. Proposed website information architecture. Each item is editable in Word.")
+    table = document.add_table(rows=5, cols=6)
+    style_table(table)
+    cells = [row.cells for row in table.rows]
+
+    cells[0][0].merge(cells[0][5])
+    set_cell_text(cells[0][0], "CareerFit Web Application", bold=True, size=11)
+    set_cell_shading(cells[0][0], LIGHT_TEAL)
+    cells[1][0].merge(cells[1][5])
+    set_cell_text(cells[1][0], "Horizontal navigation", bold=True, color=TEAL, size=9)
+    pages = ("Home", "Profile", "Resume", "Jobs", "Report", "Tracker")
+    descriptions = (
+        "Overview\nStarting actions",
+        "Preferences\nAutofill data",
+        "Upload\nEdit\nSave versions",
+        "Search\nImport\nQuick compare",
+        "Scores\nEvidence\nImprove",
+        "Stages\nTasks\nFollow-ups",
+    )
+    for column, page in enumerate(pages):
+        set_cell_text(cells[2][column], page, bold=True, size=9)
+        set_cell_shading(cells[2][column], LIGHT_BLUE if column % 2 == 0 else LIGHT_SLATE)
+        set_cell_text(cells[3][column], descriptions[column], size=8)
+    cells[4][0].merge(cells[4][5])
+    set_cell_text(
+        cells[4][0],
+        "Public entry points: Home and authentication | Private workspace records: profile, resume versions, reports, and tracked jobs",
+        size=8,
+    )
+    set_cell_shading(cells[4][0], LIGHT_AMBER)
+    document.add_paragraph()
+
+
+def add_data_model_diagram(document, appendix="D"):
+    document.add_heading(f"Appendix {appendix}: Editable Data Model", level=1)
+    document.add_paragraph(f"Figure {appendix}1. Proposed CareerFit data relationships. The model is editable in Word.")
+    table = document.add_table(rows=7, cols=3)
+    style_table(table)
+    cells = [row.cells for row in table.rows]
+    entities = (
+        ("User", "1", "Authentication identity"),
+        ("User Profile", "1:1 with User", "Preferences and autofill"),
+        ("Resume", "many per User", "Editable resume versions"),
+        ("Match Report", "many per User", "Comparison snapshots"),
+        ("Job Description", "many per User", "Selected and tracked roles"),
+        ("Search Alert", "many per User", "Reusable search filters"),
+    )
+    for index, (entity, relation, purpose) in enumerate(entities):
+        set_cell_text(cells[index][0], entity, bold=True, size=9, align=WD_ALIGN_PARAGRAPH.LEFT)
+        set_cell_text(cells[index][1], relation, color=TEAL, size=8)
+        set_cell_text(cells[index][2], purpose, size=8, align=WD_ALIGN_PARAGRAPH.LEFT)
+        set_cell_shading(cells[index][0], LIGHT_BLUE if index % 2 == 0 else LIGHT_TEAL)
+    cells[6][0].merge(cells[6][2])
+    set_cell_text(
+        cells[6][0],
+        "Match Report links a resume snapshot and a job-description snapshot so historical results remain understandable after later edits.",
+        size=8,
+    )
+    set_cell_shading(cells[6][0], LIGHT_AMBER)
     document.add_paragraph()
 
 
@@ -287,44 +353,118 @@ def add_wireframe(document, title, rows):
     document.add_paragraph()
 
 
-def add_wireframes(document):
-    document.add_heading("Appendix C: Editable Low-Fidelity Wireframes", level=1)
+def add_mockup_notes(document, notes):
+    table = document.add_table(rows=len(notes), cols=2)
+    style_table(table)
+    for row_index, (label, detail) in enumerate(notes):
+        set_cell_text(table.cell(row_index, 0), label, bold=True, color=TEAL, size=8, align=WD_ALIGN_PARAGRAPH.LEFT)
+        set_cell_text(table.cell(row_index, 1), detail, size=8, align=WD_ALIGN_PARAGRAPH.LEFT)
+        set_cell_shading(table.cell(row_index, 0), LIGHT_TEAL)
+    document.add_paragraph()
+
+
+def add_wireframes(document, appendix="E"):
+    document.add_heading(f"Appendix {appendix}: Editable Annotated Screen Mockups", level=1)
     document.add_paragraph(
-        "These low-fidelity wireframes describe the planned prototype before implementation. "
-        "They are intentionally simple and editable in Word."
+        "These annotated desktop mockups describe the planned prototype before implementation. "
+        "They are intentionally editable in Word so that the layout and labels can be revised after the midterm review."
     )
-    add_wireframe(document, "Figure C1. Home Page", [
-        ("CareerFit logo | Home | Profile | Resume | Jobs | Report | Tracker", "", "Login / Sign up"),
-        ("Headline: Find jobs that fit your experience", "", ""),
-        ("Short product value statement", "", ""),
-        ("Check resume fit", "Search jobs", "Create account"),
-        ("Step 1: Upload resume", "Step 2: Choose posting", "Step 3: Improve application"),
+    add_wireframe(document, f"Figure {appendix}1. Home Page Mockup", [
+        ("CareerFit | Home | Profile | Resume | Jobs | Report | Tracker", "", "Log in | Sign up"),
+        ("JOB SEARCH AND RESUME READINESS", "", "Hero image: resume workspace"),
+        ("Turn each job posting into a stronger application.", "", "Report preview: 78%"),
+        ("Upload your resume, find real roles, and see the most useful improvements before you apply.", "", "ATS structure: 8/9"),
+        ("CHECK YOUR RESUME FIT", "SEARCH JOBS", "Skills coverage: 12/16"),
+        ("1. Add resume", "2. Choose job", "3. Review fit | 4. Improve and track"),
+        ("Private workspace", "Explainable scores", "Free to start"),
     ])
-    add_wireframe(document, "Figure C2. Resume Workspace", [
-        ("Resume Workspace", "", "Load sample"),
-        ("Upload PDF / DOCX / TXT", "Editable resume preview", "ATS preparation checks"),
-        ("Saved resume versions", "Word and character count", "Clear resume"),
-        ("", "Continue to jobs", ""),
+    add_mockup_notes(document, [
+        ("Primary purpose", "Introduce the workflow and provide immediate entry points."),
+        ("Primary action", "Check your resume fit."),
+        ("Design rationale", "The first viewport shows the product value, next action, and an explainable-report preview."),
     ])
-    add_wireframe(document, "Figure C3. Jobs Page", [
-        ("Search title", "Location", "Country and Search"),
-        ("Filters: workplace | skills | experience | employment | salary", "", ""),
+    add_wireframe(document, f"Figure {appendix}2. Profile Page Mockup", [
+        ("CareerFit | Home | Profile | Resume | Jobs | Report | Tracker", "", "Signed-in user"),
+        ("Candidate profile", "", "Profile completion"),
+        ("Name", "Email", "Phone"),
+        ("Location", "Target role", "Experience level"),
+        ("Workplace preference", "Professional summary", ""),
+        ("SAVE PROFILE", "Saved confirmation / validation message", ""),
+    ])
+    add_mockup_notes(document, [
+        ("Primary purpose", "Capture candidate preferences and reduce repeated search input."),
+        ("Autofill", "Target role and location prefill job search fields while remaining editable."),
+        ("Feedback", "Display save confirmation and field-specific validation messages."),
+    ])
+    add_wireframe(document, f"Figure {appendix}3. Resume Workspace Mockup", [
+        ("CareerFit | Home | Profile | Resume | Jobs | Report | Tracker", "", "Load sample"),
+        ("Resume workspace: Add the resume you want to improve", "", ""),
+        ("Upload PDF / DOCX / TXT", "Editable resume text preview", "Saved versions"),
+        ("Uploading / success / error feedback", "Text editor with extracted content", "Version name | Save"),
+        ("Accepted file types and 5 MB limit", "Word count | Character count", "Load version | Delete"),
+        ("", "CLEAR RESUME | CONTINUE TO JOBS", "ATS preparation: 7/9"),
+    ])
+    add_mockup_notes(document, [
+        ("Primary purpose", "Create a reliable, editable resume source before comparison."),
+        ("Recovery", "A wrong file can be dismissed, cleared, replaced, or corrected manually."),
+        ("ATS preview", "Show document-preparation checks before the detailed job-specific report."),
+    ])
+    add_wireframe(document, f"Figure {appendix}4. Jobs Page Mockup", [
+        ("CareerFit | Home | Profile | Resume | Jobs | Report | Tracker", "", "Load sample"),
+        ("Job discovery: Choose the role you want to evaluate", "", ""),
+        ("Import public job URL", "URL input", "IMPORT URL"),
+        ("Job title", "Location", "Country | SEARCH JOBS"),
+        ("Filters: workplace | skills | experience | employment | salary", "", "SAVE SEARCH ALERT"),
         ("Role insights: recurring skills across retrieved postings", "", ""),
-        ("Job result cards", "Job result cards", "Selected job comparison"),
-        ("Add to tracker", "Open posting", "Generate detailed report"),
+        ("Search results and pagination", "Job cards: company | location | salary | source", "Selected job"),
+        ("OPEN POSTING | SAVE ROLE | USE THIS JOB", "", "Quick match | readiness | skills"),
+        ("", "", "GENERATE FULL REPORT"),
     ])
-    add_wireframe(document, "Figure C4. Detailed Report", [
-        ("Readiness Report", "", "Print / Save"),
+    add_mockup_notes(document, [
+        ("Primary purpose", "Search or import a role and make the comparison path obvious."),
+        ("Without resume", "Selecting a job opens a prompt with a direct upload-resume action."),
+        ("With resume", "Selecting a job shows a lightweight comparison immediately."),
+    ])
+    add_wireframe(document, f"Figure {appendix}5. Detailed Report Mockup", [
+        ("CareerFit | Home | Profile | Resume | Jobs | Report | Tracker", "", "Print | Save"),
+        ("Readiness report: Selected role and company", "", "Add to tracker"),
         ("Match score", "Readiness score", "ATS preparation"),
-        ("Matched requirements", "Partial and weak evidence", "Missing requirements"),
-        ("Improvement recommendations", "Resume examples", "Optional AI coaching"),
-        ("Interview questions", "ATS-friendly draft", "Add job to tracker"),
+        ("Executive summary", "Top priorities", "Score explanation"),
+        ("Matched requirements", "Partial / weak evidence", "Missing requirements"),
+        ("Requirement | priority | resume evidence", "", ""),
+        ("ATS checklist", "Specific improvement examples", "Resume template draft"),
+        ("Interview preparation", "Optional AI coaching", "RESCAN AFTER EDITS"),
     ])
-    add_wireframe(document, "Figure C5. Application Tracker", [
-        ("Application Tracker", "Search and filters", "Import / Export"),
+    add_mockup_notes(document, [
+        ("Primary purpose", "Turn a score into an understandable revision plan."),
+        ("Reading order", "Summary first, then prioritized improvements, then detailed evidence."),
+        ("AI boundary", "Optional coaching is visually separated from deterministic results."),
+    ])
+    add_wireframe(document, f"Figure {appendix}6. Application Tracker Mockup", [
+        ("CareerFit | Home | Profile | Resume | Jobs | Report | Tracker", "", "Export CSV"),
+        ("Application tracker", "Search and filters", "Add role"),
         ("Saved", "Preparing", "Applied"),
         ("Interview", "Offer", "Rejected / Archived"),
-        ("Notes and tasks", "Follow-up dates", "Linked resume version"),
+        ("Selected application details", "Notes and tasks", "Dates and recruiter"),
+        ("Linked resume version", "Cover letter and email drafts", "SAVE CHANGES"),
+    ])
+    add_mockup_notes(document, [
+        ("Primary purpose", "Keep application progress and follow-up actions together."),
+        ("Record detail", "Preserve notes, dates, recruiter contact, tasks, and linked resume version."),
+        ("Progress model", "Use clear stages from saved role through archived outcome."),
+    ])
+    add_wireframe(document, f"Figure {appendix}7. Mobile Layout Mockup", [
+        ("CareerFit", "Menu", "Account"),
+        ("Page title and short guidance", "", ""),
+        ("Primary action", "", ""),
+        ("Main content stacked vertically", "", ""),
+        ("Expandable secondary sections", "", ""),
+        ("Sticky or visible next-step action", "", ""),
+    ])
+    add_mockup_notes(document, [
+        ("Responsive rule", "Multi-column desktop layouts become a single reading column."),
+        ("Navigation", "Horizontal navigation becomes a compact menu."),
+        ("Priority", "The current task and next action remain visible before secondary detail."),
     ])
 
 
@@ -364,6 +504,8 @@ def main():
     document.add_section(WD_SECTION.NEW_PAGE)
     add_architecture_diagram(document)
     add_workflow_diagram(document)
+    add_navigation_diagram(document)
+    add_data_model_diagram(document)
     add_wireframes(document)
     document.save(OUTPUT_PATH)
     print(f"Generated {OUTPUT_PATH}")

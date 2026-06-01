@@ -12,6 +12,7 @@ build/
 .vite/
 coverage/
 *.log
+~$*.docx
 playwright-report/
 test-results/
 staticfiles/
