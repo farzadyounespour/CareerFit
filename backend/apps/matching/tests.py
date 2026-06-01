@@ -4,6 +4,7 @@ from .services import (
     analyze_ats_readiness,
     analyze_resume_match,
     calculate_text_similarity,
+    extract_skills,
     requirement_priority,
     satisfied_skill_alternatives,
 )
@@ -139,3 +140,19 @@ class AnalyzeResumeMatchTests(SimpleTestCase):
             {"name": "nlp", "priority": "low"},
             result["skills"]["missing_details"],
         )
+
+    def test_common_software_skill_spellings_do_not_create_false_gaps(self):
+        resume_text = "JS NodeJS Postgres problem-solving Typescript RESTful React.js GitHub"
+        result = analyze_resume_match(
+            {"target_role": "Junior Software Engineer"},
+            resume_text,
+            "Required JavaScript, Node.js, PostgreSQL, problem solving, and TypeScript experience. "
+            "Build REST APIs with React and Git.",
+        )
+
+        self.assertEqual(
+            set(extract_skills(resume_text)),
+            {"javascript", "node.js", "postgresql", "problem solving", "typescript", "rest", "react", "git"},
+        )
+        self.assertEqual(result["skills"]["missing"], [])
+        self.assertGreaterEqual(result["summary"]["match_score"], 60)

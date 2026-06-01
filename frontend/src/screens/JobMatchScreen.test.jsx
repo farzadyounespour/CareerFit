@@ -1,10 +1,17 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import JobMatchScreen from "./JobMatchScreen.jsx";
+import JobMatchScreen, { getMatchGuidance } from "./JobMatchScreen.jsx";
 
 
 describe("JobMatchScreen", () => {
+  it("explains how to act on a low resume match", () => {
+    expect(getMatchGuidance(8)).toMatchObject({
+      title: "Low alignment with this resume",
+      detail: expect.stringContaining("add only skills and examples you genuinely have"),
+    });
+  });
+
   it("shows the current and total number of result pages", () => {
     const onImportJobUrl = vi.fn().mockResolvedValue({});
     render(

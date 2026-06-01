@@ -101,9 +101,13 @@ SKILL_KEYWORDS = {
 SKILL_ALIASES = {
     "bi": "business intelligence",
     "powerbi": "power bi",
+    "nodejs": "node.js",
+    "node js": "node.js",
+    "postgres": "postgresql",
     "rest api": "rest",
     "restful": "rest",
     "js": "javascript",
+    "github": "git",
     "ml": "machine learning",
     "natural language processing": "nlp",
     "data analytics": "data analysis",
@@ -121,6 +125,9 @@ TOKEN_ALIASES = {
     "cleaning": "clean",
     "collaboration": "collaborate",
     "collaborated": "collaborate",
+    "github": "git",
+    "nodejs": "node.js",
+    "postgres": "postgresql",
     "reporting": "report",
     "reports": "report",
 }
@@ -140,7 +147,7 @@ def normalize_text(text):
 def tokenize(text):
     return [
         _normalize_token(token.strip(".,;:-"))
-        for token in re.findall(r"[a-zA-Z][a-zA-Z+#.-]*", normalize_text(text))
+        for token in re.findall(r"[a-zA-Z][a-zA-Z+#.-]*", normalize_text(text).replace("-", " "))
         if _normalize_token(token.strip(".,;:-")) not in STOP_WORDS and len(_normalize_token(token.strip(".,;:-"))) > 2
     ]
 

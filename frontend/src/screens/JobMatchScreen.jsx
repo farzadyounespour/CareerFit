@@ -321,6 +321,7 @@ function MatchPreview({ preview }) {
   const matchedSkills = preview.skills.matched.slice(0, 5);
   const missingSkills = preview.skills.missing.slice(0, 5);
   const missingPriorities = new Map((preview.skills.missing_details || []).map((item) => [item.name, item.priority]));
+  const guidance = getMatchGuidance(preview.summary.match_score);
 
   return (
     <section className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3">
@@ -331,8 +332,34 @@ function MatchPreview({ preview }) {
       </div>
       <SkillSummary label="Matched skills" skills={matchedSkills} emptyText="No clear matches yet" tone="emerald" />
       <SkillSummary label="Missing skills" skills={missingSkills} priorities={missingPriorities} emptyText="No missing skills found" tone="amber" />
+      <div className={`mt-3 rounded-md border px-3 py-2 ${guidance.className}`}>
+        <p className="text-xs font-bold">{guidance.title}</p>
+        <p className="mt-1 text-xs leading-5">{guidance.detail}</p>
+      </div>
     </section>
   );
+}
+
+export function getMatchGuidance(score) {
+  if (score < 35) {
+    return {
+      title: "Low alignment with this resume",
+      detail: "This resume does not yet show several requirements from the posting. Compare a closer role or add only skills and examples you genuinely have.",
+      className: "border-amber-200 bg-amber-50 text-amber-900",
+    };
+  }
+  if (score < 70) {
+    return {
+      title: "Some relevant evidence found",
+      detail: "Review the missing skills and make your most relevant projects or accomplishments easier to find before applying.",
+      className: "border-sky-200 bg-sky-50 text-sky-900",
+    };
+  }
+  return {
+    title: "Strong alignment found",
+    detail: "The resume shows many of this posting's requirements. Generate the full report to refine the remaining gaps.",
+    className: "border-emerald-200 bg-white text-emerald-900",
+  };
 }
 
 function ScoreSummary({ label, value }) {
