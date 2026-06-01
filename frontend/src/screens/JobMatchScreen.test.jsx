@@ -40,6 +40,11 @@ describe("JobMatchScreen", () => {
           description: "Build dashboards.",
           source: "Adzuna",
         }]}
+        roleInsights={{
+          postings_analyzed: 3,
+          partial_postings: 1,
+          common_skills: [{ name: "python", count: 2, percentage: 67 }],
+        }}
         onJobSearch={() => {}}
         onSelectJob={() => {}}
         onImportJobUrl={onImportJobUrl}
@@ -60,6 +65,9 @@ describe("JobMatchScreen", () => {
     );
 
     expect(screen.getByText("Page 2 of 3")).toBeVisible();
+    expect(screen.getByText("Role insights from 3 retrieved postings")).toBeVisible();
+    expect(screen.getByText("python · 2/3")).toBeVisible();
+    expect(screen.getByText("1 provider excerpt")).toBeVisible();
 
     fireEvent.change(screen.getByPlaceholderText("https://company.example/jobs/data-analyst"), { target: { value: "https://example.com/jobs/analyst" } });
     fireEvent.click(screen.getByRole("button", { name: "Import URL" }));

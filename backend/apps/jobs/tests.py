@@ -11,6 +11,7 @@ from rest_framework.test import APITestCase
 from .services import (
     JobSearchError,
     import_job_from_url,
+    build_role_insights,
     search_adzuna_jobs,
     search_arbeitnow_jobs,
     search_jobs,
@@ -77,6 +78,22 @@ class AdzunaJobSearchTests(SimpleTestCase):
         self.assertGreater(len(jobs["results"]), 0)
         self.assertEqual(jobs["results"][0]["source"], "Sample")
         self.assertIn("description", jobs["results"][0])
+
+    def test_role_insights_summarize_repeated_skills_and_partial_sources(self):
+        insights = build_role_insights(
+            [
+                {"title": "Backend Engineer", "description": "Python SQL AWS", "source": "Adzuna"},
+                {"title": "Data Engineer", "description": "Python SQL Docker", "source": "Jooble", "description_is_partial": True},
+                {"title": "API Engineer", "description": "Python REST", "source": "Arbeitnow"},
+            ],
+            role="Software Engineer",
+        )
+
+        self.assertEqual(insights["role"], "Software Engineer")
+        self.assertEqual(insights["postings_analyzed"], 3)
+        self.assertEqual(insights["partial_postings"], 1)
+        self.assertEqual(insights["common_skills"][0], {"name": "python", "count": 3, "percentage": 100})
+        self.assertIn({"name": "sql", "count": 2, "percentage": 67}, insights["common_skills"])
 
 
 class AdditionalJobProviderTests(SimpleTestCase):
@@ -227,6 +244,7 @@ class JobSearchApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["results"][0]["source"], "Adzuna")
         self.assertFalse(response.data["pagination"]["has_next"])
+        self.assertEqual(response.data["role_insights"]["postings_analyzed"], 1)
 
     @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="")
     @patch("apps.jobs.views.search_jobs")

@@ -9,6 +9,7 @@ import {
   ExternalLink,
   FileSearch,
   Link2,
+  Layers3,
   MapPin,
   Search,
   SlidersHorizontal,
@@ -25,6 +26,7 @@ export default function JobMatchScreen({
   jobSearch,
   onJobSearchChange,
   jobResults,
+  roleInsights,
   onJobSearch,
   onSelectJob,
   onImportJobUrl,
@@ -200,6 +202,7 @@ export default function JobMatchScreen({
 
         {jobSearchError && <Notice tone="amber">{jobSearchError}</Notice>}
         {jobSearchNotice && <Notice tone="sky">{jobSearchNotice}</Notice>}
+        {roleInsights?.postings_analyzed > 0 && <RoleInsights insights={roleInsights} />}
       </section>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_380px]">
@@ -342,6 +345,29 @@ function MatchPreview({ preview }) {
       <div className={`mt-3 rounded-md border px-3 py-2 ${guidance.className}`}>
         <p className="text-xs font-bold">{guidance.title}</p>
         <p className="mt-1 text-xs leading-5">{guidance.detail}</p>
+      </div>
+    </section>
+  );
+}
+
+function RoleInsights({ insights }) {
+  return (
+    <section className="mt-4 border-t border-slate-100 pt-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Layers3 size={16} className="text-teal" />
+          <p className="text-sm font-semibold text-slate-700">Role insights from {insights.postings_analyzed} retrieved postings</p>
+        </div>
+        {insights.partial_postings > 0 && <span className="text-xs font-semibold text-amber-700">{insights.partial_postings} provider excerpt{insights.partial_postings === 1 ? "" : "s"}</span>}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {insights.common_skills.length
+          ? insights.common_skills.map((skill) => (
+            <span key={skill.name} className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+              {skill.name} · {skill.count}/{insights.postings_analyzed}
+            </span>
+          ))
+          : <span className="text-xs text-slate-500">No repeated skills were found in these postings.</span>}
       </div>
     </section>
   );

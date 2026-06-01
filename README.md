@@ -76,6 +76,20 @@ OPENAI_MODEL=gpt-5.4-mini
 
 AI coaching is opt-in for each scan. The explainable CareerFit score, ATS checks, and deterministic recommendations still work when AI is disabled or the configured provider is unavailable.
 
+To run the optional local semantic-similarity evaluation described below, pull a dedicated embedding model:
+
+```bash
+ollama pull embeddinggemma
+```
+
+Then add this value to `backend/.env`:
+
+```bash
+OLLAMA_EMBEDDING_MODEL=embeddinggemma
+```
+
+This model is used only by the research evaluation script. The website's normal score remains deterministic and works without it.
+
 For deployment, set `DJANGO_DEBUG=False`, use a long random `DJANGO_SECRET_KEY`, and configure your real host and CORS origin. HTTPS redirect, secure cookies, and HSTS are enabled by default when debug mode is off.
 
 Production can use PostgreSQL by setting:
@@ -111,6 +125,7 @@ VITE_API_BASE_URL=/api
 - PDF, DOCX, TXT, and pasted resume text input with a fully editable preview, clear action, and dismissible upload errors.
 - Resume-aware job-search autofill for inferred role, location, and supported country defaults.
 - Multi-provider job search with Adzuna, no-key Arbeitnow, optional Jooble, deduplication, and sample-data fallback.
+- Lightweight role insights that summarize recurring skills across the retrieved postings and disclose provider excerpts.
 - Instant deterministic resume comparison when a user selects a job, with match score, readiness score, and skill gaps before generating a full report.
 - Job saving, workplace, skill, experience-level, employment-type, salary filtering, and report history.
 - Visible active job filters, richer posting summaries, and optional-gap labels during quick comparison.
@@ -139,6 +154,16 @@ python -m scripts.evaluate_matching
 ```
 
 The script prints precision, recall, and F1-score for the included resume/job cases, then checks that strong, partial, and unrelated resumes rank in the expected order.
+
+Run the controlled matching-method comparison:
+
+```bash
+cd backend
+source .venv/bin/activate
+python -m scripts.evaluate_matching_methods
+```
+
+This script compares normalized keyword overlap, TF-IDF cosine similarity, and optional local Ollama semantic embeddings on paraphrased requirement-evidence pairs. If `OLLAMA_EMBEDDING_MODEL` is not configured, the semantic method is reported as skipped while the deterministic baselines still run.
 
 Run frontend checks:
 

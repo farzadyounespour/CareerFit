@@ -93,6 +93,7 @@ export default function App() {
     page: 1,
   });
   const [jobResults, setJobResults] = useState([]);
+  const [roleInsights, setRoleInsights] = useState(null);
   const [jobPagination, setJobPagination] = useState({
     page: 1,
     count: 0,
@@ -357,6 +358,7 @@ export default function App() {
     setJobSearchError("");
     setJobSearchNotice("");
     setJobResults([]);
+    setRoleInsights(null);
 
     if (!nextSearch.title.trim()) {
       setJobSearchError("Enter a job title before searching.");
@@ -378,6 +380,7 @@ export default function App() {
         page: nextSearch.page,
       });
       setJobResults(result.results);
+      setRoleInsights(result.role_insights || null);
       setJobPagination(result.pagination);
       if (result.using_sample_data) {
         setJobSearchNotice("Live job providers are unavailable. Showing local sample postings.");
@@ -612,6 +615,7 @@ export default function App() {
     setSearchAlerts([]);
     setReport(null);
     setResumeText("");
+    setRoleInsights(null);
     appliedResumeSearchDefaults.current = "";
     resumeSearchSourceName.current = "";
     setUploadedResumeId(null);
@@ -718,6 +722,7 @@ export default function App() {
           jobSearch={jobSearch}
           onJobSearchChange={setJobSearch}
           jobResults={jobResults}
+          roleInsights={roleInsights}
           onJobSearch={handleJobSearch}
           onSelectJob={handleSelectJob}
           onImportJobUrl={handleImportJobUrl}

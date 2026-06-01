@@ -2,6 +2,7 @@ import json
 import ipaddress
 import re
 import socket
+from collections import Counter
 from html import unescape
 from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
@@ -9,6 +10,8 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 from django.conf import settings
+
+from apps.matching.services import extract_skills
 
 
 class JobSearchError(ValueError):
@@ -289,6 +292,35 @@ def search_jobs(
         "providers": ["Sample"],
         "provider_errors": provider_errors,
         "using_sample_data": True,
+    }
+
+
+def build_role_insights(jobs, role=""):
+    skill_counts = Counter()
+    source_counts = Counter()
+    partial_postings = 0
+
+    for job in jobs:
+        source_counts[job.get("source") or "Unknown"] += 1
+        partial_postings += int(bool(job.get("description_is_partial")))
+        skill_counts.update(
+            extract_skills(" ".join([job.get("title") or "", job.get("description") or ""]))
+        )
+
+    postings_analyzed = len(jobs)
+    return {
+        "role": role,
+        "postings_analyzed": postings_analyzed,
+        "partial_postings": partial_postings,
+        "sources": sorted(source_counts),
+        "common_skills": [
+            {
+                "name": skill,
+                "count": count,
+                "percentage": round((count / postings_analyzed) * 100),
+            }
+            for skill, count in sorted(skill_counts.items(), key=lambda item: (-item[1], item[0]))[:8]
+        ] if postings_analyzed else [],
     }
 
 

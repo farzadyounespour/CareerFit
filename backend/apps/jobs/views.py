@@ -20,7 +20,7 @@ from .serializers import (
     SearchAlertSerializer,
     TrackedJobUpdateSerializer,
 )
-from .services import JobImportError, JobSearchError, build_packet_drafts, import_job_from_url, search_jobs
+from .services import JobImportError, JobSearchError, build_packet_drafts, build_role_insights, import_job_from_url, search_jobs
 
 
 class JobSearchView(APIView):
@@ -62,6 +62,7 @@ class JobSearchView(APIView):
                 "providers": providers,
                 "provider_errors": search_result["provider_errors"],
                 "using_sample_data": using_sample_data,
+                "role_insights": build_role_insights(jobs, serializer.validated_data["title"]),
                 "pagination": {
                     "page": page,
                     "results_per_page": results_per_page,
