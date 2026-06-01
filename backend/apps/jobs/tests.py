@@ -29,7 +29,7 @@ class AdzunaJobSearchTests(SimpleTestCase):
             {
               "id": 123,
               "title": "Junior Data Analyst",
-              "description": "Python, SQL, Tableau",
+              "description": "Python, SQL, Tableau...",
               "redirect_url": "https://example.com/job",
               "company": {"display_name": "Acme"},
               "location": {"area": ["US", "New York"]}
@@ -44,6 +44,7 @@ class AdzunaJobSearchTests(SimpleTestCase):
         self.assertEqual(jobs["results"][0]["company"], "Acme")
         self.assertEqual(jobs["results"][0]["location"], "US, New York")
         self.assertIn("Python", jobs["results"][0]["description"])
+        self.assertTrue(jobs["results"][0]["description_is_partial"])
         self.assertEqual(jobs["count"], 0)
 
     @override_settings(ADZUNA_APP_ID="app-id", ADZUNA_APP_KEY="app-key")
@@ -173,7 +174,8 @@ class JobUrlImportTests(SimpleTestCase):
         <script type="application/ld+json">
         {"@type":"JobPosting","title":"Data Analyst","description":"Build dashboards with Python.",
          "hiringOrganization":{"name":"Example Co"},
-         "jobLocation":{"address":{"addressLocality":"Montreal","addressRegion":"QC","addressCountry":"CA"}}}
+         "jobLocation":{"address":{"addressLocality":"Montreal","addressRegion":"QC","addressCountry":"CA"}},
+         "employmentType":["FULL_TIME"]}
         </script>
         """
 
@@ -182,6 +184,7 @@ class JobUrlImportTests(SimpleTestCase):
         self.assertEqual(job["title"], "Data Analyst")
         self.assertEqual(job["company"], "Example Co")
         self.assertEqual(job["location"], "Montreal, QC, CA")
+        self.assertEqual(job["employment_type"], "full_time")
 
     def test_rejects_local_job_url(self):
         with self.assertRaisesMessage(ValueError, "public web URLs"):

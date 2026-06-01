@@ -550,6 +550,7 @@ def _format_adzuna_job(job):
         "description": description,
         "url": job.get("redirect_url") or "",
         "source": "Adzuna",
+        "description_is_partial": _description_looks_partial(description),
     }
 
 
@@ -648,12 +649,18 @@ def _strip_html(value):
 
 
 def _normalize_employment_type(value):
+    if isinstance(value, list):
+        value = value[0] if value else ""
     normalized = value.lower().replace("-", "_").replace(" ", "_")
     return {
         "fulltime": "full_time",
         "parttime": "part_time",
         "freelance": "contract",
     }.get(normalized, normalized)
+
+
+def _description_looks_partial(description):
+    return description.rstrip().endswith(("...", "…"))
 
 
 def _keyword_for_workplace(workplace):

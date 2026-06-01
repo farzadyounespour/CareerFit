@@ -410,17 +410,34 @@ export default function App() {
   }
 
   async function handleSelectJob(job) {
+    let comparisonJob = job;
+    if (job.description_is_partial && job.url) {
+      try {
+        const result = await importJobUrl(job.url);
+        comparisonJob = {
+          ...job,
+          ...result.job,
+          id: job.id,
+          url: job.url,
+          source: job.source,
+          description_is_partial: false,
+        };
+        setJobSearchNotice("Loaded the full posting before calculating your resume comparison.");
+      } catch {
+        setJobSearchNotice("This provider shared a shortened excerpt. Open the posting and paste the full description for the most accurate report.");
+      }
+    }
     const selectedDescription = [
-      job.title,
-      job.company ? `Company: ${job.company}` : "",
-      job.location ? `Location: ${job.location}` : "",
-      job.description,
-      job.url ? `Source: ${job.url}` : "",
+      comparisonJob.title,
+      comparisonJob.company ? `Company: ${comparisonJob.company}` : "",
+      comparisonJob.location ? `Location: ${comparisonJob.location}` : "",
+      comparisonJob.description,
+      comparisonJob.url ? `Source: ${comparisonJob.url}` : "",
     ]
       .filter(Boolean)
       .join("\n\n");
     setJobDescription(selectedDescription);
-    setSelectedJob(job);
+    setSelectedJob(comparisonJob);
     setMatchPreview(null);
     setMatchPreviewError("");
     const requestId = matchPreviewRequest.current + 1;
