@@ -372,7 +372,7 @@ def add_wireframes(document, appendix="E"):
     add_wireframe(document, f"Figure {appendix}1. Home Page Mockup", [
         ("CareerFit | Home | Profile | Resume | Jobs | Report | Tracker", "", "Log in | Sign up"),
         ("JOB SEARCH AND RESUME READINESS", "", "Hero image: resume workspace"),
-        ("Turn each job posting into a stronger application.", "", "Report preview: 78%"),
+        ("Prepare a stronger application for every role.", "", "Report preview: 78%"),
         ("Upload your resume, find real roles, and see the most useful improvements before you apply.", "", "ATS structure: 8/9"),
         ("CHECK YOUR RESUME FIT", "SEARCH JOBS", "Skills coverage: 12/16"),
         ("1. Add resume", "2. Choose job", "3. Review fit | 4. Improve and track"),

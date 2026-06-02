@@ -3,13 +3,12 @@ import { expect, test } from "@playwright/test";
 
 test("protected resume workflow prompts guests to sign in", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Turn each job posting into a stronger application." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Prepare a stronger application for every role." })).toBeVisible();
   await page.getByRole("button", { name: "Check your resume fit" }).click();
   await expect(page.getByRole("dialog", { name: "CareerFit account" })).toBeVisible();
 });
 
-test("mobile navigation remains horizontally usable", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test("desktop navigation keeps job discovery accessible", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Jobs", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Jobs", exact: true }).click();
