@@ -99,6 +99,7 @@ export async function searchJobs({
   page = 1,
   workplace = "any",
   skills = "",
+  excluded_keywords = "",
   experience_level = "any",
   employment_type = "any",
   salary_min = "",
@@ -110,6 +111,7 @@ export async function searchJobs({
     page: String(page),
     workplace,
     skills,
+    excluded_keywords,
     experience_level,
     employment_type,
   });

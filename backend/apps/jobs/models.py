@@ -69,6 +69,7 @@ class SearchAlert(models.Model):
     country = models.CharField(max_length=2, default="us")
     workplace = models.CharField(max_length=24, default="any")
     skills = models.CharField(max_length=180, blank=True)
+    excluded_keywords = models.CharField(max_length=240, blank=True)
     experience_level = models.CharField(max_length=24, default="any")
     employment_type = models.CharField(max_length=24, default="any")
     salary_min = models.PositiveIntegerField(null=True, blank=True)

@@ -414,10 +414,11 @@ def add_wireframes(document, appendix="E"):
         ("Job discovery: Choose the role you want to evaluate", "", ""),
         ("Import public job URL", "URL input", "IMPORT URL"),
         ("Job title", "Location", "Country | SEARCH JOBS"),
-        ("Filters: workplace | skills | experience | employment | salary", "", "SAVE SEARCH ALERT"),
-        ("Role insights: recurring skills across retrieved postings", "", ""),
-        ("Search results and pagination", "Job cards: company | location | salary | source", "Selected job"),
+        ("Filters: workplace | skills | exclude keywords | experience | employment | salary", "", "SAVE SEARCH ALERT"),
+        ("Role insights: recurring skills | related role suggestions", "", ""),
+        ("Search results and pagination", "Job cards: company | location | salary | source | freshness", "Selected job"),
         ("OPEN POSTING | SAVE ROLE | USE THIS JOB", "", "Quick match | readiness | skills"),
+        ("COMPARE UP TO 3 JOBS", "Side-by-side role | company | salary | workplace | freshness", ""),
         ("", "", "GENERATE FULL REPORT"),
     ])
     add_mockup_notes(document, [

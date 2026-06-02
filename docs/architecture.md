@@ -5,7 +5,7 @@
 1. User enters profile information.
 2. User pastes resume content or uploads a PDF, DOCX, or TXT resume.
 3. User searches normalized Adzuna, Arbeitnow, and optional Jooble results or pastes a job description.
-4. Search results include lightweight role insights that summarize recurring skills across retrieved postings.
+4. Search results include lightweight role insights, related-role suggestions, provider posting dates, excluded-keyword filtering, and an optional side-by-side comparison for up to three roles.
 5. Frontend sends the combined request to the Django API.
 6. Backend extracts text from uploaded resumes when needed.
 7. Backend extracts requirement-style phrases and skills from the job description.
@@ -20,7 +20,7 @@
 - `UserProfileScreen`: basic user and target-role information.
 - `DashboardScreen`: pipeline metrics, upcoming follow-ups, interviews, and saved search alerts.
 - `ResumeUploadScreen`: pasted resume text and file upload controls.
-- `JobMatchScreen`: Adzuna job search, job selection, pasted job description, and sample job loading.
+- `JobMatchScreen`: multi-provider job search, filters, related roles, freshness badges, side-by-side comparison, job selection, pasted job description, and sample job loading.
 - `ReportScreen`: score, requirement categories, missing skills, and recommendations.
 - `HistoryScreen`: application tracker board and prior readiness reports.
 

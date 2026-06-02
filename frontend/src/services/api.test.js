@@ -24,6 +24,7 @@ describe("searchJobs", () => {
       country: "ca",
       workplace: "hybrid",
       skills: "Python SQL",
+      excluded_keywords: "senior, unpaid",
       experience_level: "entry",
       employment_type: "full_time",
       salary_min: "60000",
@@ -33,6 +34,7 @@ describe("searchJobs", () => {
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toContain("workplace=hybrid");
     expect(url).toContain("skills=Python+SQL");
+    expect(url).toContain("excluded_keywords=senior%2C+unpaid");
     expect(url).toContain("salary_min=60000");
     expect(options.headers).toEqual({ Authorization: "Token careerfit-test-token" });
   });

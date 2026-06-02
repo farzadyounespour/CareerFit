@@ -3,6 +3,7 @@ import ipaddress
 import re
 import socket
 from collections import Counter
+from datetime import datetime, time
 from html import unescape
 from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
@@ -10,6 +11,8 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 from django.conf import settings
+from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
 
 from apps.matching.services import extract_skills
 
@@ -25,6 +28,14 @@ class JobImportError(ValueError):
 ADZUNA_API_BASE_URL = "https://api.adzuna.com/v1/api/jobs"
 ARBEITNOW_API_URL = "https://www.arbeitnow.com/api/job-board-api"
 JOOBLE_API_BASE_URL = "https://jooble.org/api"
+RELATED_ROLE_TITLES = {
+    "data analyst": ["Business Intelligence Analyst", "Reporting Analyst", "Product Analyst", "Operations Analyst"],
+    "software engineer": ["Backend Developer", "Full Stack Developer", "Application Developer", "DevOps Engineer"],
+    "frontend developer": ["Web Developer", "UI Developer", "Full Stack Developer", "React Developer"],
+    "mechanical engineer": ["Mechanical Design Engineer", "Product Design Engineer", "Manufacturing Engineer", "Project Engineer"],
+    "project manager": ["Program Coordinator", "Project Coordinator", "Delivery Manager", "Operations Manager"],
+    "product manager": ["Product Owner", "Product Analyst", "Program Manager", "Business Analyst"],
+}
 SAMPLE_JOBS = [
     {
         "id": "sample-data-analyst",
@@ -36,6 +47,7 @@ SAMPLE_JOBS = [
         "employment_type": "full_time",
         "salary_min": 55000,
         "salary_max": 70000,
+        "posted_at": "2026-05-30T14:00:00Z",
         "description": (
             "We are looking for a Junior Data Analyst who can collect, clean, and analyze business data. "
             "Required skills include Python, SQL, Excel, Tableau or Power BI, communication, and problem solving. "
@@ -54,6 +66,7 @@ SAMPLE_JOBS = [
         "employment_type": "full_time",
         "salary_min": 42000,
         "salary_max": 52000,
+        "posted_at": "2026-05-27T14:00:00Z",
         "description": (
             "Join our product team to build responsive React interfaces with JavaScript, REST APIs, Git, teamwork, "
             "and clear communication. Experience with accessibility, testing, and design systems is an asset."
@@ -71,6 +84,7 @@ SAMPLE_JOBS = [
         "employment_type": "full_time",
         "salary_min": 68000,
         "salary_max": 82000,
+        "posted_at": "2026-05-20T14:00:00Z",
         "description": (
             "Build web services and internal tools using Python, Django, REST APIs, SQL, Docker, Git, and AWS. "
             "Strong problem solving, documentation, and collaboration skills are important for this role."
@@ -238,6 +252,7 @@ def search_jobs(
     employment_type="any",
     salary_min=None,
     salary_max=None,
+    excluded_keywords="",
 ):
     search_args = {
         "title": title,
@@ -252,6 +267,7 @@ def search_jobs(
         "employment_type": employment_type,
         "salary_min": salary_min,
         "salary_max": salary_max,
+        "excluded_keywords": excluded_keywords,
     }
     providers = [("Arbeitnow", search_arbeitnow_jobs)]
     if settings.ADZUNA_APP_ID and settings.ADZUNA_APP_KEY:
@@ -313,6 +329,7 @@ def build_role_insights(jobs, role=""):
         "postings_analyzed": postings_analyzed,
         "partial_postings": partial_postings,
         "sources": sorted(source_counts),
+        "related_titles": build_related_titles(role, jobs),
         "common_skills": [
             {
                 "name": skill,
@@ -322,6 +339,20 @@ def build_role_insights(jobs, role=""):
             for skill, count in sorted(skill_counts.items(), key=lambda item: (-item[1], item[0]))[:8]
         ] if postings_analyzed else [],
     }
+
+
+def build_related_titles(role, jobs=None):
+    normalized_role = role.lower().strip()
+    base_role = re.sub(r"^(?:junior|senior|lead|principal|staff|entry[- ]level|intermediate|associate)\s+", "", normalized_role)
+    suggestions = []
+    for title in RELATED_ROLE_TITLES.get(base_role, []):
+        if title.lower() not in {normalized_role, base_role} and title not in suggestions:
+            suggestions.append(title)
+    for job in jobs or []:
+        title = (job.get("title") or "").strip()
+        if title and title.lower() not in {normalized_role, base_role} and title not in suggestions:
+            suggestions.append(title)
+    return suggestions[:5]
 
 
 def search_adzuna_jobs(
@@ -337,6 +368,7 @@ def search_adzuna_jobs(
     employment_type="any",
     salary_min=None,
     salary_max=None,
+    excluded_keywords="",
 ):
     if not settings.ADZUNA_APP_ID or not settings.ADZUNA_APP_KEY:
         return search_sample_jobs(
@@ -352,6 +384,7 @@ def search_adzuna_jobs(
             employment_type=employment_type,
             salary_min=salary_min,
             salary_max=salary_max,
+            excluded_keywords=excluded_keywords,
         )
 
     keywords = [title, skills, _keyword_for_workplace(workplace), _keyword_for_experience(experience_level)]
@@ -391,8 +424,10 @@ def search_adzuna_jobs(
     except (URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise JobSearchError("Unable to reach Adzuna job search.") from exc
 
+    results = [_format_adzuna_job(job) for job in payload.get("results", [])]
+    results = [job for job in results if not _excluded_by_keywords(job, excluded_keywords)]
     return {
-        "results": [_format_adzuna_job(job) for job in payload.get("results", [])],
+        "results": results,
         "count": payload.get("count", 0),
         "page": page,
         "results_per_page": results_per_page,
@@ -412,6 +447,7 @@ def search_arbeitnow_jobs(
     employment_type="any",
     salary_min=None,
     salary_max=None,
+    excluded_keywords="",
 ):
     del country
     try:
@@ -437,6 +473,7 @@ def search_arbeitnow_jobs(
             employment_type=employment_type,
             salary_min=salary_min,
             salary_max=salary_max,
+            excluded_keywords=excluded_keywords,
         )
     ]
     has_next = bool((payload.get("links") or {}).get("next"))
@@ -462,6 +499,7 @@ def search_jooble_jobs(
     employment_type="any",
     salary_min=None,
     salary_max=None,
+    excluded_keywords="",
 ):
     del country, remote, salary_max
     keywords = [title, skills, _keyword_for_workplace(workplace), _keyword_for_experience(experience_level)]
@@ -491,8 +529,10 @@ def search_jooble_jobs(
         raise JobSearchError("Jooble job search failed.") from exc
     except (URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise JobSearchError("Unable to reach Jooble job search.") from exc
+    results = [_format_jooble_job(job) for job in payload.get("jobs", [])]
+    results = [job for job in results if not _excluded_by_keywords(job, excluded_keywords)]
     return {
-        "results": [_format_jooble_job(job) for job in payload.get("jobs", [])],
+        "results": results,
         "count": payload.get("totalCount", 0),
         "page": page,
         "results_per_page": results_per_page,
@@ -512,6 +552,7 @@ def search_sample_jobs(
     employment_type="any",
     salary_min=None,
     salary_max=None,
+    excluded_keywords="",
 ):
     del country
     normalized_title = title.lower()
@@ -540,6 +581,8 @@ def search_sample_jobs(
                 job["description"],
             ]
         ).lower()
+        if _contains_excluded_keyword(searchable_text, excluded_keywords):
+            continue
         title_match = normalized_title in searchable_text
         location_match = not normalized_location or normalized_location in job["location"].lower()
         skills_match = not normalized_skills or all(skill in searchable_text for skill in normalized_skills.split())
@@ -582,6 +625,7 @@ def _format_adzuna_job(job):
         "description": description,
         "url": job.get("redirect_url") or "",
         "source": "Adzuna",
+        "posted_at": _normalize_posted_at(job.get("created")),
         "description_is_partial": _description_looks_partial(description),
     }
 
@@ -597,6 +641,7 @@ def _format_arbeitnow_job(job):
         "description": _strip_html(job.get("description") or ""),
         "url": job.get("url") or "",
         "source": "Arbeitnow",
+        "posted_at": _normalize_posted_at(job.get("created_at")),
     }
 
 
@@ -611,6 +656,7 @@ def _format_jooble_job(job):
         "description": _strip_html(job.get("snippet") or ""),
         "url": job.get("link") or "",
         "source": "Jooble",
+        "posted_at": _normalize_posted_at(job.get("updated")),
         "description_is_partial": True,
     }
 
@@ -627,11 +673,14 @@ def _matches_filters(
     employment_type,
     salary_min,
     salary_max,
+    excluded_keywords,
 ):
     searchable_text = " ".join(
         [job["title"], job["company"], job["location"], job["description"]]
     ).lower()
     if title and title.lower() not in searchable_text:
+        return False
+    if _contains_excluded_keyword(searchable_text, excluded_keywords):
         return False
     if location and location.lower() not in job["location"].lower():
         return False
@@ -693,6 +742,35 @@ def _normalize_employment_type(value):
 
 def _description_looks_partial(description):
     return description.rstrip().endswith(("...", "…"))
+
+
+def _excluded_by_keywords(job, excluded_keywords):
+    searchable_text = " ".join(
+        [job.get("title") or "", job.get("company") or "", job.get("location") or "", job.get("description") or ""]
+    ).lower()
+    return _contains_excluded_keyword(searchable_text, excluded_keywords)
+
+
+def _contains_excluded_keyword(searchable_text, excluded_keywords):
+    return any(keyword in searchable_text for keyword in _split_keywords(excluded_keywords))
+
+
+def _split_keywords(value):
+    return [keyword.strip().lower() for keyword in re.split(r"[,;\n]+", value or "") if keyword.strip()]
+
+
+def _normalize_posted_at(value):
+    if not value:
+        return ""
+    parsed = parse_datetime(str(value))
+    if parsed is None:
+        parsed_date = parse_date(str(value)[:10])
+        if parsed_date is None:
+            return ""
+        parsed = timezone.make_aware(datetime.combine(parsed_date, time.min))
+    elif timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed)
+    return parsed.isoformat()
 
 
 def _keyword_for_workplace(workplace):

@@ -4,6 +4,7 @@ import {
   BookmarkPlus,
   BriefcaseBusiness,
   Building2,
+  CalendarDays,
   CheckCircle2,
   ClipboardPaste,
   ExternalLink,
@@ -12,6 +13,7 @@ import {
   Layers3,
   ListChecks,
   MapPin,
+  PanelsTopLeft,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -37,6 +39,7 @@ export default function JobMatchScreen({
   onSaveJob,
   onOpenTracker = () => {},
   onCreateSearchAlert,
+  onRelatedTitleSelect = () => {},
   onPageChange,
   pagination,
   selectedJob,
@@ -54,6 +57,7 @@ export default function JobMatchScreen({
   const [jobUrl, setJobUrl] = useState("");
   const [isImportingUrl, setIsImportingUrl] = useState(false);
   const [jobUrlError, setJobUrlError] = useState("");
+  const [comparisonJobs, setComparisonJobs] = useState([]);
   const hasJobDescription = jobDescription.trim().length > 0;
   const totalPages = pagination.total_pages || 1;
   const activeFilters = getActiveFilters(jobSearch);
@@ -63,11 +67,22 @@ export default function JobMatchScreen({
       ...jobSearch,
       workplace: "any",
       skills: "",
+      excluded_keywords: "",
       experience_level: "any",
       employment_type: "any",
       salary_min: "",
       salary_max: "",
       page: 1,
+    });
+  }
+
+  function toggleComparison(job) {
+    setComparisonJobs((currentJobs) => {
+      const isSelected = currentJobs.some((item) => item.id === job.id);
+      if (isSelected) {
+        return currentJobs.filter((item) => item.id !== job.id);
+      }
+      return currentJobs.length < 3 ? [...currentJobs, job] : currentJobs;
     });
   }
 
@@ -156,7 +171,7 @@ export default function JobMatchScreen({
               Filters and alerts
             </div>
           </summary>
-          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
             <SelectField label="Workplace" value={jobSearch.workplace} onChange={(value) => onJobSearchChange({ ...jobSearch, workplace: value, page: 1 })} options={[
               ["any", "Any workplace"],
               ["remote", "Remote"],
@@ -164,6 +179,7 @@ export default function JobMatchScreen({
               ["on_site", "On-site"],
             ]} />
             <SearchField label="Skills" value={jobSearch.skills} onChange={(value) => onJobSearchChange({ ...jobSearch, skills: value, page: 1 })} placeholder="Python SQL" />
+            <SearchField label="Exclude keywords" value={jobSearch.excluded_keywords} onChange={(value) => onJobSearchChange({ ...jobSearch, excluded_keywords: value, page: 1 })} placeholder="senior, unpaid" />
             <SelectField label="Experience" value={jobSearch.experience_level} onChange={(value) => onJobSearchChange({ ...jobSearch, experience_level: value, page: 1 })} options={[
               ["any", "Any level"],
               ["internship", "Internship"],
@@ -204,8 +220,12 @@ export default function JobMatchScreen({
 
         {jobSearchError && <Notice tone="amber">{jobSearchError}</Notice>}
         {jobSearchNotice && <Notice tone="sky">{jobSearchNotice}</Notice>}
-        {roleInsights?.postings_analyzed > 0 && <RoleInsights insights={roleInsights} />}
+        {roleInsights?.postings_analyzed > 0 && <RoleInsights insights={roleInsights} onSelectTitle={onRelatedTitleSelect} />}
       </section>
+
+      {comparisonJobs.length > 0 && (
+        <JobComparison jobs={comparisonJobs} onRemove={toggleComparison} onClear={() => setComparisonJobs([])} />
+      )}
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_380px]">
         <section>
@@ -218,7 +238,16 @@ export default function JobMatchScreen({
               <LoadingResults />
             ) : jobResults.length ? (
               jobResults.map((job) => (
-                <JobCard key={job.id || `${job.title}-${job.company}`} job={job} selected={selectedJob?.id === job.id} onSelect={() => onSelectJob(job)} onSave={() => onSaveJob(job)} />
+                <JobCard
+                  key={job.id || `${job.title}-${job.company}`}
+                  job={job}
+                  selected={selectedJob?.id === job.id}
+                  comparisonSelected={comparisonJobs.some((item) => item.id === job.id)}
+                  comparisonLimitReached={comparisonJobs.length >= 3}
+                  onSelect={() => onSelectJob(job)}
+                  onSave={() => onSaveJob(job)}
+                  onToggleComparison={() => toggleComparison(job)}
+                />
               ))
             ) : (
               <div className="rounded-md border border-dashed border-slate-300 bg-white p-8 text-center">
@@ -362,7 +391,7 @@ function MatchPreview({ preview }) {
   );
 }
 
-function RoleInsights({ insights }) {
+function RoleInsights({ insights, onSelectTitle }) {
   return (
     <section className="mt-4 border-t border-slate-100 pt-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -381,6 +410,16 @@ function RoleInsights({ insights }) {
           ))
           : <span className="text-xs text-slate-500">No repeated skills were found in these postings.</span>}
       </div>
+      {insights.related_titles?.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Related roles</span>
+          {insights.related_titles.map((title) => (
+            <button key={title} type="button" onClick={() => onSelectTitle(title)} className="rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-teal hover:border-teal hover:bg-emerald-50">
+              {title}
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -459,7 +498,7 @@ function SelectField({ label, value, onChange, options }) {
   );
 }
 
-function JobCard({ job, selected, onSelect, onSave }) {
+function JobCard({ job, selected, comparisonSelected, comparisonLimitReached, onSelect, onSave, onToggleComparison }) {
   return (
     <article className={`rounded-md border bg-white p-4 shadow-panel ${selected ? "border-teal" : "border-slate-200"}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -468,6 +507,7 @@ function JobCard({ job, selected, onSelect, onSave }) {
             <h4 className="font-semibold text-ink">{job.title}</h4>
             <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{job.source}</span>
             {job.description_is_partial && <span className="rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">Excerpt</span>}
+            {job.posted_at && <FreshnessBadge postedAt={job.posted_at} />}
           </div>
           <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><Building2 size={15} />{job.company || "Company not listed"}</p>
           <p className="mt-1 flex items-center gap-2 text-sm text-slate-600"><MapPin size={15} />{job.location || "Location not listed"}</p>
@@ -481,6 +521,16 @@ function JobCard({ job, selected, onSelect, onSave }) {
         </div>
         <div className="flex gap-2">
           {job.url && <a href={job.url} target="_blank" rel="noreferrer" title="Open posting" className="rounded-md border border-slate-300 p-2 text-slate-600 hover:border-teal hover:text-teal"><ExternalLink size={16} /></a>}
+          <button
+            type="button"
+            title={comparisonSelected ? "Remove from comparison" : comparisonLimitReached ? "Compare up to three jobs" : "Add to comparison"}
+            aria-label={comparisonSelected ? `Remove ${job.title} from comparison` : `Add ${job.title} to comparison`}
+            disabled={!comparisonSelected && comparisonLimitReached}
+            onClick={onToggleComparison}
+            className={`rounded-md border p-2 disabled:cursor-not-allowed disabled:text-slate-300 ${comparisonSelected ? "border-teal bg-emerald-50 text-teal" : "border-slate-300 text-slate-600 hover:border-teal hover:text-teal"}`}
+          >
+            <PanelsTopLeft size={16} />
+          </button>
           <button type="button" title="Add to tracker" onClick={onSave} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:border-teal hover:text-teal"><BookmarkPlus size={16} /></button>
         </div>
       </div>
@@ -490,6 +540,65 @@ function JobCard({ job, selected, onSelect, onSave }) {
         {selected ? "Selected for comparison" : "Compare with resume"}
       </button>
     </article>
+  );
+}
+
+function JobComparison({ jobs, onRemove, onClear }) {
+  return (
+    <section className="mt-5 overflow-hidden rounded-md border border-slate-200 bg-white shadow-panel">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+        <div>
+          <h3 className="font-semibold text-ink">Compare jobs side by side</h3>
+          <p className="mt-1 text-xs text-slate-500">Choose up to three roles before deciding where to spend your preparation time.</p>
+        </div>
+        <button type="button" onClick={onClear} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-ink">
+          <X size={14} />
+          Clear comparison
+        </button>
+      </header>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th className="px-4 py-3">Role</th>
+              <th className="px-4 py-3">Company</th>
+              <th className="px-4 py-3">Location</th>
+              <th className="px-4 py-3">Salary</th>
+              <th className="px-4 py-3">Workplace</th>
+              <th className="px-4 py-3">Freshness</th>
+              <th className="px-4 py-3"><span className="sr-only">Remove</span></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {jobs.map((job) => (
+              <tr key={job.id || `${job.title}-${job.company}`}>
+                <td className="px-4 py-3 font-semibold text-ink">{job.title}</td>
+                <td className="px-4 py-3 text-slate-600">{job.company || "Not listed"}</td>
+                <td className="px-4 py-3 text-slate-600">{job.location || "Not listed"}</td>
+                <td className="px-4 py-3 text-slate-600">{job.salary_text || formatSalary(job.salary_min, job.salary_max) || "Not listed"}</td>
+                <td className="px-4 py-3 text-slate-600">{job.workplace ? formatLabel(job.workplace) : "Not listed"}</td>
+                <td className="px-4 py-3 text-slate-600">{formatFreshness(job.posted_at)}</td>
+                <td className="px-4 py-3">
+                  <button type="button" title={`Remove ${job.title}`} onClick={() => onRemove(job)} className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                    <X size={15} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function FreshnessBadge({ postedAt }) {
+  const freshness = formatFreshness(postedAt);
+  return (
+    <span className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700">
+      <CalendarDays size={13} />
+      {freshness}
+    </span>
   );
 }
 
@@ -505,6 +614,7 @@ function getActiveFilters(jobSearch) {
   return [
     jobSearch.workplace !== "any" ? formatLabel(jobSearch.workplace) : "",
     jobSearch.skills ? `Skills: ${jobSearch.skills}` : "",
+    jobSearch.excluded_keywords ? `Exclude: ${jobSearch.excluded_keywords}` : "",
     jobSearch.experience_level !== "any" ? formatLabel(jobSearch.experience_level) : "",
     jobSearch.employment_type !== "any" ? formatLabel(jobSearch.employment_type) : "",
     jobSearch.salary_min ? `Min salary: ${jobSearch.salary_min}` : "",
@@ -513,10 +623,22 @@ function getActiveFilters(jobSearch) {
 }
 
 function formatSalary(minimum, maximum) {
+  if (!minimum && !maximum) return "";
   const formatter = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
   if (minimum && maximum) return `${formatter.format(minimum)} - ${formatter.format(maximum)}`;
   if (minimum) return `From ${formatter.format(minimum)}`;
   return `Up to ${formatter.format(maximum)}`;
+}
+
+function formatFreshness(postedAt) {
+  if (!postedAt) return "Date not listed";
+  const postedDate = new Date(postedAt);
+  if (Number.isNaN(postedDate.getTime())) return "Date not listed";
+  const days = Math.max(0, Math.floor((Date.now() - postedDate.getTime()) / 86400000));
+  if (days === 0) return "Posted today";
+  if (days === 1) return "Posted yesterday";
+  if (days <= 7) return `Posted ${days} days ago`;
+  return `Posted ${postedDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
 
 function LoadingResults() {

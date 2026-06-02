@@ -12,6 +12,7 @@ from .services import (
     JobSearchError,
     import_job_from_url,
     build_role_insights,
+    build_related_titles,
     search_adzuna_jobs,
     search_arbeitnow_jobs,
     search_jobs,
@@ -34,6 +35,7 @@ class AdzunaJobSearchTests(SimpleTestCase):
               "redirect_url": "https://example.com/job",
               "company": {"display_name": "Acme"},
               "location": {"area": ["US", "New York"]}
+              ,"created": "2026-05-30T14:00:00Z"
             }
           ]
         }
@@ -46,6 +48,7 @@ class AdzunaJobSearchTests(SimpleTestCase):
         self.assertEqual(jobs["results"][0]["location"], "US, New York")
         self.assertIn("Python", jobs["results"][0]["description"])
         self.assertTrue(jobs["results"][0]["description_is_partial"])
+        self.assertEqual(jobs["results"][0]["posted_at"], "2026-05-30T14:00:00+00:00")
         self.assertEqual(jobs["count"], 0)
 
     @override_settings(ADZUNA_APP_ID="app-id", ADZUNA_APP_KEY="app-key")
@@ -94,6 +97,16 @@ class AdzunaJobSearchTests(SimpleTestCase):
         self.assertEqual(insights["partial_postings"], 1)
         self.assertEqual(insights["common_skills"][0], {"name": "python", "count": 3, "percentage": 100})
         self.assertIn({"name": "sql", "count": 2, "percentage": 67}, insights["common_skills"])
+        self.assertIn("Backend Engineer", insights["related_titles"])
+
+    def test_related_titles_include_curated_and_result_roles_without_duplicates(self):
+        titles = build_related_titles(
+            "Junior Data Analyst",
+            [{"title": "Reporting Analyst"}, {"title": "Data Analyst"}, {"title": "Analytics Consultant"}],
+        )
+
+        self.assertEqual(titles[:2], ["Business Intelligence Analyst", "Reporting Analyst"])
+        self.assertNotIn("Data Analyst", titles)
 
 
 class AdditionalJobProviderTests(SimpleTestCase):
@@ -345,6 +358,11 @@ class JobSearchApiTests(APITestCase):
 
         self.assertEqual([job["id"] for job in result["results"]], ["sample-data-analyst"])
 
+    def test_sample_search_excludes_unwanted_keywords(self):
+        result = search_sample_jobs(title="Junior", excluded_keywords="software, unpaid")
+
+        self.assertEqual([job["id"] for job in result["results"]], ["sample-data-analyst"])
+
     def test_saved_job_can_be_updated_as_tracked_application(self):
         create_response = self.client.post(
             "/api/jobs/saved/",
@@ -437,7 +455,7 @@ class JobSearchApiTests(APITestCase):
     def test_search_alert_can_be_created_paused_and_deleted(self):
         create_response = self.client.post(
             "/api/jobs/alerts/",
-            {"title": "Data Analyst", "country": "ca", "frequency": "daily"},
+            {"title": "Data Analyst", "country": "ca", "excluded_keywords": "senior, unpaid", "frequency": "daily"},
             format="json",
         )
         alert_id = create_response.data["alert"]["id"]
@@ -451,5 +469,6 @@ class JobSearchApiTests(APITestCase):
 
         self.assertEqual(create_response.status_code, 201)
         self.assertFalse(pause_response.data["alert"]["is_active"])
+        self.assertEqual(create_response.data["alert"]["excluded_keywords"], "senior, unpaid")
         self.assertEqual(len(list_response.data["results"]), 1)
         self.assertEqual(delete_response.status_code, 204)

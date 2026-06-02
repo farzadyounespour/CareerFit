@@ -44,6 +44,7 @@ describe("JobMatchScreen", () => {
           postings_analyzed: 3,
           partial_postings: 1,
           common_skills: [{ name: "python", count: 2, percentage: 67 }],
+          related_titles: ["Business Intelligence Analyst"],
         }}
         onJobSearch={() => {}}
         onSelectJob={() => {}}
@@ -68,10 +69,62 @@ describe("JobMatchScreen", () => {
     expect(screen.getByText("Role insights from 3 retrieved postings")).toBeVisible();
     expect(screen.getByText("python · 2/3")).toBeVisible();
     expect(screen.getByText("1 provider excerpt")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Business Intelligence Analyst" })).toBeVisible();
 
     fireEvent.change(screen.getByPlaceholderText("https://company.example/jobs/data-analyst"), { target: { value: "https://example.com/jobs/analyst" } });
     fireEvent.click(screen.getByRole("button", { name: "Import URL" }));
     return waitFor(() => expect(onImportJobUrl).toHaveBeenCalledWith("https://example.com/jobs/analyst"));
+  });
+
+  it("compares selected jobs side by side and clears the comparison", () => {
+    render(
+      <JobMatchScreen
+        jobDescription=""
+        onChange={() => {}}
+        onLoadSample={() => {}}
+        jobSearch={{
+          title: "Data Analyst",
+          location: "",
+          country: "ca",
+          workplace: "any",
+          skills: "",
+          excluded_keywords: "",
+          experience_level: "any",
+          employment_type: "any",
+          salary_min: "",
+          salary_max: "",
+          page: 1,
+        }}
+        onJobSearchChange={() => {}}
+        jobResults={[
+          { id: "job-1", title: "Data Analyst", company: "Example Co", location: "Montreal", description: "Build dashboards.", source: "Adzuna", posted_at: "2026-05-30T14:00:00Z" },
+          { id: "job-2", title: "Reporting Analyst", company: "Sample Co", location: "Toronto", description: "Prepare reports.", source: "Sample" },
+        ]}
+        onJobSearch={() => {}}
+        onSelectJob={() => {}}
+        isSearchingJobs={false}
+        jobSearchError=""
+        jobSearchNotice=""
+        onSaveJob={() => {}}
+        onCreateSearchAlert={() => {}}
+        onPageChange={() => {}}
+        pagination={{ page: 1, count: 2, total_pages: 1, has_previous: false, has_next: false }}
+        selectedJob={null}
+        onAnalyze={() => {}}
+        isLoading={false}
+        error=""
+        useAiCoaching={false}
+        onAiCoachingChange={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Data Analyst to comparison" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add Reporting Analyst to comparison" }));
+    expect(screen.getByText("Compare jobs side by side")).toBeVisible();
+    expect(screen.getAllByText("Example Co")).toHaveLength(2);
+    expect(screen.getByText("Date not listed")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Clear comparison" }));
+    expect(screen.queryByText("Compare jobs side by side")).not.toBeInTheDocument();
   });
 
   it("shows a quick resume comparison for the selected job", () => {

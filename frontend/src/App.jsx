@@ -86,6 +86,7 @@ export default function App() {
     country: "us",
     workplace: "any",
     skills: "",
+    excluded_keywords: "",
     experience_level: "any",
     employment_type: "any",
     salary_min: "",
@@ -373,6 +374,7 @@ export default function App() {
         country: nextSearch.country,
         workplace: nextSearch.workplace,
         skills: nextSearch.skills.trim(),
+        excluded_keywords: nextSearch.excluded_keywords.trim(),
         experience_level: nextSearch.experience_level,
         employment_type: nextSearch.employment_type,
         salary_min: nextSearch.salary_min,
@@ -408,6 +410,12 @@ export default function App() {
 
   async function handleJobPageChange(page) {
     const nextSearch = { ...jobSearch, page };
+    setJobSearch(nextSearch);
+    await runJobSearch(nextSearch);
+  }
+
+  async function handleRelatedTitleSelect(title) {
+    const nextSearch = { ...jobSearch, title, page: 1 };
     setJobSearch(nextSearch);
     await runJobSearch(nextSearch);
   }
@@ -732,6 +740,7 @@ export default function App() {
           onSaveJob={handleSaveJob}
           onOpenTracker={() => handleNavigate("history")}
           onCreateSearchAlert={handleCreateSearchAlert}
+          onRelatedTitleSelect={handleRelatedTitleSelect}
           onPageChange={handleJobPageChange}
           pagination={jobPagination}
           selectedJob={selectedJob}

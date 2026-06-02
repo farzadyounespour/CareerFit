@@ -179,6 +179,8 @@ This persona is not intended to represent every job seeker. It provides a concre
 | US-06 | As a job seeker, I want improvement examples related to my resume so that I know what to revise. |
 | US-07 | As a job seeker, I want to save promising roles and record follow-ups so that applications remain organized. |
 | US-08 | As a privacy-conscious user, I want AI coaching to be optional so that the basic analysis can work without sending my resume to an external model. |
+| US-09 | As a job seeker, I want to discover related job titles so that I do not miss suitable roles with unfamiliar names. |
+| US-10 | As a job seeker, I want to exclude unsuitable keywords and compare promising postings so that I can focus my preparation time. |
 
 ## 8. Functional and Non-Functional Requirements
 
@@ -200,6 +202,8 @@ This persona is not intended to represent every job seeker. It provides a concre
 | FR-12 | The system shall summarize common skills across retrieved postings. |
 | FR-13 | The user shall be able to add roles to an application tracker. |
 | FR-14 | The system shall support reusable resume versions and report history. |
+| FR-15 | The system shall suggest related role titles and show posting-freshness information where provider dates are available. |
+| FR-16 | The system shall support excluded-keyword filtering and side-by-side comparison of up to three postings. |
 
 ### 8.2 Non-Functional Requirements
 
@@ -226,9 +230,11 @@ The following acceptance criteria will guide implementation and testing:
 | AC-05 | The detailed report separates matched, partial, weak, and missing requirements. |
 | AC-06 | Each supported requirement can display resume evidence or a plain-language explanation. |
 | AC-07 | The report distinguishes ATS preparation from content alignment. |
-| AC-08 | Job search supports title, location, country, workplace, skills, experience, employment type, and salary filters. |
+| AC-08 | Job search supports title, location, country, workplace, skills, excluded keywords, experience, employment type, and salary filters. |
 | AC-09 | A selected role can be added to the tracker and assigned an application stage. |
 | AC-10 | Optional AI coaching requires an explicit user action and does not change the deterministic score. |
+| AC-11 | Related-role suggestions can start a new search without requiring the user to re-enter existing filters. |
+| AC-12 | Users can compare up to three postings by title, company, location, salary, workplace, and freshness. |
 
 ## 9. Proposed Wireframes and Prototype
 
@@ -320,7 +326,10 @@ The jobs page will include:
 
 - Search fields and filters.
 - Role-insights summary.
+- Related-role suggestions and posting-freshness badges.
+- Excluded-keyword filtering.
 - Retrieved job cards.
+- Optional side-by-side comparison for up to three postings.
 - Selected-job comparison panel.
 - Quick score, matched skills, missing skills, and report action.
 

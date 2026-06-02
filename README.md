@@ -127,8 +127,9 @@ VITE_API_BASE_URL=/api
 - Multi-provider job search with Adzuna, no-key Arbeitnow, optional Jooble, deduplication, and sample-data fallback.
 - Lightweight role insights that summarize recurring skills across the retrieved postings and disclose provider excerpts.
 - Instant deterministic resume comparison when a user selects a job, with match score, readiness score, and skill gaps before generating a full report.
-- Job saving, workplace, skill, experience-level, employment-type, salary filtering, and report history.
+- Job saving, workplace, skill, excluded-keyword, experience-level, employment-type, salary filtering, and report history.
 - Visible active job filters, richer posting summaries, and optional-gap labels during quick comparison.
+- Related-role suggestions, posting-freshness badges, and a side-by-side comparison table for up to three search results.
 - Application tracker with stages, notes, recruiter details, follow-up dates, interview dates, salary notes, and tailored resume links.
 - Tracker attention mode with search, overdue follow-up signals, pipeline counts, and next-action sorting.
 - Application packets with linked resume versions, editable cover-letter and follow-up drafts, reminders, personal pitch notes, and reusable STAR stories.

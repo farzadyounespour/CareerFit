@@ -152,6 +152,8 @@ The evaluation module also supports semantic embeddings through Ollama. Ollama's
 | FR-12 | Store application stages, notes, reminders, and drafts | Implemented |
 | FR-13 | Show recurring role skills across retrieved postings | Implemented |
 | FR-14 | Evaluate matching methods using reproducible scripts | Implemented |
+| FR-15 | Suggest related job titles and show posting freshness where provider dates are available | Implemented |
+| FR-16 | Exclude unsuitable keywords and compare up to three postings side by side | Implemented |
 
 ### 5.2 Non-Functional Requirements
 
@@ -316,6 +318,8 @@ CareerFit treats provider excerpts carefully:
 The search API builds a lightweight role profile from the retrieved postings. It counts extracted skills and returns the most frequent skills with occurrence counts and percentages. The frontend displays these insights directly below the search controls.
 
 This feature is intentionally lightweight. It is not a permanent labor-market database. Instead, it provides a transparent summary of the currently retrieved sample.
+
+The discovery workflow also provides related-role suggestions. Suggestions combine a small transparent role map with distinct titles found in the current result set. Posting timestamps from providers are normalized when available and shown as freshness badges. Users can enter comma-separated excluded keywords and compare up to three result cards side by side before deciding which role deserves a full readiness report.
 
 ### 7.4 Application Tracker
 
@@ -531,7 +535,7 @@ CareerFit is designed around a visible, reversible workflow. Users can review an
 | Home | Hero, workflow summary, report preview, connected features | Check resume fit | Public visitor and signed-in navigation |
 | Profile | Candidate preferences and contact information | Save profile | Validation and saved confirmation |
 | Resume | Upload, text editor, versions, ATS preview | Continue to jobs | Empty, uploading, parsed, invalid file, cleared |
-| Jobs | Import URL, search, filters, role insights, results, selected-job panel | Use this job | Loading, provider notice, excerpt warning, no resume, quick comparison |
+| Jobs | Import URL, search, filters, exclusions, related roles, freshness, comparison table, results, selected-job panel | Use this job | Loading, provider notice, excerpt warning, no resume, quick comparison |
 | Report | Scores, summary, evidence, ATS checks, improvements, template, interview preparation | Rescan after edits | Deterministic report, optional coaching loading and result |
 | Tracker | Application stages, details, tasks, drafts, dates, resume version | Save changes | Empty tracker, selected role, overdue follow-up |
 

@@ -18,6 +18,7 @@ class JobSearchSerializer(serializers.Serializer):
         required=False,
     )
     skills = serializers.CharField(max_length=180, required=False, allow_blank=True)
+    excluded_keywords = serializers.CharField(max_length=240, required=False, allow_blank=True)
     experience_level = serializers.ChoiceField(
         choices=["any", "internship", "entry", "mid", "senior"],
         default="any",
