@@ -130,7 +130,7 @@ export default function ReportScreen({
             <ScoreHistory history={history} targetRole={summary.target_role} />
           </section>
 
-          <section id="priority-improvements" className="rounded-md border border-slate-200 bg-white shadow-panel">
+          <section id="priority-improvements" className="scroll-mt-24 rounded-md border border-slate-200 bg-white shadow-panel">
             <div className="border-b border-slate-200 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -171,7 +171,7 @@ export default function ReportScreen({
 
           <ResumeExamples examples={resumeExamples} />
 
-          <section className="rounded-md border border-slate-200 bg-white shadow-panel">
+          <section id="skill-review" className="scroll-mt-24 rounded-md border border-slate-200 bg-white shadow-panel">
             <div className="border-b border-slate-200 p-5">
               <h3 className="text-lg font-semibold text-ink">Skills for this job</h3>
               <p className="mt-1 text-sm text-slate-600">Add missing skills only when your real experience supports them.</p>
@@ -185,7 +185,7 @@ export default function ReportScreen({
           {aiCompleted ? (
             <SpecificImprovements coaching={aiCoaching} />
           ) : (
-            <section className="rounded-md border border-emerald-200 bg-emerald-50 p-5">
+            <section id="specific-improvements" className="scroll-mt-24 rounded-md border border-emerald-200 bg-emerald-50 p-5">
               <div className="flex items-start gap-3">
                 <Sparkles className="mt-0.5 shrink-0 text-teal" size={20} />
                 <div className="flex-1">
@@ -214,6 +214,7 @@ export default function ReportScreen({
           )}
 
           <ReportDisclosure
+            id="ats-checks"
             icon={ListChecks}
             title="ATS preparation checks"
             detail="Contact details, resume structure, and recruiter-friendly formatting."
@@ -228,6 +229,7 @@ export default function ReportScreen({
           </ReportDisclosure>
 
           <ReportDisclosure
+            id="requirement-evidence"
             icon={Target}
             title="Requirement evidence"
             detail="See how strongly your resume supports each part of the job posting."
@@ -248,6 +250,7 @@ export default function ReportScreen({
           )}
 
           <ReportDisclosure
+            id="source-documents"
             icon={FileText}
             title="Source documents"
             detail="Review the exact resume and job description used for this report."
@@ -277,7 +280,7 @@ export default function ReportScreen({
           <p className="mt-4 text-center text-sm leading-6 text-slate-600">{readinessGuidance(score)}</p>
           <button
             type="button"
-            onClick={() => document.getElementById("priority-improvements")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() => scrollToReportSection("priority-improvements")}
             className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90"
           >
             Review priority fixes
@@ -290,6 +293,16 @@ export default function ReportScreen({
           >
             Update resume
           </button>
+          <nav aria-label="Report sections" className="mt-6 border-t border-slate-100 pt-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Jump to section</p>
+            <div className="mt-2 space-y-1">
+              <ReportJumpLink target="priority-improvements">Priority fixes</ReportJumpLink>
+              <ReportJumpLink target="skill-review">Skills</ReportJumpLink>
+              <ReportJumpLink target="ats-checks">ATS checks</ReportJumpLink>
+              <ReportJumpLink target="requirement-evidence">Requirement evidence</ReportJumpLink>
+              <ReportJumpLink target="resume-draft">Resume draft</ReportJumpLink>
+            </div>
+          </nav>
           <dl className="mt-6 divide-y divide-slate-100 border-t border-slate-100 text-sm">
             <SummaryRow label="Requirements reviewed" value={summary.requirements_reviewed || 0} />
             <SummaryRow label="Requirement gaps" value={requirementGaps} />
@@ -324,7 +337,7 @@ function TailoredResumeTemplate({ resumeText, summary, skills, onUseTemplate }) 
   }
 
   return (
-    <section className="rounded-md border border-teal/30 bg-white shadow-panel">
+    <section id="resume-draft" className="scroll-mt-24 rounded-md border border-teal/30 bg-white shadow-panel">
       <div className="border-b border-teal/20 bg-emerald-50 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -505,7 +518,7 @@ function SpecificImprovements({ coaching }) {
   }
 
   return (
-    <section className="rounded-md border border-emerald-200 bg-white shadow-panel">
+    <section id="specific-improvements" className="scroll-mt-24 rounded-md border border-emerald-200 bg-white shadow-panel">
       <div className="border-b border-emerald-200 bg-emerald-50 p-5">
         <div className="flex items-start gap-3">
           <Sparkles className="mt-0.5 shrink-0 text-teal" size={20} />
@@ -567,9 +580,9 @@ function ScoreHistory({ history, targetRole }) {
   );
 }
 
-function ReportDisclosure({ icon: Icon, title, detail, badge, open = false, children }) {
+function ReportDisclosure({ id, icon: Icon, title, detail, badge, open = false, children }) {
   return (
-    <details className="group rounded-md border border-slate-200 bg-white shadow-panel" open={open}>
+    <details id={id} className="group scroll-mt-24 rounded-md border border-slate-200 bg-white shadow-panel" open={open}>
       <summary className="flex cursor-pointer list-none items-center gap-3 p-5">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-slate-100 text-teal"><Icon size={18} /></span>
         <span className="min-w-0 flex-1">
@@ -582,6 +595,19 @@ function ReportDisclosure({ icon: Icon, title, detail, badge, open = false, chil
       <div className="border-t border-slate-200">{children}</div>
     </details>
   );
+}
+
+function ReportJumpLink({ target, children }) {
+  return (
+    <button type="button" onClick={() => scrollToReportSection(target)} className="flex w-full items-center justify-between gap-2 rounded px-2 py-2 text-left text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-teal">
+      {children}
+      <ArrowRight size={14} />
+    </button>
+  );
+}
+
+function scrollToReportSection(target) {
+  document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function CheckRow({ label, passed }) {

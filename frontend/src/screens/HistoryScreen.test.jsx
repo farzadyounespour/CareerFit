@@ -87,7 +87,9 @@ describe("HistoryScreen", () => {
     fireEvent.click(screen.getByLabelText("Compare Mechanical Engineer"));
     expect(screen.getByText("Compare opportunities")).toBeVisible();
 
-    fireEvent.click(screen.getAllByTitle("Open application packet")[0]);
+    const packetButton = screen.getAllByTitle("Open application packet")[0];
+    fireEvent.click(packetButton);
+    expect(packetButton).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Add task" }));
     fireEvent.change(screen.getByPlaceholderText("Send follow-up email"), { target: { value: "Send portfolio follow-up" } });
     fireEvent.click(screen.getByRole("button", { name: "Save application packet" }));

@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Bell,
   BellOff,
   BriefcaseBusiness,
@@ -55,10 +56,7 @@ export default function DashboardScreen({ history, savedJobs, searchAlerts, onNa
                   <p className="font-semibold text-ink">{job.title}</p>
                   <p className="mt-1 text-sm text-slate-500">{job.company || "Company not listed"} · {labelStage(job.status)}</p>
                 </div>
-                <div className="text-right text-sm">
-                  {job.interview_date && <p className="font-semibold text-teal">Interview {formatDate(job.interview_date)}</p>}
-                  {job.follow_up_date && <p className="mt-1 text-slate-500">Follow up {formatDate(job.follow_up_date)}</p>}
-                </div>
+                <UpcomingAction job={job} />
               </article>
             )) : <EmptyState text="Add follow-up or interview dates in the tracker to build your next-action list." />}
           </div>
@@ -130,7 +128,39 @@ function averageReadiness(history) {
 }
 
 function nextDate(job) {
-  return job.interview_date || job.follow_up_date || "9999-12-31";
+  return nextAction(job)?.date || "9999-12-31";
+}
+
+function UpcomingAction({ job }) {
+  const action = nextAction(job);
+  if (!action) return null;
+  const overdue = action.date < today();
+  return (
+    <div className="text-right text-sm">
+      <p className={`flex items-center justify-end gap-1 font-semibold ${overdue ? "text-rose-600" : "text-teal"}`}>
+        {overdue && <AlertTriangle size={14} />}
+        {overdue ? `Overdue ${action.label.toLowerCase()}` : action.label}
+      </p>
+      <p className={`mt-1 ${overdue ? "text-rose-600" : "text-slate-500"}`}>{formatDate(action.date)}</p>
+    </div>
+  );
+}
+
+function nextAction(job) {
+  return [
+    { label: "Interview", date: job.interview_date },
+    { label: "Follow up", date: job.follow_up_date },
+  ]
+    .filter((action) => action.date)
+    .sort((first, second) => first.date.localeCompare(second.date))[0];
+}
+
+function today() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatDate(value) {

@@ -109,7 +109,7 @@ export default function UserProfileScreen({
           </section>
 
           {isSignedIn && (
-            <section className="rounded-md border border-rose-200 bg-white p-5 shadow-panel">
+            <section className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
               <h3 className="font-semibold text-ink">Account email</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 {currentUser?.email_verified ? "Your email address is verified." : "Verify your email address so account recovery is dependable."}
@@ -121,9 +121,9 @@ export default function UserProfileScreen({
               )}
               {accountNotice && <p className="mt-3 break-words text-xs leading-5 text-slate-500">{accountNotice}</p>}
               <div className="my-5 border-t border-slate-200" />
-              <h3 className="font-semibold text-rose-700">Privacy controls</h3>
+              <h3 className="font-semibold text-ink">Workspace data</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Deleting your account permanently removes your profile, saved resumes, saved jobs, and report history.
+                Download a copy of your CareerFit workspace whenever you need one.
               </p>
               <button
                 type="button"
@@ -133,10 +133,16 @@ export default function UserProfileScreen({
                 <Download size={16} />
                 Download workspace data
               </button>
+              <div className="mt-5 border-t border-slate-200 pt-5">
+                <h4 className="text-sm font-semibold text-rose-700">Delete account</h4>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Permanently remove your profile, saved resumes, saved jobs, and report history.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => window.confirm("Delete your CareerFit account and all saved data?") && onDeleteAccount()}
-                className="ml-2 mt-4 inline-flex items-center gap-2 rounded-md border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50"
+                className="mt-3 inline-flex items-center gap-2 rounded-md border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50"
               >
                 <Trash2 size={16} />
                 Delete account

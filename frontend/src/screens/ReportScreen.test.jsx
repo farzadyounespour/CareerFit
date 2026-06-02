@@ -85,6 +85,13 @@ describe("ReportScreen", () => {
     expect(screen.getByText("Experience bullet example")).toBeVisible();
     expect(screen.getByText("Optional certifications header")).toBeVisible();
     expect(screen.getByText(/Data Analyst with experience using python, sql/)).toBeVisible();
+    expect(screen.getByRole("navigation", { name: "Report sections" })).toBeVisible();
+
+    const resumeDraft = screen.getByRole("button", { name: "Resume draft" });
+    const scrollIntoView = vi.fn();
+    document.getElementById("resume-draft").scrollIntoView = scrollIntoView;
+    fireEvent.click(resumeDraft);
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
 
     fireEvent.click(screen.getByLabelText("Mark priority 1: Add evidence for missing skills complete"));
     expect(screen.getByText(/1 of \d+ complete/)).toBeVisible();

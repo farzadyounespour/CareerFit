@@ -14,7 +14,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const stages = [
   ["saved", "Saved"],
@@ -50,12 +50,19 @@ export default function HistoryScreen({
   const [attentionOnly, setAttentionOnly] = useState(false);
   const [comparisonIds, setComparisonIds] = useState([]);
   const [importNotice, setImportNotice] = useState("");
+  const packetEditorRef = useRef(null);
   const attentionJobs = savedJobs.filter(needsAttention);
   const visibleJobs = savedJobs
     .filter((job) => matchesQuery(job, query))
     .filter((job) => !attentionOnly || needsAttention(job));
   const comparisonJobs = comparisonIds.map((id) => savedJobs.find((job) => job.id === id)).filter(Boolean);
   const analytics = trackerAnalytics(savedJobs, history);
+
+  useEffect(() => {
+    if (editingJobId) {
+      packetEditorRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    }
+  }, [editingJobId]);
 
   function openEditor(job) {
     setEditingJobId(job.id);
@@ -191,7 +198,7 @@ export default function HistoryScreen({
                 </div>
                 <div className="mt-3 space-y-3">
                   {jobs.map((job) => (
-                    <article key={job.id} className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+                    <article key={job.id} className={`rounded-md border bg-white p-3 shadow-sm ${editingJobId === job.id ? "border-teal ring-2 ring-teal/10" : "border-slate-200"}`}>
                       <label className="flex items-start gap-2">
                         <input type="checkbox" aria-label={`Compare ${job.title}`} checked={comparisonIds.includes(job.id)} onChange={() => toggleComparison(job.id)} className="mt-1 h-3.5 w-3.5 shrink-0 accent-teal" />
                         <span className="text-sm font-semibold leading-5 text-ink">{job.title}</span>
@@ -204,7 +211,7 @@ export default function HistoryScreen({
                         {stages.map(([value, stageLabel]) => <option key={value} value={value}>{stageLabel}</option>)}
                       </select>
                       <div className="mt-3 flex items-center gap-1 border-t border-slate-100 pt-2">
-                        <button type="button" title="Open application packet" onClick={() => openEditor(job)} className="rounded p-2 text-slate-500 hover:bg-emerald-50 hover:text-teal"><Pencil size={15} /></button>
+                        <button type="button" title="Open application packet" aria-pressed={editingJobId === job.id} onClick={() => openEditor(job)} className={`rounded p-2 hover:bg-emerald-50 hover:text-teal ${editingJobId === job.id ? "bg-emerald-50 text-teal" : "text-slate-500"}`}><Pencil size={15} /></button>
                         <button type="button" title="Use for analysis" onClick={() => onUseJob(job)} className="rounded p-2 text-slate-500 hover:bg-sky-50 hover:text-sky-700"><ArrowRight size={15} /></button>
                         <button type="button" title="Delete application" onClick={() => onDeleteJob(job.id)} className="ml-auto rounded p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 size={15} /></button>
                       </div>
@@ -219,7 +226,7 @@ export default function HistoryScreen({
       </section>
 
       {editingJobId && (
-        <form onSubmit={saveEditor} className="mt-3 space-y-5 rounded-md border border-teal/30 bg-white p-5 shadow-panel">
+        <form ref={packetEditorRef} onSubmit={saveEditor} className="mt-3 scroll-mt-24 space-y-5 rounded-md border border-teal/30 bg-white p-5 shadow-panel">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="font-semibold text-ink">Application packet</h3>
