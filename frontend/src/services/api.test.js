@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { previewMatch, requestAiCoaching, searchJobs, storeToken } from "./api.js";
+import { generateResumeDraft, previewMatch, requestAiCoaching, searchJobs, storeToken } from "./api.js";
 
 
 afterEach(() => {
@@ -22,6 +22,7 @@ describe("searchJobs", () => {
     await searchJobs({
       title: "Data Analyst",
       country: "ca",
+      source: "remotive",
       workplace: "hybrid",
       skills: "Python SQL",
       excluded_keywords: "senior, unpaid",
@@ -32,6 +33,7 @@ describe("searchJobs", () => {
     });
 
     const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toContain("source=remotive");
     expect(url).toContain("workplace=hybrid");
     expect(url).toContain("skills=Python+SQL");
     expect(url).toContain("excluded_keywords=senior%2C+unpaid");
@@ -85,6 +87,30 @@ describe("requestAiCoaching", () => {
 
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/matches/coach/");
+    expect(options.headers).toEqual({
+      "Content-Type": "application/json",
+      Authorization: "Token careerfit-test-token",
+    });
+  });
+});
+
+
+describe("generateResumeDraft", () => {
+  it("requests an optional AI resume draft with login credentials", async () => {
+    storeToken("careerfit-test-token");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ resume_generation: { status: "completed" } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateResumeDraft({
+      resume_text: "Python SQL",
+      job_description: "Build dashboards with Python.",
+    });
+
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/matches/resume-draft/");
     expect(options.headers).toEqual({
       "Content-Type": "application/json",
       Authorization: "Token careerfit-test-token",

@@ -17,6 +17,7 @@ from .services import (
     search_arbeitnow_jobs,
     search_jobs,
     search_jooble_jobs,
+    search_remotive_jobs,
     search_sample_jobs,
 )
 
@@ -110,6 +111,9 @@ class AdzunaJobSearchTests(SimpleTestCase):
 
 
 class AdditionalJobProviderTests(SimpleTestCase):
+    def setUp(self):
+        cache.clear()
+
     @patch("apps.jobs.services.urlopen")
     def test_formats_and_filters_arbeitnow_results(self, mock_urlopen):
         mock_urlopen.return_value.__enter__.return_value.read.return_value = b"""
@@ -134,6 +138,46 @@ class AdditionalJobProviderTests(SimpleTestCase):
 
         self.assertEqual(jobs["results"][0]["source"], "Arbeitnow")
         self.assertEqual(jobs["results"][0]["description"], "Build Python SQL dashboards.")
+
+    @patch("apps.jobs.services.urlopen")
+    def test_formats_and_filters_remotive_results(self, mock_urlopen):
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = b"""
+        {
+          "job-count": 1,
+          "jobs": [
+            {
+              "id": 345,
+              "url": "https://remotive.com/remote-jobs/software-dev/backend-engineer-345",
+              "title": "Backend Engineer",
+              "company_name": "Remote Co",
+              "category": "Software Development",
+              "job_type": "full_time",
+              "publication_date": "2026-07-01T10:00:00",
+              "candidate_required_location": "Canada",
+              "salary": "$80k - $110k",
+              "tags": ["python", "api"],
+              "description": "<p>Build Python API services.</p>"
+            }
+          ]
+        }
+        """
+
+        jobs = search_remotive_jobs("Backend Engineer", location="Canada", workplace="remote", skills="Python API")
+
+        self.assertEqual(jobs["results"][0]["source"], "Remotive")
+        self.assertEqual(jobs["results"][0]["company"], "Remote Co")
+        self.assertEqual(jobs["results"][0]["workplace"], "remote")
+        self.assertEqual(jobs["results"][0]["employment_type"], "full_time")
+        self.assertEqual(jobs["results"][0]["description"], "Build Python API services.")
+        self.assertEqual(jobs["results"][0]["salary_min"], 80000)
+        self.assertEqual(jobs["results"][0]["salary_max"], 110000)
+
+    @patch("apps.jobs.services.urlopen")
+    def test_remotive_skips_non_remote_workplace_filters(self, mock_urlopen):
+        jobs = search_remotive_jobs("Backend Engineer", workplace="on_site")
+
+        self.assertEqual(jobs["results"], [])
+        mock_urlopen.assert_not_called()
 
     @override_settings(JOOBLE_API_KEY="jooble-key")
     @patch("apps.jobs.services.urlopen")
@@ -163,10 +207,11 @@ class AdditionalJobProviderTests(SimpleTestCase):
         self.assertEqual(jobs["results"][0]["description"], "Python SQL reporting")
         self.assertTrue(jobs["results"][0]["description_is_partial"])
 
-    @override_settings(ADZUNA_APP_ID="app-id", ADZUNA_APP_KEY="app-key", JOOBLE_API_KEY="")
+    @override_settings(ADZUNA_APP_ID="app-id", ADZUNA_APP_KEY="app-key", JOOBLE_API_KEY="", CAREERFIT_ENABLE_REMOTIVE=True)
+    @patch("apps.jobs.services.search_remotive_jobs")
     @patch("apps.jobs.services.search_arbeitnow_jobs")
     @patch("apps.jobs.services.search_adzuna_jobs")
-    def test_aggregates_and_deduplicates_live_results(self, mock_adzuna, mock_arbeitnow):
+    def test_aggregates_and_deduplicates_live_results(self, mock_adzuna, mock_arbeitnow, mock_remotive):
         duplicate = {
             "id": "1",
             "title": "Data Analyst",
@@ -177,15 +222,36 @@ class AdditionalJobProviderTests(SimpleTestCase):
             "source": "Adzuna",
         }
         mock_adzuna.return_value = {"results": [duplicate], "count": 1}
+        mock_remotive.return_value = {"results": [{**duplicate, "id": "remote", "source": "Remotive"}], "count": 1}
         mock_arbeitnow.return_value = {"results": [{**duplicate, "id": "other", "source": "Arbeitnow"}], "count": 1}
 
         result = search_jobs("Data Analyst")
 
         self.assertEqual(len(result["results"]), 1)
-        self.assertEqual(result["providers"], ["Adzuna", "Arbeitnow"])
+        self.assertEqual(result["providers"], ["Adzuna", "Remotive", "Arbeitnow"])
         self.assertFalse(result["using_sample_data"])
 
-    @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="", JOOBLE_API_KEY="")
+    @override_settings(ADZUNA_APP_ID="app-id", ADZUNA_APP_KEY="app-key", JOOBLE_API_KEY="jooble-key", CAREERFIT_ENABLE_REMOTIVE=True)
+    @patch("apps.jobs.services.search_jooble_jobs")
+    @patch("apps.jobs.services.search_arbeitnow_jobs")
+    @patch("apps.jobs.services.search_remotive_jobs")
+    @patch("apps.jobs.services.search_adzuna_jobs")
+    def test_source_filter_searches_only_the_requested_provider(self, mock_adzuna, mock_remotive, mock_arbeitnow, mock_jooble):
+        mock_remotive.return_value = {
+            "results": [{"id": "remote-1", "title": "Data Analyst", "company": "Remote Co", "location": "Remote", "source": "Remotive"}],
+            "count": 1,
+        }
+
+        result = search_jobs("Data Analyst", source="remotive")
+
+        self.assertEqual(result["providers"], ["Remotive"])
+        self.assertEqual(result["results"][0]["source"], "Remotive")
+        mock_remotive.assert_called_once()
+        mock_adzuna.assert_not_called()
+        mock_arbeitnow.assert_not_called()
+        mock_jooble.assert_not_called()
+
+    @override_settings(ADZUNA_APP_ID="", ADZUNA_APP_KEY="", JOOBLE_API_KEY="", CAREERFIT_ENABLE_REMOTIVE=False)
     @patch("apps.jobs.services.search_arbeitnow_jobs", side_effect=JobSearchError("Unavailable"))
     def test_falls_back_to_samples_when_live_providers_are_unavailable(self, _mock_arbeitnow):
         result = search_jobs("Data Analyst")
@@ -252,10 +318,11 @@ class JobSearchApiTests(APITestCase):
             "using_sample_data": False,
         }
 
-        response = self.client.get("/api/jobs/search/", {"title": "Junior Data Analyst"})
+        response = self.client.get("/api/jobs/search/", {"title": "Junior Data Analyst", "source": "remotive"})
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["results"][0]["source"], "Adzuna")
+        self.assertEqual(mock_search.call_args.kwargs["source"], "remotive")
         self.assertFalse(response.data["pagination"]["has_next"])
         self.assertEqual(response.data["role_insights"]["postings_analyzed"], 1)
 

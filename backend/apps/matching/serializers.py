@@ -34,3 +34,7 @@ class PreviewMatchRequestSerializer(serializers.Serializer):
 
 class CoachMatchRequestSerializer(PreviewMatchRequestSerializer):
     pass
+
+
+class ResumeDraftRequestSerializer(PreviewMatchRequestSerializer):
+    pass

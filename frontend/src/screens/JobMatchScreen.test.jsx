@@ -23,6 +23,7 @@ describe("JobMatchScreen", () => {
           title: "Data Analyst",
           location: "",
           country: "ca",
+          source: "all",
           workplace: "any",
           skills: "",
           experience_level: "any",
@@ -86,6 +87,7 @@ describe("JobMatchScreen", () => {
           title: "Data Analyst",
           location: "",
           country: "ca",
+          source: "all",
           workplace: "any",
           skills: "",
           excluded_keywords: "",
@@ -139,6 +141,7 @@ describe("JobMatchScreen", () => {
           title: "Data Analyst",
           location: "",
           country: "ca",
+          source: "all",
           workplace: "any",
           skills: "",
           experience_level: "any",
@@ -159,10 +162,63 @@ describe("JobMatchScreen", () => {
         onCreateSearchAlert={() => {}}
         onPageChange={() => {}}
         pagination={{ page: 1, count: 0, total_pages: 0, has_previous: false, has_next: false }}
-        selectedJob={{ id: "job-1", title: "Data Analyst", company: "Example Co", description_is_partial: true }}
+        selectedJob={{ id: "job-1", title: "Data Analyst", company: "Example Co", url: "https://example.com/job?utm_medium=api", description_is_partial: true }}
         matchPreview={{
-          summary: { match_score: 76, readiness_score: 68 },
+          summary: {
+            match_score: 76,
+            readiness_score: 68,
+            score_breakdown: {
+              requirement_evidence: { score: 72, weight: 65 },
+              skill_coverage: { score: 83, weight: 35 },
+              ats_preparation: { score: 60, weight: 20 },
+              job_match_weight: 80,
+            },
+            confidence: {
+              level: "medium",
+              label: "Medium confidence",
+              detail: "Score is based on useful job text, but a full posting may change the result.",
+            },
+          },
           skills: { matched: ["python", "sql"], missing: ["tableau"], missing_details: [{ name: "tableau", priority: "low" }] },
+          semantic_matches: [
+            {
+              label: "Semantic match",
+              requirement: "Experience with REST API development",
+              evidence: "Built backend endpoints and integrated third-party services",
+              score: 82,
+              explanation: "Different wording, related technical meaning",
+            },
+          ],
+          requirements_summary: {
+            counts: { matched: 1, partial: 1, weak: 1, missing: 1 },
+            top_gaps: [
+              {
+                category: "missing",
+                text: "Build Tableau dashboards for stakeholders.",
+                score: 0,
+                priority: "high",
+                evidence: "",
+                match_basis: "",
+              },
+            ],
+            top_evidence: [
+              {
+                category: "matched",
+                text: "Use Python for reporting.",
+                score: 90,
+                priority: "medium",
+                evidence: "Built Python reporting workflow.",
+                match_basis: "Keyword evidence match",
+              },
+            ],
+          },
+          priority_fixes: [
+            {
+              title: "Add proof for missing job skills",
+              evidenceNeeded: "One real Tableau example with a project and result.",
+              priority: "high",
+            },
+          ],
         }}
         isPreviewingMatch={false}
         matchPreviewError=""
@@ -175,11 +231,36 @@ describe("JobMatchScreen", () => {
     );
 
     expect(screen.getByText("Quick resume comparison")).toBeVisible();
+    expect(screen.getByText("Strong fit")).toBeVisible();
     expect(screen.getByText("76%")).toBeVisible();
     expect(screen.getByText("68%")).toBeVisible();
+    expect(screen.getByText("Requirement gaps")).toBeVisible();
+    expect(screen.getByText("2 open, 1 partial")).toBeVisible();
+    expect(screen.getByText("Score breakdown")).toBeVisible();
+    expect(screen.getByText("Review before applying")).toBeVisible();
+    expect(screen.getByText("Add proof for missing job skills")).toBeVisible();
+    expect(screen.getByText("One real Tableau example with a project and result.")).toBeVisible();
+    expect(screen.getByText("Requirements")).toBeVisible();
+    expect(screen.getByText("Matched 1")).toBeVisible();
+    expect(screen.getByText("Build Tableau dashboards for stakeholders.")).toBeVisible();
+    expect(screen.getByText("Built Python reporting workflow.")).toBeVisible();
+    expect(screen.getByText(/Medium confidence:/)).toBeVisible();
+    expect(screen.getByText(/a full posting may change the result/)).toBeVisible();
+    expect(screen.getByText("Requirement evidence")).toBeVisible();
+    expect(screen.getByText("Skill coverage")).toBeVisible();
+    expect(screen.getByText("ATS preparation")).toBeVisible();
     expect(screen.getByText("python")).toBeVisible();
+    expect(screen.getByText("Semantic evidence")).toBeVisible();
+    expect(screen.getByText("Semantic match")).toBeVisible();
+    expect(screen.getByText("Experience with REST API development")).toBeVisible();
+    expect(screen.getByText("Built backend endpoints and integrated third-party services")).toBeVisible();
+    expect(screen.getByText("Different wording, related technical meaning")).toBeVisible();
     expect(screen.getByText("tableau · optional")).toBeVisible();
     expect(screen.getByText("This provider shared a shortened excerpt")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Open source posting" })).toHaveAttribute("href", "https://example.com/job?utm_medium=api");
+    expect(screen.getByText("Job text used for scoring")).toBeVisible();
+    fireEvent.click(screen.getByText("Job text used for scoring"));
+    expect(screen.getByText(/job description text only/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Generate full readiness report" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Add to tracker" }));
     fireEvent.click(screen.getByRole("button", { name: "Open tracker" }));
@@ -198,6 +279,7 @@ describe("JobMatchScreen", () => {
           title: "Data Analyst",
           location: "Montreal",
           country: "ca",
+          source: "remotive",
           workplace: "hybrid",
           skills: "Python SQL",
           experience_level: "entry",
@@ -227,11 +309,13 @@ describe("JobMatchScreen", () => {
     );
 
     expect(screen.getByText("Active filters")).toBeVisible();
+    expect(screen.getByText("Website: Remotive")).toBeVisible();
     expect(screen.getAllByText("Hybrid")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(onJobSearchChange).toHaveBeenCalledWith(expect.objectContaining({
       title: "Data Analyst",
       location: "Montreal",
+      source: "all",
       workplace: "any",
       skills: "",
       experience_level: "any",
@@ -252,6 +336,7 @@ describe("JobMatchScreen", () => {
           title: "Data Analyst",
           location: "",
           country: "ca",
+          source: "all",
           workplace: "any",
           skills: "",
           experience_level: "any",

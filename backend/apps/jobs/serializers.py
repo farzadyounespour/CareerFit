@@ -9,6 +9,11 @@ class JobSearchSerializer(serializers.Serializer):
         default="us",
         required=False,
     )
+    source = serializers.ChoiceField(
+        choices=["all", "adzuna", "remotive", "arbeitnow", "jooble", "sample"],
+        default="all",
+        required=False,
+    )
     page = serializers.IntegerField(min_value=1, default=1, required=False)
     results_per_page = serializers.IntegerField(min_value=1, max_value=20, default=8, required=False)
     remote = serializers.BooleanField(default=False, required=False)

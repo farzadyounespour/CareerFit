@@ -67,6 +67,7 @@ class SearchAlert(models.Model):
     title = models.CharField(max_length=180)
     location = models.CharField(max_length=180, blank=True)
     country = models.CharField(max_length=2, default="us")
+    source = models.CharField(max_length=24, default="all")
     workplace = models.CharField(max_length=24, default="any")
     skills = models.CharField(max_length=180, blank=True)
     excluded_keywords = models.CharField(max_length=240, blank=True)

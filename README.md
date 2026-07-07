@@ -35,7 +35,7 @@ python manage.py runserver
 
 The API runs at `http://127.0.0.1:8000`.
 
-CareerFit searches Arbeitnow automatically without a key. To add Adzuna results, create `backend/.env` and add your Adzuna credentials:
+CareerFit searches Arbeitnow and Remotive automatically without a key. Remotive results must keep the source URL and source name visible, and CareerFit caches those responses to avoid frequent requests. To add Adzuna results, create `backend/.env` and add your Adzuna credentials:
 
 ```bash
 ADZUNA_APP_ID=your_app_id
@@ -46,6 +46,12 @@ You can also add an optional Jooble API key after registering at `https://jooble
 
 ```bash
 JOOBLE_API_KEY=your_jooble_api_key
+```
+
+To disable Remotive locally:
+
+```bash
+CAREERFIT_ENABLE_REMOTIVE=False
 ```
 
 If live providers are unavailable, CareerFit still works locally by returning sample job postings for the search flow.
@@ -72,11 +78,14 @@ Ollama runs on the same computer as CareerFit, so this option does not require a
 CAREERFIT_LLM_PROVIDER=openai
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-5.4-mini
+OPENAI_RESUME_MAX_OUTPUT_TOKENS=3500
 ```
 
-AI coaching is opt-in for each scan. The explainable CareerFit score, ATS checks, and deterministic recommendations still work when AI is disabled or the configured provider is unavailable.
+ChatGPT Plus and the OpenAI API are separate products. A ChatGPT Plus subscription does not automatically give the Django backend API access; create an API key in the OpenAI platform dashboard and put it in `backend/.env`.
 
-To run the optional local semantic-similarity evaluation described below, pull a dedicated embedding model:
+AI coaching and AI resume drafts are opt-in for each scan. The explainable CareerFit score, ATS checks, and deterministic recommendations still work when AI is disabled or the configured provider is unavailable.
+
+To run the optional local semantic-similarity evaluation described below, or to add local embedding evidence to the report score, pull a dedicated embedding model:
 
 ```bash
 ollama pull embeddinggemma
@@ -88,7 +97,13 @@ Then add this value to `backend/.env`:
 OLLAMA_EMBEDDING_MODEL=embeddinggemma
 ```
 
-This model is used only by the research evaluation script. The website's normal score remains deterministic and works without it.
+By default, embeddings are used only by the research evaluation script. To let the website's matcher add local embedding evidence to the deterministic score, also enable:
+
+```bash
+CAREERFIT_ENABLE_EMBEDDINGS=True
+```
+
+The website still works without embeddings. When enabled, CareerFit uses local Ollama embeddings only as an additional requirement-evidence signal; AI coaching still does not change the score.
 
 For deployment, set `DJANGO_DEBUG=False`, use a long random `DJANGO_SECRET_KEY`, and configure your real host and CORS origin. HTTPS redirect, secure cookies, and HSTS are enabled by default when debug mode is off.
 
@@ -138,7 +153,7 @@ VITE_API_BASE_URL=/api
 - Interactive report suggestions with accept, edit, and dismiss actions plus readiness-score history across rescans.
 - Reusable resume versions and saved daily or weekly job-search alerts.
 - Interactive ATS preparation checks for contact details, resume sections, bullet formatting, dates, measurable achievements, paragraph length, and resume length.
-- Explainable weighted requirement matching, best-segment TF-IDF evidence, skill coverage, missing-skill analysis, and recommendations.
+- Explainable weighted requirement matching, best-segment BM25/TF-IDF evidence, skill coverage, optional local embedding evidence, missing-skill analysis, and recommendations.
 - Role-specific interview questions, STAR answer prompts, and a progress dashboard.
 - Persistent light and dark appearance modes across the public site and private workspace.
 - Optional local Ollama or OpenAI-powered coaching with explicit user consent and deterministic fallback.
@@ -182,7 +197,7 @@ npm run test:e2e
 
 `GET /api/jobs/search/?title=Junior%20Data%20Analyst&location=New%20York&country=us`
 
-CareerFit combines available Adzuna, Arbeitnow, and optional Jooble results. Supported Adzuna country values are `us`, `ca`, and `gb`.
+CareerFit combines available Adzuna, Remotive, Arbeitnow, and optional Jooble results. Supported Adzuna country values are `us`, `ca`, and `gb`.
 
 ```json
 {
@@ -229,6 +244,10 @@ Returns the deterministic score summary and skill gaps for the current resume an
 `POST /api/matches/coach/`
 
 Returns optional AI coaching for the current resume and selected job without saving a duplicate report. The endpoint uses the configured Ollama or OpenAI provider and applies the dedicated coaching rate limit.
+
+`POST /api/matches/resume-draft/`
+
+Returns an optional AI-generated, editable resume draft for the current resume and selected job without saving a duplicate report. The draft prompt instructs the model to use only facts from the uploaded resume, avoid invented experience, and use bracketed placeholders when a job requirement is not supported by the resume.
 
 ### Upload Resume
 

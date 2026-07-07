@@ -1,4 +1,5 @@
 import json
+import hashlib
 import ipaddress
 import re
 import socket
@@ -11,6 +12,7 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 from django.conf import settings
+from django.core.cache import cache
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
@@ -28,6 +30,7 @@ class JobImportError(ValueError):
 ADZUNA_API_BASE_URL = "https://api.adzuna.com/v1/api/jobs"
 ARBEITNOW_API_URL = "https://www.arbeitnow.com/api/job-board-api"
 JOOBLE_API_BASE_URL = "https://jooble.org/api"
+REMOTIVE_API_URL = "https://remotive.com/api/remote-jobs"
 RELATED_ROLE_TITLES = {
     "data analyst": ["Business Intelligence Analyst", "Reporting Analyst", "Product Analyst", "Operations Analyst"],
     "software engineer": ["Backend Developer", "Full Stack Developer", "Application Developer", "DevOps Engineer"],
@@ -243,6 +246,7 @@ def search_jobs(
     title,
     location="",
     country="us",
+    source="all",
     page=1,
     results_per_page=8,
     remote=False,
@@ -258,6 +262,7 @@ def search_jobs(
         "title": title,
         "location": location,
         "country": country,
+        "source": source,
         "page": page,
         "results_per_page": results_per_page,
         "remote": remote,
@@ -269,14 +274,18 @@ def search_jobs(
         "salary_max": salary_max,
         "excluded_keywords": excluded_keywords,
     }
-    providers = [("Arbeitnow", search_arbeitnow_jobs)]
-    if settings.ADZUNA_APP_ID and settings.ADZUNA_APP_KEY:
-        providers.insert(0, ("Adzuna", search_adzuna_jobs))
-    if settings.JOOBLE_API_KEY:
-        providers.append(("Jooble", search_jooble_jobs))
+    providers, provider_setup_errors = _build_provider_list(source)
+    if source == "sample":
+        sample_result = search_sample_jobs(**search_args)
+        return {
+            **sample_result,
+            "providers": ["Sample"],
+            "provider_errors": [],
+            "using_sample_data": True,
+        }
 
     successful_results = []
-    provider_errors = []
+    provider_errors = [*provider_setup_errors]
     successful_providers = []
     total_count = 0
 
@@ -298,6 +307,17 @@ def search_jobs(
             "page": page,
             "results_per_page": results_per_page,
             "providers": successful_providers,
+            "provider_errors": provider_errors,
+            "using_sample_data": False,
+        }
+
+    if source != "all":
+        return {
+            "results": [],
+            "count": 0,
+            "page": page,
+            "results_per_page": results_per_page,
+            "providers": [],
             "provider_errors": provider_errors,
             "using_sample_data": False,
         }
@@ -355,10 +375,35 @@ def build_related_titles(role, jobs=None):
     return suggestions[:5]
 
 
+def _build_provider_list(source="all"):
+    requested_source = (source or "all").lower()
+    provider_factories = {
+        "adzuna": ("Adzuna", search_adzuna_jobs, bool(settings.ADZUNA_APP_ID and settings.ADZUNA_APP_KEY), "Adzuna is not configured."),
+        "remotive": ("Remotive", search_remotive_jobs, bool(settings.CAREERFIT_ENABLE_REMOTIVE), "Remotive is disabled."),
+        "arbeitnow": ("Arbeitnow", search_arbeitnow_jobs, True, ""),
+        "jooble": ("Jooble", search_jooble_jobs, bool(settings.JOOBLE_API_KEY), "Jooble is not configured."),
+    }
+    provider_order = ["adzuna", "remotive", "arbeitnow", "jooble"]
+    selected_sources = provider_order if requested_source == "all" else [requested_source]
+    providers = []
+    setup_errors = []
+    for provider_key in selected_sources:
+        provider = provider_factories.get(provider_key)
+        if not provider:
+            continue
+        name, search_function, is_available, unavailable_message = provider
+        if is_available:
+            providers.append((name, search_function))
+        elif requested_source != "all":
+            setup_errors.append({"provider": name, "detail": unavailable_message})
+    return providers, setup_errors
+
+
 def search_adzuna_jobs(
     title,
     location="",
     country="us",
+    source="all",
     page=1,
     results_per_page=8,
     remote=False,
@@ -370,6 +415,7 @@ def search_adzuna_jobs(
     salary_max=None,
     excluded_keywords="",
 ):
+    del source
     if not settings.ADZUNA_APP_ID or not settings.ADZUNA_APP_KEY:
         return search_sample_jobs(
             title=title,
@@ -438,6 +484,7 @@ def search_arbeitnow_jobs(
     title,
     location="",
     country="us",
+    source="all",
     page=1,
     results_per_page=8,
     remote=False,
@@ -449,7 +496,7 @@ def search_arbeitnow_jobs(
     salary_max=None,
     excluded_keywords="",
 ):
-    del country
+    del country, source
     try:
         with urlopen(f"{ARBEITNOW_API_URL}?{urlencode({'page': page})}", timeout=10) as response:
             payload = json.loads(response.read().decode("utf-8"))
@@ -486,10 +533,11 @@ def search_arbeitnow_jobs(
     }
 
 
-def search_jooble_jobs(
+def search_remotive_jobs(
     title,
     location="",
     country="us",
+    source="all",
     page=1,
     results_per_page=8,
     remote=False,
@@ -501,7 +549,74 @@ def search_jooble_jobs(
     salary_max=None,
     excluded_keywords="",
 ):
-    del country, remote, salary_max
+    del country, source
+    if page > 1:
+        return {
+            "results": [],
+            "count": 0,
+            "page": page,
+            "results_per_page": results_per_page,
+        }
+    if workplace in {"hybrid", "on_site"}:
+        return {
+            "results": [],
+            "count": 0,
+            "page": page,
+            "results_per_page": results_per_page,
+        }
+
+    keywords = [title, skills, _keyword_for_experience(experience_level), _keyword_for_employment(employment_type)]
+    params = {
+        "limit": max(results_per_page * 4, 20),
+    }
+    search_text = " ".join(keyword for keyword in keywords if keyword).strip()
+    if search_text:
+        params["search"] = search_text
+
+    payload = _fetch_remotive_payload(params)
+    jobs = [_format_remotive_job(job) for job in payload.get("jobs", [])]
+    filtered_jobs = [
+        job for job in jobs
+        if _remotive_location_matches(job.get("location", ""), location)
+        and _matches_filters(
+            job,
+            title=title,
+            location="",
+            remote=remote,
+            workplace=workplace,
+            skills=skills,
+            experience_level=experience_level,
+            employment_type=employment_type,
+            salary_min=salary_min,
+            salary_max=salary_max,
+            excluded_keywords=excluded_keywords,
+        )
+    ]
+    return {
+        "results": filtered_jobs[:results_per_page],
+        "count": len(filtered_jobs),
+        "page": page,
+        "results_per_page": results_per_page,
+    }
+
+
+def search_jooble_jobs(
+    title,
+    location="",
+    country="us",
+    source="all",
+    page=1,
+    results_per_page=8,
+    remote=False,
+    workplace="any",
+    skills="",
+    experience_level="any",
+    employment_type="any",
+    salary_min=None,
+    salary_max=None,
+    excluded_keywords="",
+):
+    del country, source, remote, salary_max
     keywords = [title, skills, _keyword_for_workplace(workplace), _keyword_for_experience(experience_level)]
     body = {
         "keywords": " ".join(keyword for keyword in keywords if keyword).strip(),
@@ -543,6 +658,7 @@ def search_sample_jobs(
     title,
     location="",
     country="us",
+    source="all",
     page=1,
     results_per_page=8,
     remote=False,
@@ -554,7 +670,7 @@ def search_sample_jobs(
     salary_max=None,
     excluded_keywords="",
 ):
-    del country
+    del country, source
     normalized_title = title.lower()
     normalized_location = location.lower()
     normalized_skills = skills.lower()
@@ -645,6 +761,28 @@ def _format_arbeitnow_job(job):
     }
 
 
+def _format_remotive_job(job):
+    salary_min, salary_max = _parse_salary_range(job.get("salary") or "")
+    tags = job.get("tags") or []
+    return {
+        "id": str(job.get("id") or ""),
+        "title": job.get("title") or "Untitled job",
+        "company": job.get("company_name") or "",
+        "location": job.get("candidate_required_location") or "Remote",
+        "workplace": "remote",
+        "employment_type": _normalize_employment_type(job.get("job_type") or ""),
+        "salary_text": job.get("salary") or "",
+        "salary_min": salary_min,
+        "salary_max": salary_max,
+        "description": _strip_html(job.get("description") or ""),
+        "url": job.get("url") or "",
+        "source": "Remotive",
+        "posted_at": _normalize_posted_at(job.get("publication_date")),
+        "category": job.get("category") or "",
+        "tags": tags if isinstance(tags, list) else [],
+    }
+
+
 def _format_jooble_job(job):
     return {
         "id": str(job.get("id") or ""),
@@ -676,7 +814,15 @@ def _matches_filters(
     excluded_keywords,
 ):
     searchable_text = " ".join(
-        [job["title"], job["company"], job["location"], job["description"]]
+        [
+            job.get("title") or "",
+            job.get("company") or "",
+            job.get("location") or "",
+            job.get("description") or "",
+            job.get("category") or "",
+            job.get("salary_text") or "",
+            " ".join(job.get("tags") or []),
+        ]
     ).lower()
     if title and title.lower() not in searchable_text:
         return False
@@ -694,8 +840,12 @@ def _matches_filters(
         return False
     if employment_type != "any" and job.get("employment_type") != employment_type:
         return False
-    if salary_min is not None or salary_max is not None:
-        return False
+    if salary_min is not None:
+        if job.get("salary_max") is None or job.get("salary_max") < salary_min:
+            return False
+    if salary_max is not None:
+        if job.get("salary_min") is None or job.get("salary_min") > salary_max:
+            return False
     return True
 
 
@@ -727,6 +877,63 @@ def _interleave(groups):
 
 def _strip_html(value):
     return re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", " ", value))).strip()
+
+
+def _fetch_remotive_payload(params):
+    query = urlencode(sorted(params.items()))
+    cache_key = f"careerfit:remotive:{hashlib.sha256(query.encode('utf-8')).hexdigest()}"
+    cached_payload = cache.get(cache_key)
+    if cached_payload is not None:
+        return cached_payload
+
+    request = Request(
+        f"{REMOTIVE_API_URL}?{query}",
+        headers={"User-Agent": "CareerFit job search/1.0; source attribution enabled"},
+    )
+    try:
+        with urlopen(request, timeout=10) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise JobSearchError("Unable to reach Remotive job search.") from exc
+
+    cache.set(cache_key, payload, settings.REMOTIVE_CACHE_SECONDS)
+    return payload
+
+
+def _remotive_location_matches(job_location, requested_location):
+    if not requested_location:
+        return True
+    normalized_job_location = (job_location or "").lower()
+    normalized_requested = requested_location.lower()
+    if normalized_requested in normalized_job_location:
+        return True
+    if any(term in normalized_job_location for term in ["worldwide", "anywhere", "global"]):
+        return True
+    country_aliases = {
+        "us": ["usa", "united states", "u.s.", "u.s.a", "america"],
+        "usa": ["us", "united states", "u.s.", "u.s.a", "america"],
+        "united states": ["us", "usa", "u.s.", "u.s.a", "america"],
+        "ca": ["canada"],
+        "canada": ["ca"],
+        "uk": ["united kingdom", "great britain", "gb"],
+        "united kingdom": ["uk", "great britain", "gb"],
+    }
+    return any(alias in normalized_job_location for alias in country_aliases.get(normalized_requested, []))
+
+
+def _parse_salary_range(value):
+    if not value:
+        return None, None
+    amounts = []
+    for match in re.finditer(r"(\d+(?:[,\s]\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)(\s*[kK])?", value):
+        raw_number, suffix = match.groups()
+        number = float(raw_number.replace(",", "").replace(" ", ""))
+        if suffix:
+            number *= 1000
+        amounts.append(round(number))
+    if not amounts:
+        return None, None
+    return min(amounts), max(amounts)
 
 
 def _normalize_employment_type(value):

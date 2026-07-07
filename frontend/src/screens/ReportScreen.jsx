@@ -10,6 +10,7 @@ import {
   ListChecks,
   MessagesSquare,
   Pencil,
+  PenLine,
   Printer,
   RotateCcw,
   Sparkles,
@@ -59,6 +60,7 @@ export default function ReportScreen({
     skills = { matched: [], missing: [] },
     requirements = { missing: [], weak: [], partial: [], matched: [] },
     recommendations = [],
+    priority_fixes: priorityFixes = [],
     ats = { score: 0, checks: [], issues: [] },
     interview_prep: interviewPrep,
     ai_coaching: aiCoaching,
@@ -68,8 +70,8 @@ export default function ReportScreen({
   const atsScore = ats.score || 0;
   const atsIssues = ats.issues || [];
   const requirementGaps = requirements.missing.length + requirements.weak.length;
-  const priorityActions = buildPriorityActions(skills, requirements, atsIssues, recommendations);
-  const resumeExamples = buildResumeExamples(summary, skills, atsIssues);
+  const hasSemanticMatches = Object.values(requirements).some((items) => items.some((item) => item.match_label));
+  const priorityActions = buildPriorityActions(skills, requirements, atsIssues, recommendations, priorityFixes);
   const completedActionCount = priorityActions.filter((item) => completedActions.has(actionKey(item))).length;
   const aiCompleted = aiCoaching?.status === "completed";
   const scoreBreakdown = summary.score_breakdown || {
@@ -163,13 +165,12 @@ export default function ReportScreen({
                       <ImpactBadge priority={item.priority} />
                     </div>
                     <p className="mt-1 text-sm leading-6 text-slate-600">{item.detail}</p>
+                    <EvidenceGapCard item={item} />
                   </div>
                 </article>
               ))}
             </div>
           </section>
-
-          <ResumeExamples examples={resumeExamples} />
 
           <section id="skill-review" className="scroll-mt-24 rounded-md border border-slate-200 bg-white shadow-panel">
             <div className="border-b border-slate-200 p-5">
@@ -234,33 +235,9 @@ export default function ReportScreen({
             title="Requirement evidence"
             detail="See how strongly your resume supports each part of the job posting."
             badge={`${requirementGaps} gap${requirementGaps === 1 ? "" : "s"}`}
+            open={hasSemanticMatches}
           >
             <RequirementDetails requirements={requirements} />
-          </ReportDisclosure>
-
-          {interviewPrep && (
-            <ReportDisclosure
-              icon={MessagesSquare}
-              title="Interview preparation"
-              detail="Practice examples that connect your real experience to this role."
-              badge={`${interviewPrep.questions.length} prompts`}
-            >
-              <InterviewPreparation interviewPrep={interviewPrep} />
-            </ReportDisclosure>
-          )}
-
-          <ReportDisclosure
-            id="source-documents"
-            icon={FileText}
-            title="Source documents"
-            detail="Review the exact resume and job description used for this report."
-          >
-            <DocumentPreview
-              activeDocument={activeDocument}
-              setActiveDocument={setActiveDocument}
-              resumeText={resumeText}
-              jobDescription={jobDescription}
-            />
           </ReportDisclosure>
 
           <TailoredResumeTemplate
@@ -270,6 +247,41 @@ export default function ReportScreen({
             skills={skills}
             onUseTemplate={onUseResumeTemplate}
           />
+
+          <section id="additional-tools" className="scroll-mt-24 space-y-3">
+            <div className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
+              <p className="text-sm font-semibold uppercase tracking-wide text-teal">Additional tools</p>
+              <h3 className="mt-1 text-lg font-semibold text-ink">Open these only when you need the extra detail</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                The main report above is the action plan. Use these supporting sections for interview practice or audit details.
+              </p>
+            </div>
+
+            {interviewPrep && (
+              <ReportDisclosure
+                icon={MessagesSquare}
+                title="Interview preparation"
+                detail="Practice examples that connect your real experience to this role."
+                badge={`${interviewPrep.questions.length} prompts`}
+              >
+                <InterviewPreparation interviewPrep={interviewPrep} />
+              </ReportDisclosure>
+            )}
+
+            <ReportDisclosure
+              id="source-documents"
+              icon={FileText}
+              title="Source documents"
+              detail="Review the exact resume and job description used for this report."
+            >
+              <DocumentPreview
+                activeDocument={activeDocument}
+                setActiveDocument={setActiveDocument}
+                resumeText={resumeText}
+                jobDescription={jobDescription}
+              />
+            </ReportDisclosure>
+          </section>
         </main>
 
         <aside className="rounded-md border border-slate-200 bg-white p-5 shadow-panel lg:sticky lg:top-24">
@@ -301,6 +313,7 @@ export default function ReportScreen({
               <ReportJumpLink target="ats-checks">ATS checks</ReportJumpLink>
               <ReportJumpLink target="requirement-evidence">Requirement evidence</ReportJumpLink>
               <ReportJumpLink target="resume-draft">Resume draft</ReportJumpLink>
+              <ReportJumpLink target="additional-tools">Additional tools</ReportJumpLink>
             </div>
           </nav>
           <dl className="mt-6 divide-y divide-slate-100 border-t border-slate-100 text-sm">
@@ -316,8 +329,14 @@ export default function ReportScreen({
 }
 
 function TailoredResumeTemplate({ resumeText, summary, skills, onUseTemplate }) {
-  const [draft, setDraft] = useState(() => buildAtsResumeTemplate(resumeText, summary, skills));
+  const [sections, setSections] = useState(() => buildResumeWorkspaceSections(resumeText, summary, skills));
+  const [activeSectionId, setActiveSectionId] = useState("summary");
   const [copied, setCopied] = useState(false);
+  const activeSection = sections.find((section) => section.id === activeSectionId) || sections[0];
+  const draft = serializeResumeSections(sections);
+  const placeholderCount = (draft.match(/\[[^\]]+\]/g) || []).length;
+  const completedRequiredSections = sections.filter((section) => section.required && section.content.trim() && !section.content.includes("[")).length;
+  const requiredSectionCount = sections.filter((section) => section.required).length;
 
   async function copyDraft() {
     await navigator.clipboard?.writeText(draft);
@@ -336,81 +355,226 @@ function TailoredResumeTemplate({ resumeText, summary, skills, onUseTemplate }) 
     URL.revokeObjectURL(url);
   }
 
+  function updateSection(sectionId, content) {
+    setSections((currentSections) => currentSections.map((section) => section.id === sectionId ? { ...section, content } : section));
+  }
+
   return (
-    <section id="resume-draft" className="scroll-mt-24 rounded-md border border-teal/30 bg-white shadow-panel">
-      <div className="border-b border-teal/20 bg-emerald-50 p-5">
+    <details id="resume-draft" className="group scroll-mt-24 rounded-md border border-slate-200 bg-white shadow-panel">
+      <summary className="flex cursor-pointer list-none items-center gap-3 p-5">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-emerald-50 text-teal">
+          <PenLine size={18} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-ink">Resume draft workspace</span>
+          <span className="mt-1 block text-sm leading-5 text-slate-500">
+            Create a tailored plain-text resume only after you review the priority fixes.
+          </span>
+        </span>
+        <span className="hidden rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600 sm:block">
+          {placeholderCount ? `${placeholderCount} placeholders` : "Ready to review"}
+        </span>
+        <ChevronDown className="shrink-0 text-slate-400 transition group-open:rotate-180" size={18} />
+      </summary>
+      <div className="border-t border-slate-200 bg-slate-50 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-ink">ATS-friendly resume draft</h3>
+            <p className="text-sm font-semibold uppercase tracking-wide text-teal">Resume tailoring workspace</p>
+            <h3 className="mt-1 text-lg font-semibold text-ink">Create a tailored resume version</h3>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              CareerFit reorganized your uploaded text into a clean starting template. Review every line and replace bracketed placeholders with truthful details before using it.
+              Review each section, keep only truthful details, and replace bracketed placeholders before using the resume.
             </p>
           </div>
-          <span className="rounded bg-white px-2 py-1 text-xs font-bold text-teal">Editable draft</span>
+          <span className="rounded bg-white px-2 py-1 text-xs font-bold text-teal">Review required</span>
         </div>
       </div>
-      <div className="p-5">
-        <textarea
-          aria-label="ATS-friendly resume draft"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          className="min-h-[540px] w-full resize-y rounded-md border border-slate-300 bg-slate-50 px-4 py-4 font-mono text-sm leading-6 text-slate-700 focus:border-teal focus:outline-none"
-        />
+      <div className="grid divide-y divide-slate-100 xl:grid-cols-[220px_minmax(0,1fr)_360px] xl:divide-x xl:divide-y-0">
+        <aside className="p-5">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Sections</p>
+          <div className="mt-3 space-y-1">
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                aria-label={`Edit ${section.label} section`}
+                onClick={() => setActiveSectionId(section.id)}
+                className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold ${activeSectionId === section.id ? "bg-emerald-50 text-teal" : "text-slate-600 hover:bg-slate-50 hover:text-teal"}`}
+              >
+                {section.label}
+                {section.required && <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Required</span>}
+              </button>
+            ))}
+          </div>
+          <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Readiness</p>
+            <p className="mt-2 text-sm font-semibold text-ink">{completedRequiredSections} of {requiredSectionCount} core sections reviewed</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{placeholderCount ? `${placeholderCount} placeholder${placeholderCount === 1 ? "" : "s"} still need truthful detail.` : "No bracketed placeholders remain."}</p>
+          </div>
+        </aside>
+
+        <div className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-ink">{activeSection.label}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{activeSection.helper}</p>
+            </div>
+            <span className="rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">Section editor</span>
+          </div>
+          <textarea
+            aria-label={`Edit ${activeSection.label}`}
+            value={activeSection.content}
+            onChange={(event) => updateSection(activeSection.id, event.target.value)}
+            className="mt-4 min-h-[360px] w-full resize-y rounded-md border border-slate-300 bg-white px-4 py-4 font-mono text-sm leading-6 text-slate-700 focus:border-teal focus:outline-none"
+          />
+          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-amber-900">Truthfulness check</p>
+            <p className="mt-1 text-xs leading-5 text-amber-900">
+              Remove any line you cannot support in an interview. Add job keywords only when your real work or projects prove them.
+            </p>
+          </div>
+        </div>
+
+        <aside className="p-5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-ink">Resume preview</p>
+            <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-teal">ATS plain text</span>
+          </div>
+          <div className="mt-4 max-h-[620px] overflow-auto rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+            <ResumePreview sections={sections} />
+          </div>
+        </aside>
+      </div>
+      <div className="border-t border-slate-100 p-5">
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" onClick={copyDraft} className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal">
             <Copy size={16} />
-            {copied ? "Copied draft" : "Copy draft"}
+            {copied ? "Copied resume" : "Copy resume"}
           </button>
           <button type="button" onClick={downloadDraft} className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal">
             <Download size={16} />
             Download TXT
           </button>
           <button type="button" onClick={() => onUseTemplate(draft)} className="inline-flex items-center gap-2 rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal/90">
-            Open in resume workspace
+            Use this resume version
             <ArrowRight size={16} />
           </button>
         </div>
       </div>
-    </section>
+    </details>
   );
 }
 
-function ResumeExamples({ examples }) {
-  const [copiedId, setCopiedId] = useState("");
-  if (!examples.length) return null;
-
-  async function copyExample(example) {
-    await navigator.clipboard?.writeText(example.content);
-    setCopiedId(example.id);
-    window.setTimeout(() => setCopiedId(""), 1800);
-  }
+function EvidenceGapCard({ item }) {
+  const hasGapDetails = item.jobSignal || item.resumeSignal || item.evidenceNeeded;
+  if (!hasGapDetails && !item.example && !item.checklist?.length && !item.why) return null;
 
   return (
-    <section className="rounded-md border border-sky-200 bg-white shadow-panel">
-      <div className="border-b border-sky-200 bg-sky-50 p-5">
-        <h3 className="text-lg font-semibold text-ink">Resume section examples</h3>
-        <p className="mt-1 text-sm leading-6 text-slate-600">
-          Use these as fill-in templates. Keep only sections that are true for you and replace every bracketed placeholder with your real details.
-        </p>
-      </div>
-      <div className="grid divide-y divide-slate-100 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-        {examples.map((example) => (
-          <article key={example.id} className="min-w-0 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-ink">{example.title}</p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">{example.detail}</p>
-              </div>
-              <button type="button" title={`Copy ${example.title}`} onClick={() => copyExample(example)} className="shrink-0 rounded p-2 text-slate-500 hover:bg-sky-50 hover:text-sky-700">
-                <Copy size={16} />
-              </button>
+    <div className="mt-3 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+      {hasGapDetails && (
+        <div className="grid divide-y divide-slate-200 bg-white md:grid-cols-3 md:divide-x md:divide-y-0">
+          <EvidenceGapColumn
+            label="Job asks for"
+            value={item.jobSignal}
+            empty="No specific job signal found."
+            tone="job"
+          />
+          <EvidenceGapColumn
+            label="Resume shows"
+            value={item.resumeSignal}
+            empty="No clear resume proof yet."
+            tone="resume"
+          />
+          <EvidenceGapColumn
+            label="Add this proof"
+            value={item.evidenceNeeded}
+            empty="Add one specific, truthful example."
+            tone="proof"
+          />
+        </div>
+      )}
+      <div className="space-y-3 p-3">
+        {item.where && (
+          <div className="flex flex-wrap items-center gap-2 text-xs leading-5 text-slate-600">
+            <span className="font-bold uppercase tracking-wide text-slate-500">Best place</span>
+            <span className="rounded bg-white px-2 py-1 font-semibold text-slate-700">{item.where}</span>
+          </div>
+        )}
+        {!!item.checklist?.length && (
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">A strong fix includes</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {item.checklist.map((detail) => (
+                <span key={detail} className="inline-flex items-center gap-1 rounded bg-white px-2 py-1 text-xs font-semibold text-slate-600">
+                  <CheckCircle2 size={12} className="text-teal" />
+                  {detail}
+                </span>
+              ))}
             </div>
-            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700">{example.content}</pre>
-            {copiedId === example.id && <p className="mt-2 text-xs font-semibold text-emerald-700">Copied example</p>}
-          </article>
+          </div>
+        )}
+        {item.why && (
+          <p className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs leading-5 text-slate-600">
+            <span className="font-semibold text-slate-700">Why this matters: </span>
+            {item.why}
+          </p>
+        )}
+        {item.example && (
+          <div className="rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-teal">Suggested resume bullet</p>
+            <p className="mt-1 text-xs leading-5 text-slate-700">{item.example}</p>
+          </div>
+        )}
+        {item.truthfulnessNote && (
+          <p className="text-xs leading-5 text-slate-500">
+            <span className="font-semibold text-slate-600">Truthfulness note: </span>
+            {item.truthfulnessNote}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EvidenceGapColumn({ label, value, empty, tone }) {
+  const toneClasses = {
+    job: "text-rose-700 bg-rose-50",
+    resume: "text-sky-700 bg-sky-50",
+    proof: "text-teal bg-emerald-50",
+  };
+
+  return (
+    <div className="p-3">
+      <p className={`inline-flex rounded px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${toneClasses[tone]}`}>
+        {label}
+      </p>
+      <p className={`mt-2 text-xs leading-5 ${value ? "text-slate-700" : "text-slate-400"}`}>
+        {value || empty}
+      </p>
+    </div>
+  );
+}
+
+function ResumePreview({ sections }) {
+  const header = sections.find((section) => section.id === "header");
+  const bodySections = sections.filter((section) => section.id !== "header" && section.content.trim());
+  const headerLines = (header?.content || "").split(/\r?\n/).filter(Boolean);
+  return (
+    <div className="text-sm leading-6 text-slate-700">
+      <div className="border-b border-slate-200 pb-3 text-center">
+        <p className="text-lg font-bold uppercase tracking-wide text-ink">{headerLines[0] || "[Your name]"}</p>
+        {headerLines.slice(1).map((line) => (
+          <p key={line} className="text-xs text-slate-500">{line}</p>
         ))}
       </div>
-    </section>
+      <div className="mt-4 space-y-4">
+        {bodySections.map((section) => (
+          <section key={section.id}>
+            <p className="border-b border-slate-200 pb-1 text-xs font-bold uppercase tracking-wide text-teal">{section.outputLabel}</p>
+            <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-700">{section.content}</div>
+          </section>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -548,11 +712,50 @@ function SpecificImprovements({ coaching }) {
             ) : (
               <p className="mt-1 text-sm leading-6 text-slate-600">{item.detail}</p>
             )}
+            <AiRecommendationDetails item={item} />
             {item.status === "accepted" && <p className="mt-2 text-xs font-semibold text-emerald-700">Added to your tailoring checklist</p>}
           </article>
         ))}
       </div>
     </section>
+  );
+}
+
+function AiRecommendationDetails({ item }) {
+  const detailItems = [
+    ["Job ask", item.job_requirement],
+    ["Resume evidence", item.resume_evidence],
+    ["Where to add", item.where_to_add],
+    ["What to add", item.what_to_add],
+  ].filter(([, value]) => value);
+
+  if (!detailItems.length && !item.bullet_template && !item.truthfulness_note) return null;
+
+  return (
+    <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+      {!!detailItems.length && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {detailItems.map(([label, value]) => (
+            <div key={label} className="rounded bg-white px-3 py-2">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-700">{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {item.bullet_template && (
+        <div className="mt-2 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-teal">Suggested resume bullet</p>
+          <p className="mt-1 text-xs leading-5 text-slate-700">{item.bullet_template}</p>
+        </div>
+      )}
+      {item.truthfulness_note && (
+        <p className="mt-2 text-xs leading-5 text-slate-500">
+          <span className="font-semibold text-slate-600">Truthfulness note: </span>
+          {item.truthfulness_note}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -627,7 +830,7 @@ function RequirementDetails({ requirements }) {
   return (
     <div className="divide-y divide-slate-100">
       {Object.entries(categoryLabels).map(([key, label]) => (
-        <details key={key} className="group/requirement" open={key === "missing" && requirements[key].length > 0}>
+        <details key={key} className="group/requirement" open={(key === "missing" && requirements[key].length > 0) || requirements[key].some((item) => item.match_label)}>
           <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4">
             <span className={`h-2.5 w-2.5 rounded-full ${categoryStyles[key]}`} />
             <span className="flex-1 text-sm font-semibold text-slate-700">{label} requirements</span>
@@ -636,23 +839,57 @@ function RequirementDetails({ requirements }) {
           </summary>
           <div className="divide-y divide-slate-100 border-t border-slate-100 bg-slate-50">
             {requirements[key].length ? requirements[key].map((item) => (
-              <article key={`${key}-${item.text}-${item.score}`} className="px-5 py-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <p className="max-w-3xl text-sm font-medium leading-6 text-slate-700">{item.text}</p>
-                  <div className="flex items-center gap-2">
-                    <ImpactBadge priority={item.priority} />
-                    <span className="text-sm font-bold text-slate-500">{item.score}%</span>
-                  </div>
-                </div>
-                {!!item.evidence.length && (
-                  <p className="mt-2 text-xs leading-5 text-slate-500">Evidence found: {item.evidence.join(", ")}</p>
-                )}
-              </article>
+              <RequirementEvidenceRow key={`${key}-${item.text}-${item.score}`} item={item} />
             )) : <p className="px-5 py-4 text-sm text-slate-500">No requirements in this category.</p>}
           </div>
         </details>
       ))}
     </div>
+  );
+}
+
+function RequirementEvidenceRow({ item }) {
+  const evidenceText = item.semantic_evidence || item.best_evidence;
+  const explanation = item.semantic_explanation || item.match_basis;
+  const scoreDetails = [
+    item.lexical_score ? `Lexical ${item.lexical_score}%` : "",
+    item.semantic_score ? `Concept ${item.semantic_score}%` : "",
+    item.embedding_score ? `Embedding ${item.embedding_score}%` : "",
+  ].filter(Boolean);
+
+  return (
+    <article className="px-5 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="max-w-3xl text-sm font-medium leading-6 text-slate-700">{item.text}</p>
+        <div className="flex items-center gap-2">
+          {item.match_label && (
+            <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-teal">{item.match_label}</span>
+          )}
+          {item.match_basis && !item.match_label && (
+            <span className="rounded bg-sky-50 px-2 py-1 text-xs font-bold text-sky-700">{item.match_basis}</span>
+          )}
+          <ImpactBadge priority={item.priority} />
+          <span className="text-sm font-bold text-slate-500">{item.score}%</span>
+        </div>
+      </div>
+      {evidenceText && (
+        <div className="mt-3 rounded-md border border-emerald-100 bg-white p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-teal">Strongest resume evidence</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">{evidenceText}</p>
+          {explanation && (
+            <p className="mt-1 text-xs leading-5 text-slate-500">{explanation}</p>
+          )}
+          {!!scoreDetails.length && (
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              {scoreDetails.join(" · ")}
+            </p>
+          )}
+        </div>
+      )}
+      {!!item.evidence?.length && (
+        <p className="mt-2 text-xs leading-5 text-slate-500">Keyword evidence: {item.evidence.join(", ")}</p>
+      )}
+    </article>
   );
 }
 
@@ -705,89 +942,276 @@ function SummaryRow({ label, value }) {
   );
 }
 
-function buildPriorityActions(skills, requirements, atsIssues, recommendations) {
+function buildPriorityActions(skills, requirements, atsIssues, recommendations, backendFixes = []) {
+  if (backendFixes.length) {
+    return backendFixes
+      .filter((item) => isActionableRequirement({ text: `${item.title || ""} ${item.detail || ""} ${item.jobSignal || ""}` }))
+      .map(normalizePriorityFix)
+      .slice(0, 5);
+  }
+
   const actions = [];
   const importantSkillGaps = (skills.missing_details || skills.missing.map((name) => ({ name, priority: "high" })))
     .filter((item) => item.priority !== "low");
   if (importantSkillGaps.length) {
+    const importantSkillNames = importantSkillGaps.slice(0, 5).map((item) => item.name);
+    const firstSkillGap = importantSkillNames[0];
     actions.push({
       title: "Add evidence for missing skills",
-      detail: `Use a project or work bullet to support ${importantSkillGaps.slice(0, 5).map((item) => item.name).join(", ")} when those skills reflect your real experience.`,
+      detail: `CareerFit found ${formatList(importantSkillNames)} in the job posting, but not enough resume evidence that proves you used ${importantSkillNames.length === 1 ? "it" : "them"}.`,
       priority: "high",
+      where: "Experience or Projects",
+      evidenceNeeded: `A real example that names ${firstSkillGap}, the feature or system, your action, and the result.`,
+      jobSignal: formatList(importantSkillNames),
+      resumeSignal: resumeSkillSignal(skills.matched),
+      checklist: skillEvidenceChecklist(firstSkillGap),
+      why: "Recruiters and ATS tools look for proof, not just a keyword in the skills list. A concrete bullet makes the match stronger and easier to defend in an interview.",
+      example: skillBulletExample(firstSkillGap),
     });
   }
-  [...requirements.missing].sort(comparePriority).slice(0, 2).forEach((item) => {
-    actions.push({ title: "Address a missing requirement", detail: item.text, priority: item.priority || "high" });
+  [...requirements.missing].filter(isActionableRequirement).sort(comparePriority).slice(0, 2).forEach((item) => {
+    actions.push({
+      title: "Address a missing requirement",
+      detail: `The resume does not yet show clear evidence for this job requirement: ${item.text}`,
+      priority: item.priority || "high",
+      where: "Most relevant experience, project, or summary line",
+      evidenceNeeded: "One truthful bullet that maps your work directly to this requirement.",
+      jobSignal: item.text,
+      resumeSignal: requirementEvidenceSignal(item),
+      checklist: ["Requirement keyword", "Concrete project", "Your action", "Outcome"],
+      why: "A missing requirement usually means the job asks for something CareerFit could not connect to any resume evidence.",
+      example: requirementBulletExample(item.text),
+    });
   });
-  requirements.weak.slice(0, 1).forEach((item) => {
-    actions.push({ title: "Strengthen a weak requirement", detail: item.text, priority: item.priority || "medium" });
+  requirements.weak.filter(isActionableRequirement).slice(0, 1).forEach((item) => {
+    actions.push({
+      title: "Strengthen a weak requirement",
+      detail: `CareerFit found related wording, but the resume needs a clearer example for: ${item.text}`,
+      priority: item.priority || "medium",
+      where: "Rewrite an existing bullet under the closest role or project",
+      evidenceNeeded: "Add the method, context, and measurable or observable result.",
+      jobSignal: item.text,
+      resumeSignal: requirementEvidenceSignal(item),
+      checklist: ["Specific feature/system", "Method or tool", "Scope or scale", "Result"],
+      why: "Weak matches often happen when the resume has a related skill word but not enough context to prove depth.",
+      example: requirementBulletExample(item.text),
+    });
   });
   atsIssues.slice(0, 2).forEach((issue) => {
-    actions.push({ title: `Improve ${issue.toLowerCase()}`, detail: `Update your resume so recruiters and applicant tracking systems can clearly detect your ${issue.toLowerCase()}.`, priority: "medium" });
+    actions.push({
+      title: `Improve ${issue.toLowerCase()}`,
+      detail: `Update your resume so recruiters and applicant tracking systems can clearly detect your ${issue.toLowerCase()}.`,
+      priority: "medium",
+      where: resumeSectionForAtsIssue(issue),
+      evidenceNeeded: atsEvidenceDetail(issue),
+      jobSignal: "ATS structure check",
+      resumeSignal: `CareerFit flagged ${issue.toLowerCase()} as incomplete or hard to detect.`,
+      checklist: ["Clear heading", "Plain text", "Consistent formatting"],
+    });
   });
-  recommendations.forEach((item) => actions.push({ ...item, priority: item.priority || "medium" }));
+  recommendations
+    .filter(isActionableRecommendation)
+    .forEach((item) => actions.push({ ...item, priority: item.priority || "medium" }));
 
   return uniqueActions(actions).slice(0, 5);
 }
 
-function buildResumeExamples(summary, skills, atsIssues) {
-  const issues = new Set(atsIssues);
-  const targetRole = summary.target_role || "Target Role";
-  const detectedSkills = skills.matched.slice(0, 5);
-  const skillText = detectedSkills.length ? detectedSkills.join(", ") : "[relevant skills you genuinely use]";
-  const strongestSkill = detectedSkills[0] || "[relevant skill]";
-  const examples = [];
+function normalizePriorityFix(fix) {
+  return {
+    title: fix.title,
+    detail: fix.detail,
+    priority: fix.priority || "medium",
+    where: fix.where || fix.where_to_add,
+    evidenceNeeded: fix.evidenceNeeded || fix.what_to_add,
+    jobSignal: fix.jobSignal || fix.job_requirement,
+    resumeSignal: fix.resumeSignal || fix.resume_evidence,
+    checklist: fix.checklist || [],
+    why: fix.why,
+    example: fix.example || fix.bullet_template,
+    truthfulnessNote: fix.truthfulnessNote || fix.truthfulness_note,
+    status: fix.status,
+  };
+}
 
-  if (issues.has("Summary section") || issues.has("Target-role language")) {
-    examples.push({
+function formatList(items) {
+  if (items.length <= 1) return items[0] || "";
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
+function resumeSkillSignal(matchedSkills) {
+  if (!matchedSkills?.length) return "No strong skill evidence detected yet.";
+  return `CareerFit currently detects ${formatList(matchedSkills.slice(0, 4))}, but not this missing skill evidence.`;
+}
+
+function requirementEvidenceSignal(item) {
+  if (item.semantic_evidence) return item.semantic_evidence;
+  if (item.evidence?.length) return `Related wording found: ${formatList(item.evidence.slice(0, 5))}.`;
+  return "No direct resume evidence detected for this requirement.";
+}
+
+function isActionableRequirement(item) {
+  const text = normalizeActionText(item.text || "");
+  return !NON_RESUME_ACTION_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function isActionableRecommendation(item) {
+  const text = normalizeActionText(`${item.title || ""} ${item.detail || ""} ${item.example || ""}`);
+  return !NON_RESUME_ACTION_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function normalizeActionText(text) {
+  return text.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+const NON_RESUME_ACTION_PATTERNS = [
+  /\b(if you have questions|questions regarding|please contact|email protected|reach out)\b/,
+  /\b(hiring practices|hiring process|recruitment process|application process|selection process|screening process|interview process|recruiting team|talent acquisition)\b/,
+  /\b(artificial intelligence|ai tools?|automated tools?|automated decision|algorithmic)\b.*\b(hiring|recruit|application|selection|screening|assessment)\b/,
+  /\b(hiring|recruit|application|selection|screening|assessment)\b.*\b(artificial intelligence|ai tools?|automated tools?|automated decision|algorithmic)\b/,
+  /\b(equal opportunity|eeo|affirmative action|reasonable accommodation|accommodation request|diversity and inclusion|veteran status|disability status)\b/,
+  /\b(privacy policy|privacy notice|personal information|personal data|gdpr|ccpa|data retention|cookies?)\b/,
+  /\b(apply now|submit your application|click apply|learn more|job alert|talent community|careers page|application portal)\b/,
+  /\b(compensation|salary range|pay range|benefits package|vacation policy|paid time off|stock options|bonus eligible|equity package)\b/,
+  /\b(background check|reference check|employment verification|work authorization|visa sponsorship|e-verify|criminal history)\b/,
+  /\b(agency|agencies|recruiters?|staffing firms?|unsolicited resumes?)\b/,
+  /\b(job id|job number|requisition|req id|posted date|posting date|employment type|work location)\b/,
+];
+
+function skillEvidenceChecklist(skill) {
+  if (/test|qa|quality/i.test(skill)) {
+    return ["Testing type", "Feature or API", "Tool or method", "Defect/result"];
+  }
+  if (/sql|postgres|database|mongodb|redis|supabase/i.test(skill)) {
+    return ["Dataset or table", "Query/design choice", "Business result", "Scale"];
+  }
+  if (/react|next|typescript|javascript|node|express/i.test(skill)) {
+    return ["Feature built", "Framework/tool", "User impact", "Deployment/result"];
+  }
+  return ["Skill used", "Project context", "Your action", "Result"];
+}
+
+function skillBulletExample(skill) {
+  if (/test|qa|quality/i.test(skill)) {
+    return `Tested [feature/API/workflow] using [unit, integration, functional, performance, or chaos testing], covering [edge case or failure mode] and improving [release confidence, defects found, or reliability].`;
+  }
+  if (/sql|postgres|database|mongodb|redis|supabase/i.test(skill)) {
+    return `Used ${skill} to [model, query, or optimize] [dataset/system], improving [reporting speed, data quality, reliability, or decision-making].`;
+  }
+  if (/react|next|typescript|javascript|node|express/i.test(skill)) {
+    return `Built [feature or workflow] with ${skill}, improving [user task, performance, maintainability, or delivery speed].`;
+  }
+  return `Used ${skill} to [describe a real feature, tool, or project], resulting in [truthful outcome or measurable result].`;
+}
+
+function requirementBulletExample(requirement) {
+  if (/test|quality|sdlc|software development lifecycle/i.test(requirement)) {
+    return "Applied [testing methodology] during [SDLC phase/project], validating [feature/system] through [test type/tool] and improving [release quality, reliability, or defect detection].";
+  }
+  if (/api|backend|service|endpoint/i.test(requirement)) {
+    return "Built [backend service/API endpoint] for [use case], integrating [system/tool] and improving [latency, reliability, automation, or user workflow].";
+  }
+  if (/full.?stack|react|next|typescript/i.test(requirement)) {
+    return "Delivered [full-stack feature] using [frontend/backend tools], connecting [data/API] to [user workflow] and improving [specific outcome].";
+  }
+  return `Built or improved [specific project/system] related to "${shortenText(requirement, 80)}", using [tools/method] to achieve [truthful result].`;
+}
+
+function resumeSectionForAtsIssue(issue) {
+  if (/summary/i.test(issue)) return "Professional Summary";
+  if (/education/i.test(issue)) return "Education";
+  if (/experience|dates|bullet|measurable/i.test(issue)) return "Experience";
+  if (/skill/i.test(issue)) return "Skills";
+  return "Header or relevant resume section";
+}
+
+function atsEvidenceDetail(issue) {
+  if (/summary/i.test(issue)) return "A 2-3 line summary with target-role language and one truthful strength.";
+  if (/bullet/i.test(issue)) return "Short bullets that start with action verbs and describe outcomes.";
+  if (/measurable/i.test(issue)) return "A truthful number, scale, frequency, or observable result.";
+  return `A clearly labeled ${issue.toLowerCase()} section or detail.`;
+}
+
+function shortenText(text, maxLength) {
+  return text.length > maxLength ? `${text.slice(0, maxLength - 3).trim()}...` : text;
+}
+
+function buildResumeWorkspaceSections(resumeText, summary, skills) {
+  const parsed = parseResumeSections(resumeText);
+  const candidateName = parsed.header[0] || summary.candidate_name || "[Your name]";
+  const contactLines = parsed.header.slice(1);
+  const targetRole = summary.target_role || "[Target role]";
+  const detectedSkills = skills.matched.length ? skills.matched.join(", ") : "[Add your relevant skills]";
+  return [
+    {
+      id: "header",
+      label: "Header",
+      outputLabel: "",
+      required: true,
+      helper: "Confirm your name, target role, and contact details. Keep this short and recruiter-friendly.",
+      content: [
+        candidateName,
+        targetRole,
+        contactLines.length ? contactLines.join(" | ") : "[Email] | [Phone] | [City, Province or State]",
+      ].join("\n"),
+    },
+    {
       id: "summary",
-      title: "Professional summary header",
-      detail: "Add a short section near the top and connect it to your real background.",
-      content: `PROFESSIONAL SUMMARY\n${targetRole} with experience using ${skillText}. [Add one truthful strength or measurable result relevant to the role.]`,
-    });
-  }
-  if (["Experience section", "Experience dates", "Readable bullet points", "Measurable achievements"].some((issue) => issues.has(issue))) {
-    examples.push({
-      id: "experience",
-      title: "Experience or project structure",
-      detail: "A consistent header, dates, and outcome-focused bullets are easier for recruiters and ATS tools to scan.",
-      content: `EXPERIENCE\n[Role or project name] | [Organization] | [Month Year - Month Year]\n- Used ${strongestSkill} to [describe your real action], resulting in [truthful outcome or number].\n- Collaborated with [team or stakeholder] to [describe a real contribution].`,
-    });
-  }
-  if (issues.has("Skills section")) {
-    examples.push({
+      label: "Professional summary",
+      outputLabel: "Professional Summary",
+      required: true,
+      helper: "Use 2-3 lines that connect your real background to the selected job.",
+      content: sectionText(parsed.sections.summary, `[Write 2-3 lines about your real experience relevant to ${targetRole}. Mention your strongest skills and one truthful result.]`),
+    },
+    {
       id: "skills",
-      title: "Skills header",
-      detail: "Group the skills already supported by your resume. Add other skills only when they reflect your real experience.",
-      content: `SKILLS\n${skillText}`,
-    });
-  }
-  if (issues.has("Education section")) {
-    examples.push({
+      label: "Skills",
+      outputLabel: "Skills",
+      required: true,
+      helper: "Group skills that are supported by your resume. Do not add unsupported keywords.",
+      content: sectionText(parsed.sections.skills, detectedSkills),
+    },
+    {
+      id: "experience",
+      label: "Experience",
+      outputLabel: "Experience",
+      required: true,
+      helper: "Use role, organization, dates, and outcome-focused bullets. Add numbers only when truthful.",
+      content: sectionText(parsed.sections.experience, "[Role or project] | [Organization] | [Dates]\n- [Describe a real action and its result. Add a truthful number when possible.]"),
+    },
+    {
+      id: "projects",
+      label: "Projects",
+      outputLabel: "Projects",
+      required: false,
+      helper: "Use this for academic, portfolio, or personal projects that support missing job evidence.",
+      content: sectionText(parsed.sections.projects, ""),
+    },
+    {
       id: "education",
-      title: "Education header",
-      detail: "Use a recognizable section label and keep the format simple.",
-      content: "EDUCATION\n[Degree or diploma] | [School name] | [Graduation year]\n[Relevant coursework, honors, or academic project if applicable]",
-    });
-  }
-  if (!examples.some((example) => example.id === "experience")) {
-    examples.push({
-      id: "experience-bullet",
-      title: "Experience bullet example",
-      detail: "Use this structure to make one real project or work contribution easier to understand.",
-      content: `EXPERIENCE\n[Role or project name] | [Organization] | [Dates]\n- Used ${strongestSkill} to [describe your real action], resulting in [truthful outcome or number].`,
-    });
-  }
-  if (examples.length < 4) {
-    examples.push({
+      label: "Education",
+      outputLabel: "Education",
+      required: true,
+      helper: "Keep education simple: degree, school, dates, and relevant coursework if useful.",
+      content: sectionText(parsed.sections.education, "[Degree or diploma] | [School] | [Graduation year]"),
+    },
+    {
       id: "certifications",
-      title: "Optional certifications header",
-      detail: "Include this section only when you have a relevant certification, course credential, or license.",
-      content: "CERTIFICATIONS\n[Certification or credential name] | [Issuing organization] | [Year]\n[Credential URL or expiration date if relevant]",
-    });
-  }
+      label: "Certifications",
+      outputLabel: "Certifications",
+      required: false,
+      helper: "Include this only when you have a relevant credential. Leave blank otherwise.",
+      content: sectionText(parsed.sections.certifications, ""),
+    },
+  ];
+}
 
-  return examples.slice(0, 4);
+function serializeResumeSections(sections) {
+  const header = sections.find((section) => section.id === "header")?.content.trim();
+  const body = sections
+    .filter((section) => section.id !== "header" && section.content.trim())
+    .map((section) => `${section.outputLabel.toUpperCase()}\n${section.content.trim()}`);
+  return [header, ...body].filter(Boolean).join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function buildAtsResumeTemplate(resumeText, summary, skills) {

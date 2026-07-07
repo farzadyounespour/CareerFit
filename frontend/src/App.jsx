@@ -84,6 +84,7 @@ export default function App() {
     title: "Junior Data Analyst",
     location: "",
     country: "us",
+    source: "all",
     workplace: "any",
     skills: "",
     excluded_keywords: "",
@@ -372,6 +373,7 @@ export default function App() {
         title: nextSearch.title.trim(),
         location: nextSearch.location.trim(),
         country: nextSearch.country,
+        source: nextSearch.source,
         workplace: nextSearch.workplace,
         skills: nextSearch.skills.trim(),
         excluded_keywords: nextSearch.excluded_keywords.trim(),
@@ -438,15 +440,7 @@ export default function App() {
         setJobSearchNotice("This provider shared a shortened excerpt. Open the posting and paste the full description for the most accurate report.");
       }
     }
-    const selectedDescription = [
-      comparisonJob.title,
-      comparisonJob.company ? `Company: ${comparisonJob.company}` : "",
-      comparisonJob.location ? `Location: ${comparisonJob.location}` : "",
-      comparisonJob.description,
-      comparisonJob.url ? `Source: ${comparisonJob.url}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    const selectedDescription = comparisonJob.description || "";
     setJobDescription(selectedDescription);
     setSelectedJob(comparisonJob);
     setMatchPreview(null);
@@ -777,6 +771,7 @@ export default function App() {
           onGeneratePacketDrafts={handleGeneratePacketDrafts}
           onExportJobs={exportTrackedJobs}
           onImportJobs={handleImportTrackedJobs}
+          onNavigate={handleNavigate}
           resumeVersions={resumeVersions}
         />
       );

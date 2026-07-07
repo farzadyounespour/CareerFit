@@ -53,7 +53,35 @@ class MatchPersistenceApiTests(APITestCase):
         self.assertIn("readiness_score", response.data["summary"])
         self.assertIn("matched", response.data["skills"])
         self.assertIn("missing", response.data["skills"])
+        self.assertIn("semantic_matches", response.data)
+        self.assertIn("requirements_summary", response.data)
+        self.assertIn("priority_fixes", response.data)
+        self.assertGreaterEqual(response.data["requirements_summary"]["counts"]["matched"], 0)
+        self.assertTrue(response.data["requirements_summary"]["top_gaps"])
         self.assertEqual(MatchReport.objects.filter(user=user).count(), 0)
+
+    def test_preview_returns_semantic_matches_for_related_wording(self):
+        user = User.objects.create_user(username="semantic@example.com", password="careerfit-pass")
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = self.client.post(
+            "/api/matches/preview/",
+            {
+                "user_profile": {"target_role": "Backend Developer"},
+                "resume_text": "Built backend endpoints and integrated third-party services",
+                "job_description": "Experience with REST API development",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["semantic_matches"][0]["label"], "Semantic match")
+        self.assertEqual(response.data["semantic_matches"][0]["score"], 82)
+        self.assertEqual(
+            response.data["semantic_matches"][0]["evidence"],
+            "Built backend endpoints and integrated third-party services",
+        )
 
     def test_preview_requires_login(self):
         response = self.client.post(
@@ -99,6 +127,51 @@ class MatchPersistenceApiTests(APITestCase):
     def test_coaching_requires_login(self):
         response = self.client.post(
             "/api/matches/coach/",
+            {
+                "resume_text": "Python SQL dashboard experience",
+                "job_description": "Build dashboards with Python and SQL.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    @patch("apps.matching.views.generate_tailored_resume")
+    def test_resume_draft_returns_generated_resume_without_saving_report(self, mock_generate):
+        user = User.objects.create_user(username="draft@example.com", password="careerfit-pass")
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        mock_generate.return_value = {
+            "status": "completed",
+            "provider": "openai",
+            "model": "test-model",
+            "resume_text": "STUDENT USER\n\nPROFESSIONAL SUMMARY\nPython and SQL experience.",
+            "summary": "Generated an editable draft.",
+            "tailoring_notes": ["Kept the draft truthful."],
+            "safety_warnings": [],
+        }
+
+        response = self.client.post(
+            "/api/matches/resume-draft/",
+            {
+                "user_profile": {"target_role": "Data Analyst"},
+                "resume_text": "Python SQL dashboard experience",
+                "job_description": "Build dashboards with Python, SQL, and Tableau.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["resume_generation"]["status"], "completed")
+        self.assertIn("PROFESSIONAL SUMMARY", response.data["resume_generation"]["resume_text"])
+        self.assertEqual(MatchReport.objects.filter(user=user).count(), 0)
+        mock_generate.assert_called_once()
+        self.assertTrue(mock_generate.call_args.kwargs["requested"])
+        self.assertTrue(mock_generate.call_args.kwargs["authorized"])
+
+    def test_resume_draft_requires_login(self):
+        response = self.client.post(
+            "/api/matches/resume-draft/",
             {
                 "resume_text": "Python SQL dashboard experience",
                 "job_description": "Build dashboards with Python and SQL.",
@@ -174,6 +247,7 @@ class MatchPersistenceApiTests(APITestCase):
             "/api/matches/analyze/",
             {
                 "resume_id": resume.id,
+                "job_company": "Example Co",
                 "resume_text": "Snapshot resume with Python",
                 "job_description": "Snapshot job requiring Python.",
             },
@@ -188,6 +262,7 @@ class MatchPersistenceApiTests(APITestCase):
 
         self.assertEqual(history_response.data["results"][0]["resume_text"], "Snapshot resume with Python")
         self.assertEqual(history_response.data["results"][0]["job_description"], "Snapshot job requiring Python.")
+        self.assertEqual(history_response.data["results"][0]["company"], "Example Co")
         self.assertEqual(delete_response.status_code, 204)
         self.assertFalse(MatchReport.objects.filter(user=user).exists())
 

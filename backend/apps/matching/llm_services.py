@@ -21,6 +21,12 @@ class LLMRecommendation(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     detail: str = Field(min_length=1, max_length=420)
     priority: str = Field(pattern="^(high|medium|low)$")
+    job_requirement: str = Field(default="", max_length=420)
+    resume_evidence: str = Field(default="", max_length=420)
+    where_to_add: str = Field(default="", max_length=120)
+    what_to_add: str = Field(default="", max_length=420)
+    bullet_template: str = Field(default="", max_length=420)
+    truthfulness_note: str = Field(default="Use only if this reflects your real experience.", max_length=220)
 
 
 class LLMCoachingResult(BaseModel):
@@ -32,6 +38,13 @@ class LLMCoachingResult(BaseModel):
 class LLMPacketDraftResult(BaseModel):
     cover_letter: str = Field(min_length=1, max_length=5000)
     follow_up_email: str = Field(min_length=1, max_length=2500)
+
+
+class LLMResumeDraftResult(BaseModel):
+    resume_text: str = Field(min_length=1, max_length=12000)
+    summary: str = Field(min_length=1, max_length=700)
+    tailoring_notes: list[str] = Field(default_factory=list, max_length=6)
+    safety_warnings: list[str] = Field(default_factory=list, max_length=4)
 
 
 def enrich_match_report(match_result, resume_text, job_description, requested=False, authorized=False):
@@ -75,6 +88,47 @@ def enrich_match_report(match_result, resume_text, job_description, requested=Fa
         return _status("unavailable", "AI coaching is temporarily unavailable. The deterministic report is complete.")
 
 
+def generate_tailored_resume(match_result, resume_text, job_description, requested=False, authorized=False):
+    if not requested:
+        return _status("skipped", "AI resume generation was not requested.")
+
+    if not authorized:
+        return _status("sign_in_required", "Sign in to generate an AI resume draft.")
+
+    if not settings.CAREERFIT_ENABLE_LLM:
+        return _status("not_configured", "AI resume generation is not configured. The editable deterministic draft is still available.")
+
+    try:
+        if settings.CAREERFIT_LLM_PROVIDER == "ollama":
+            draft = _request_ollama_resume_draft(match_result, resume_text, job_description)
+            model = settings.OLLAMA_MODEL
+        elif settings.CAREERFIT_LLM_PROVIDER == "openai":
+            if not settings.OPENAI_API_KEY:
+                return _status("not_configured", "OpenAI resume generation requires an API key.")
+            draft = _request_openai_resume_draft(match_result, resume_text, job_description)
+            model = settings.OPENAI_MODEL
+        else:
+            return _status("not_configured", "The configured AI resume provider is not supported.")
+        if not draft:
+            return _status("unavailable", "AI resume generation returned no usable draft.")
+        logger.info(
+            "Optional AI resume draft completed provider=%s model=%s",
+            settings.CAREERFIT_LLM_PROVIDER,
+            model,
+        )
+        return {
+            "status": "completed",
+            "provider": settings.CAREERFIT_LLM_PROVIDER,
+            "model": model,
+            **draft.model_dump(),
+        }
+    except Exception:
+        logger.exception("Optional AI resume draft request failed")
+        if settings.CAREERFIT_LLM_PROVIDER == "ollama":
+            return _status("unavailable", "Local Ollama is unavailable. Start Ollama and download the configured model, then try again.")
+        return _status("unavailable", "AI resume generation is temporarily unavailable.")
+
+
 def _request_openai_coaching(match_result, resume_text, job_description):
     from openai import OpenAI
 
@@ -101,6 +155,32 @@ def _request_openai_coaching(match_result, resume_text, job_description):
     return response.output_parsed
 
 
+def _request_openai_resume_draft(match_result, resume_text, job_description):
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=settings.OPENAI_API_KEY,
+        timeout=settings.OPENAI_TIMEOUT_SECONDS,
+        max_retries=settings.OPENAI_MAX_RETRIES,
+    )
+    response = client.responses.parse(
+        model=settings.OPENAI_MODEL,
+        input=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": _build_resume_draft_prompt(match_result, resume_text, job_description)},
+        ],
+        text_format=LLMResumeDraftResult,
+        max_output_tokens=settings.OPENAI_RESUME_MAX_OUTPUT_TOKENS,
+    )
+    usage = getattr(response, "usage", None)
+    logger.info(
+        "OpenAI resume draft usage input_tokens=%s output_tokens=%s",
+        getattr(usage, "input_tokens", None),
+        getattr(usage, "output_tokens", None),
+    )
+    return response.output_parsed
+
+
 def _request_ollama_coaching(match_result, resume_text, job_description):
     request = Request(
         f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/chat",
@@ -121,6 +201,28 @@ def _request_ollama_coaching(match_result, resume_text, job_description):
     with urlopen(request, timeout=settings.OLLAMA_TIMEOUT_SECONDS) as response:
         payload = json.loads(response.read().decode("utf-8"))
     return LLMCoachingResult.model_validate_json(payload["message"]["content"])
+
+
+def _request_ollama_resume_draft(match_result, resume_text, job_description):
+    request = Request(
+        f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/chat",
+        data=json.dumps(
+            {
+                "model": settings.OLLAMA_MODEL,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": _build_resume_draft_prompt(match_result, resume_text, job_description)},
+                ],
+                "format": LLMResumeDraftResult.model_json_schema(),
+                "stream": False,
+            }
+        ).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urlopen(request, timeout=settings.OLLAMA_TIMEOUT_SECONDS) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return LLMResumeDraftResult.model_validate_json(payload["message"]["content"])
 
 
 def generate_application_packet(job, resume_text, requested=False, authorized=False):
@@ -191,20 +293,55 @@ def _build_packet_prompt(job, resume_text):
     )
 
 
+def _build_resume_draft_prompt(match_result, resume_text, job_description):
+    summary = match_result["summary"]
+    skills = match_result["skills"]
+    missing_requirements = [
+        item["text"]
+        for category in ("missing", "weak", "partial")
+        for item in match_result["requirements"][category]
+    ][:8]
+    return (
+        "Create a complete, ATS-friendly resume draft tailored to the job posting.\n"
+        "Rules:\n"
+        "- Use only facts present in the original resume.\n"
+        "- Do not invent employers, dates, degrees, certifications, tools, metrics, or responsibilities.\n"
+        "- You may reorganize sections, improve wording, and emphasize relevant truthful evidence.\n"
+        "- Ignore legal notices, hiring-process text, benefits, privacy language, source URLs, and application instructions.\n"
+        "- If the job needs a skill that is not supported by the resume, do not claim it. Add a bracketed placeholder such as [Add a truthful TypeScript project if applicable].\n"
+        "- Keep the draft in plain text with recognizable headings: Professional Summary, Skills, Experience, Projects if useful, Education.\n"
+        "- Preserve contact details if they are present in the resume.\n\n"
+        f"Target role: {summary.get('target_role') or 'Not provided'}\n"
+        f"Deterministic match score: {summary['match_score']}\n"
+        f"Deterministic readiness score: {summary['readiness_score']}\n"
+        f"Matched skills: {', '.join(skills['matched']) or 'None'}\n"
+        f"Missing skills: {', '.join(skills['missing']) or 'None'}\n"
+        f"Missing, weak, or partial requirements: {' | '.join(missing_requirements) or 'None'}\n\n"
+        f"ORIGINAL RESUME:\n{resume_text[:MAX_LLM_TEXT_LENGTH]}\n\n"
+        f"JOB POSTING:\n{job_description[:MAX_LLM_TEXT_LENGTH]}"
+    )
+
+
 def _build_prompt(match_result, resume_text, job_description):
     summary = match_result["summary"]
     skills = match_result["skills"]
+    priority_fixes = match_result.get("priority_fixes", [])[:5]
     missing_requirements = [
         item["text"]
         for category in ("missing", "weak")
         for item in match_result["requirements"][category]
     ][:5]
     return (
+        "Return recommendation objects with job_requirement, resume_evidence, where_to_add, "
+        "what_to_add, bullet_template, and truthfulness_note whenever possible. Keep every "
+        "suggestion grounded in the resume and CareerFit findings. Do not recommend adding "
+        "legal notices, hiring-process text, benefits, privacy language, source URLs, or application instructions to the resume.\n\n"
         f"Target role: {summary.get('target_role') or 'Not provided'}\n"
         f"Deterministic match score: {summary['match_score']}\n"
         f"Deterministic readiness score: {summary['readiness_score']}\n"
         f"Matched skills: {', '.join(skills['matched']) or 'None'}\n"
         f"Missing skills: {', '.join(skills['missing']) or 'None'}\n\n"
+        f"CareerFit priority fixes: {json.dumps(priority_fixes, ensure_ascii=False)}\n\n"
         f"Missing or weak requirements: {' | '.join(missing_requirements) or 'None'}\n\n"
         f"RESUME:\n{resume_text[:MAX_LLM_TEXT_LENGTH]}\n\n"
         f"JOB POSTING:\n{job_description[:MAX_LLM_TEXT_LENGTH]}"

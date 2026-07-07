@@ -74,6 +74,24 @@ export async function requestAiCoaching(payload) {
   return response.json();
 }
 
+export async function generateResumeDraft(payload) {
+  const response = await fetch(`${API_BASE_URL}/matches/resume-draft/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}));
+    throw new Error(details.detail || "Unable to generate resume draft.");
+  }
+
+  return response.json();
+}
+
 export async function uploadResume(file) {
   const formData = new FormData();
   formData.append("file", file);
@@ -96,6 +114,7 @@ export async function searchJobs({
   title,
   location,
   country,
+  source = "all",
   page = 1,
   workplace = "any",
   skills = "",
@@ -108,6 +127,7 @@ export async function searchJobs({
   const params = new URLSearchParams({
     title,
     country,
+    source,
     page: String(page),
     workplace,
     skills,

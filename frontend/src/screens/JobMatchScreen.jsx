@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   ArrowRight,
   BellPlus,
   BookmarkPlus,
@@ -9,14 +10,17 @@ import {
   ClipboardPaste,
   ExternalLink,
   FileSearch,
+  Gauge,
   Link2,
   Layers3,
   ListChecks,
   MapPin,
   PanelsTopLeft,
   Search,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Target,
   Upload,
   X,
 } from "lucide-react";
@@ -65,6 +69,7 @@ export default function JobMatchScreen({
   function clearFilters() {
     onJobSearchChange({
       ...jobSearch,
+      source: "all",
       workplace: "any",
       skills: "",
       excluded_keywords: "",
@@ -119,6 +124,7 @@ export default function JobMatchScreen({
           Load sample job
         </button>
       </div>
+      <WorkflowSteps />
 
       <section className="mt-6 rounded-md border border-slate-200 bg-white p-5 shadow-panel">
         <div className="flex items-center gap-3">
@@ -171,7 +177,15 @@ export default function JobMatchScreen({
               Filters and alerts
             </div>
           </summary>
-          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+            <SelectField label="Website" value={jobSearch.source || "all"} onChange={(value) => onJobSearchChange({ ...jobSearch, source: value, page: 1 })} options={[
+              ["all", "All websites"],
+              ["remotive", "Remotive"],
+              ["arbeitnow", "Arbeitnow"],
+              ["adzuna", "Adzuna"],
+              ["jooble", "Jooble"],
+              ["sample", "Sample demo"],
+            ]} />
             <SelectField label="Workplace" value={jobSearch.workplace} onChange={(value) => onJobSearchChange({ ...jobSearch, workplace: value, page: 1 })} options={[
               ["any", "Any workplace"],
               ["remote", "Remote"],
@@ -267,7 +281,7 @@ export default function JobMatchScreen({
           )}
         </section>
 
-        <aside className="h-fit rounded-md border border-slate-200 bg-white p-5 shadow-panel xl:sticky xl:top-24">
+        <aside className="h-fit rounded-md border border-slate-200 bg-white p-5 shadow-panel xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:overscroll-contain">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-md bg-sky-50 text-sky-700">
               <FileSearch size={18} />
@@ -285,6 +299,12 @@ export default function JobMatchScreen({
                 <div>
                   <p className="text-sm font-semibold text-emerald-900">{selectedJob.title}</p>
                   <p className="mt-1 text-xs leading-5 text-emerald-700">{selectedJob.company || "Selected posting"}</p>
+                  {selectedJob.url && (
+                    <a href={selectedJob.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex max-w-full items-center gap-1 text-xs font-semibold text-teal hover:underline">
+                      <ExternalLink size={13} />
+                      Open source posting
+                    </a>
+                  )}
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2 border-t border-emerald-200 pt-3">
@@ -341,8 +361,9 @@ export default function JobMatchScreen({
           )}
 
           <details className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3" open={!selectedJob}>
-            <summary className="cursor-pointer text-sm font-semibold text-slate-700">Job description</summary>
-            <textarea value={jobDescription} onChange={(event) => onChange(event.target.value)} className="mt-3 min-h-[240px] w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-3 text-sm leading-6 focus:border-teal focus:outline-none" placeholder="Select a job posting or paste its description here..." />
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">Job text used for scoring</summary>
+            <p className="mt-2 text-xs leading-5 text-slate-500">CareerFit scores the job description text only. Title, company, location, and source links are kept separately so metadata does not affect the match.</p>
+            <textarea value={jobDescription} onChange={(event) => onChange(event.target.value)} className="mt-3 min-h-[180px] w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-3 text-sm leading-6 focus:border-teal focus:outline-none" placeholder="Select a job posting or paste its description here..." />
           </details>
 
           {error && <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
@@ -368,24 +389,110 @@ export default function JobMatchScreen({
   );
 }
 
+function WorkflowSteps() {
+  const steps = [
+    { icon: Search, label: "Find posting", detail: "Search or import a URL" },
+    { icon: FileSearch, label: "Preview fit", detail: "Check score and gaps" },
+    { icon: Target, label: "Decide next", detail: "Apply, tailor, or skip" },
+  ];
+
+  return (
+    <div className="mt-5 grid gap-2 md:grid-cols-3">
+      {steps.map(({ icon: Icon, label, detail }, index) => (
+        <div key={label} className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-emerald-50 text-teal">
+            <Icon size={16} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Step {index + 1}</p>
+            <p className="truncate text-sm font-semibold text-ink">{label}</p>
+            <p className="truncate text-xs text-slate-500">{detail}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MatchPreview({ preview }) {
   const matchedSkills = preview.skills.matched.slice(0, 5);
   const missingSkills = preview.skills.missing.slice(0, 5);
   const missingPriorities = new Map((preview.skills.missing_details || []).map((item) => [item.name, item.priority]));
+  const semanticMatches = (preview.semantic_matches || []).slice(0, 2);
   const guidance = getMatchGuidance(preview.summary.match_score);
+  const confidence = preview.summary.confidence;
+  const breakdown = preview.summary.score_breakdown || {};
+  const requirementScore = breakdown.requirement_evidence?.score ?? preview.summary.match_score;
+  const skillScore = breakdown.skill_coverage?.score ?? preview.summary.match_score;
+  const atsScore = breakdown.ats_preparation?.score ?? preview.summary.readiness_score;
+  const requirementsSummary = preview.requirements_summary || {};
+  const counts = requirementsSummary.counts || {};
+  const topGaps = requirementsSummary.top_gaps || [];
+  const topEvidence = requirementsSummary.top_evidence || [];
+  const priorityFixes = (preview.priority_fixes || []).slice(0, 3);
 
   return (
-    <section className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3">
-      <p className="text-xs font-bold uppercase tracking-wide text-teal">Quick resume comparison</p>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <ScoreSummary label="Match score" value={preview.summary.match_score} />
-        <ScoreSummary label="Readiness" value={preview.summary.readiness_score} />
+    <section className="mt-4 overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 bg-slate-50 p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-teal">Quick resume comparison</p>
+            <p className="mt-1 text-xs leading-5 text-slate-600">A decision preview using requirement evidence, skills, ATS readiness, and semantic matches.</p>
+          </div>
+          <span className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-bold ${decisionBadgeClass(preview.summary.match_score)}`}>
+            <Gauge size={13} />
+            {guidance.shortLabel}
+          </span>
+        </div>
+        {confidence && (
+          <div className={`mt-2 rounded border px-2 py-1.5 text-xs leading-5 ${confidenceClassName(confidence.level)}`}>
+            <span className="font-bold">{confidence.label}:</span> {confidence.detail}
+          </div>
+        )}
       </div>
-      <SkillSummary label="Matched skills" skills={matchedSkills} emptyText="No clear matches yet" tone="emerald" />
-      <SkillSummary label="Missing skills" skills={missingSkills} priorities={missingPriorities} emptyText="No missing skills found" tone="amber" />
-      <div className={`mt-3 rounded-md border px-3 py-2 ${guidance.className}`}>
-        <p className="text-xs font-bold">{guidance.title}</p>
-        <p className="mt-1 text-xs leading-5">{guidance.detail}</p>
+      <div className="p-3">
+        <div className="grid grid-cols-2 gap-2">
+          <ScoreSummary label="Job match" value={preview.summary.match_score} detail="Content fit" />
+          <ScoreSummary label="Readiness" value={preview.summary.readiness_score} detail="Match + ATS" />
+        </div>
+        <DecisionSignals
+          confidence={confidence}
+          missingSkills={missingSkills.length}
+          requirementGaps={(counts.missing || 0) + (counts.weak || 0)}
+          partialRequirements={counts.partial || 0}
+        />
+        <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Score breakdown</p>
+          <div className="mt-3 space-y-3">
+            <ScoreMeter label="Requirement evidence" value={requirementScore} />
+            <ScoreMeter label="Skill coverage" value={skillScore} />
+            <ScoreMeter label="ATS preparation" value={atsScore} />
+          </div>
+        </div>
+        <PriorityFixPreview fixes={priorityFixes} gaps={topGaps} />
+        <RequirementSnapshot counts={counts} topGaps={topGaps} topEvidence={topEvidence} />
+        <SkillSummary label="Matched skills" skills={matchedSkills} emptyText="No clear skill matches yet" tone="emerald" />
+        {semanticMatches.length > 0 && (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs font-semibold text-slate-600">Semantic evidence</p>
+            {semanticMatches.map((match) => (
+              <article key={`${match.requirement}-${match.evidence}`} className="rounded-md border border-emerald-100 bg-emerald-50/50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="rounded bg-white px-2 py-1 text-xs font-bold text-teal">{match.label}</span>
+                  <span className="text-xs font-bold text-slate-500">{match.score}%</span>
+                </div>
+                <p className="mt-2 text-xs font-semibold leading-5 text-slate-700">{match.requirement}</p>
+                {match.evidence && <p className="mt-1 text-xs leading-5 text-slate-600">{match.evidence}</p>}
+                {match.explanation && <p className="mt-1 text-xs leading-5 text-slate-500">{match.explanation}</p>}
+              </article>
+            ))}
+          </div>
+        )}
+        <SkillSummary label="Missing or weak skills" skills={missingSkills} priorities={missingPriorities} emptyText="No priority skill gaps detected in the extracted job text" tone="amber" />
+        <div className={`mt-3 rounded-md border px-3 py-2 ${guidance.className}`}>
+          <p className="text-xs font-bold">{guidance.title}</p>
+          <p className="mt-1 text-xs leading-5">{guidance.detail}</p>
+        </div>
       </div>
     </section>
   );
@@ -424,9 +531,141 @@ function RoleInsights({ insights, onSelectTitle }) {
   );
 }
 
+function DecisionSignals({ confidence, missingSkills, requirementGaps, partialRequirements }) {
+  const signals = [
+    {
+      icon: confidence?.level === "high" ? ShieldCheck : AlertCircle,
+      label: "Confidence",
+      value: confidence?.label || "No preview",
+      tone: confidence?.level === "high" ? "good" : confidence?.level === "medium" ? "info" : "warn",
+    },
+    {
+      icon: Target,
+      label: "Requirement gaps",
+      value: `${requirementGaps} open${partialRequirements ? `, ${partialRequirements} partial` : ""}`,
+      tone: requirementGaps ? "warn" : "good",
+    },
+    {
+      icon: ListChecks,
+      label: "Skill gaps",
+      value: missingSkills ? `${missingSkills} to review` : "No priority gaps",
+      tone: missingSkills ? "info" : "good",
+    },
+  ];
+
+  return (
+    <div className="mt-3 grid gap-2">
+      {signals.map(({ icon: Icon, label, value, tone }) => (
+        <div key={label} className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2">
+          <span className={`grid h-7 w-7 shrink-0 place-items-center rounded ${signalToneClass(tone)}`}>
+            <Icon size={15} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
+            <p className="truncate text-xs font-semibold text-slate-700">{value}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PriorityFixPreview({ fixes, gaps }) {
+  const items = fixes.length
+    ? fixes.map((fix) => ({
+      title: fix.title,
+      detail: fix.evidenceNeeded || fix.detail || fix.jobSignal,
+      priority: fix.priority,
+    }))
+    : gaps.slice(0, 2).map((gap) => ({
+      title: `Address ${gap.category} requirement`,
+      detail: gap.text,
+      priority: gap.priority,
+    }));
+
+  if (!items.length) return null;
+
+  return (
+    <div className="mt-3 rounded-md border border-amber-100 bg-amber-50 p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-amber-900">Review before applying</p>
+      <div className="mt-2 space-y-2">
+        {items.map((item) => (
+          <article key={`${item.title}-${item.detail}`} className="rounded border border-amber-100 bg-white px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-bold text-ink">{item.title}</p>
+              {item.priority && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-900">{item.priority}</span>}
+            </div>
+            {item.detail && <p className="mt-1 text-xs leading-5 text-slate-600">{item.detail}</p>}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RequirementSnapshot({ counts, topGaps, topEvidence }) {
+  const hasSnapshot = Object.values(counts).some(Boolean) || topGaps.length || topEvidence.length;
+  if (!hasSnapshot) return null;
+
+  return (
+    <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <p className="mr-1 text-xs font-bold uppercase tracking-wide text-slate-500">Requirements</p>
+        <RequirementCount label="Matched" value={counts.matched || 0} tone="good" />
+        <RequirementCount label="Partial" value={counts.partial || 0} tone="info" />
+        <RequirementCount label="Weak" value={counts.weak || 0} tone="warn" />
+        <RequirementCount label="Missing" value={counts.missing || 0} tone="bad" />
+      </div>
+      {topGaps.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-slate-600">Top gaps</p>
+          <div className="mt-2 space-y-2">
+            {topGaps.slice(0, 2).map((gap) => (
+              <RequirementLine key={`${gap.category}-${gap.text}`} item={gap} />
+            ))}
+          </div>
+        </div>
+      )}
+      {topEvidence.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-slate-600">Best evidence</p>
+          <div className="mt-2 space-y-2">
+            {topEvidence.slice(0, 2).map((item) => (
+              <RequirementLine key={`${item.category}-${item.text}`} item={item} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RequirementCount({ label, value, tone }) {
+  return (
+    <span className={`rounded px-1.5 py-1 text-[11px] font-bold ${signalToneClass(tone)}`}>
+      {label} {value}
+    </span>
+  );
+}
+
+function RequirementLine({ item }) {
+  return (
+    <article className="rounded border border-slate-100 bg-slate-50 px-2.5 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{formatLabel(item.category || "requirement")}</span>
+        <span className="text-xs font-bold text-slate-500">{item.score}%</span>
+      </div>
+      <p className="mt-1 text-xs font-semibold leading-5 text-slate-700">{item.text}</p>
+      {item.evidence && <p className="mt-1 text-xs leading-5 text-slate-500">{item.evidence}</p>}
+      {item.match_basis && <p className="mt-1 text-[11px] font-semibold text-teal">{item.match_basis}</p>}
+    </article>
+  );
+}
+
 export function getMatchGuidance(score) {
   if (score < 35) {
     return {
+      shortLabel: "Low fit",
       title: "Low alignment with this resume",
       detail: "This resume does not yet show several requirements from the posting. Compare a closer role or add only skills and examples you genuinely have.",
       className: "border-amber-200 bg-amber-50 text-amber-900",
@@ -434,23 +673,59 @@ export function getMatchGuidance(score) {
   }
   if (score < 70) {
     return {
+      shortLabel: "Tailor first",
       title: "Some relevant evidence found",
       detail: "Review the missing skills and make your most relevant projects or accomplishments easier to find before applying.",
       className: "border-sky-200 bg-sky-50 text-sky-900",
     };
   }
   return {
+    shortLabel: "Strong fit",
     title: "Strong alignment found",
     detail: "The resume shows many of this posting's requirements. Generate the full report to refine the remaining gaps.",
     className: "border-emerald-200 bg-white text-emerald-900",
   };
 }
 
-function ScoreSummary({ label, value }) {
+function signalToneClass(tone) {
+  if (tone === "good") return "bg-emerald-50 text-teal";
+  if (tone === "bad") return "bg-rose-50 text-rose-700";
+  if (tone === "warn") return "bg-amber-100 text-amber-900";
+  return "bg-sky-50 text-sky-700";
+}
+
+function decisionBadgeClass(score) {
+  if (score >= 70) return "bg-emerald-50 text-teal";
+  if (score >= 35) return "bg-sky-50 text-sky-700";
+  return "bg-amber-100 text-amber-900";
+}
+
+function confidenceClassName(level) {
+  if (level === "high") return "border-emerald-200 bg-white text-emerald-900";
+  if (level === "medium") return "border-sky-200 bg-sky-50 text-sky-900";
+  return "border-amber-200 bg-amber-50 text-amber-900";
+}
+
+function ScoreSummary({ label, value, detail }) {
   return (
     <div className="rounded-md border border-emerald-100 bg-white p-3">
       <p className="text-xs font-semibold text-slate-500">{label}</p>
       <p className="mt-1 text-2xl font-bold text-ink">{value}%</p>
+      <p className="mt-1 text-xs text-slate-500">{detail} · {value >= 75 ? "At target" : "Below 75% target"}</p>
+    </div>
+  );
+}
+
+function ScoreMeter({ label, value }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-semibold text-slate-700">{label}</span>
+        <span className="font-bold text-teal">{value}%</span>
+      </div>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div className="h-full rounded-full bg-teal" style={{ width: `${Math.max(0, Math.min(value, 100))}%` }} />
+      </div>
     </div>
   );
 }
@@ -612,6 +887,7 @@ function formatLabel(value) {
 
 function getActiveFilters(jobSearch) {
   return [
+    jobSearch.source && jobSearch.source !== "all" ? `Website: ${formatSourceLabel(jobSearch.source)}` : "",
     jobSearch.workplace !== "any" ? formatLabel(jobSearch.workplace) : "",
     jobSearch.skills ? `Skills: ${jobSearch.skills}` : "",
     jobSearch.excluded_keywords ? `Exclude: ${jobSearch.excluded_keywords}` : "",
@@ -620,6 +896,16 @@ function getActiveFilters(jobSearch) {
     jobSearch.salary_min ? `Min salary: ${jobSearch.salary_min}` : "",
     jobSearch.salary_max ? `Max salary: ${jobSearch.salary_max}` : "",
   ].filter(Boolean);
+}
+
+function formatSourceLabel(value) {
+  return {
+    adzuna: "Adzuna",
+    remotive: "Remotive",
+    arbeitnow: "Arbeitnow",
+    jooble: "Jooble",
+    sample: "Sample demo",
+  }[value] || formatLabel(value);
 }
 
 function formatSalary(minimum, maximum) {

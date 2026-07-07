@@ -1,0 +1,82 @@
+ALEX MORGAN
+Senior Site Reliability Engineer | Platform Engineering | Cloud Infrastructure
+Montreal, Canada
+alex.morgan@example.com | +1 555 010 4421
+LinkedIn: linkedin.com/in/alex-morgan-platform
+
+DEMO NOTE
+This is a fictional sample resume created for the CareerFit project demo. It is designed to show how CareerFit detects strong alignment between a resume and a Site Reliability Engineer / Platform Engineering job posting.
+
+DEMO TARGET OBJECTIVE
+Join a cloud platform team and help shape the future of open cloud infrastructure with innovative, sustainable, and efficient platform engineering practices.
+Contribute to a small senior team that owns OpenStack-based infrastructure, Kubernetes, GitOps, and customer-facing cloud platforms while treating AI-assisted engineering as a first-class part of the workflow.
+Work in a build-mode environment with real influence on architecture, automation strategy, compute-lifecycle planning, platform work, and AI-substrate development.
+
+PROFESSIONAL SUMMARY
+Senior Site Reliability Engineer with 6+ years of hands-on experience running production infrastructure, platform engineering, DevOps automation, and cloud-native systems. Experienced with OpenStack-based on-prem infrastructure, Kubernetes, Linux, bare-metal operations, Terraform, Ansible, GitOps workflows, FluxCD, ArgoCD, Docker, Git, Go, Python, monitoring, observability, incident triage, capacity planning, and self-healing automation. Strong background designing reliable platforms, improving compute infrastructure lifecycle management, documenting operational runbooks, and mentoring engineers across automation and platform engineering.
+
+TECHNICAL SKILLS
+Cloud and Platform: OpenStack, on-prem cloud, Kubernetes, KVM, Linux, bare-metal infrastructure, virtual compute nodes, hypervisors
+Infrastructure as Code: Terraform, Ansible, GitOps, FluxCD, ArgoCD, CI/CD, automated provisioning, infrastructure automation
+Programming: Go, Python, Bash, Ruby, SQL
+Reliability: Site reliability engineering, DevOps, production infrastructure, observability, monitoring, telemetry, incident triage, auto-remediation, self-healing systems
+Data and Services: REST APIs, microservices, Kafka, PostgreSQL, Redis, Elasticsearch, ClickHouse
+Tools and Practices: Git, Docker, Grafana, Agile, technical documentation, test suites, non-regression testing, performance testing, security testing, AI-assisted engineering, agentic coding tools, prompt-engineered review workflows
+
+PROFESSIONAL EXPERIENCE
+
+Senior Site Reliability Engineer
+Northstar Cloud Systems | Remote
+January 2023 - Present
+- Designed and operated OpenStack-based on-prem infrastructure for internal cloud services, including Linux hosts, KVM hypervisors, virtual compute nodes, and bare-metal provisioning workflows.
+- Built Infrastructure as Code modules with Terraform and Ansible to provision compute, networking, storage, and Kubernetes clusters with repeatable, version-controlled automation.
+- Drove Kubernetes platform development using GitOps workflows with FluxCD and ArgoCD, improving deployment consistency and reducing manual release steps.
+- Owned compute infrastructure lifecycle work from bare-metal hardware health checks through host evacuation, graceful drains, capacity rebalancing, and virtual node operations.
+- Created self-healing automation and auto-remediation runbooks for recurring production incidents, improving reliability and reducing manual intervention.
+- Built observability dashboards with Grafana, telemetry pipelines, logging, and alerting for production infrastructure, Kubernetes workloads, and platform services.
+- Used AI-assisted engineering and agentic coding tools to generate test cases, review Infrastructure as Code changes, summarize incidents, and maintain Markdown knowledge bases.
+- Documented platform architecture and operational procedures so engineers could deploy, operate, and troubleshoot services with less friction.
+
+Platform Engineer
+Worten | Remote
+February 2021 - December 2022
+- Developed cloud-native microservices in Go, Scala, and Python for high-volume e-commerce systems using Kubernetes, Docker, AWS, Kafka, PostgreSQL, and Redis.
+- Implemented event-driven architecture and REST API integrations for marketplace services processing more than 10 million offers per day.
+- Improved CI/CD pipelines, deployment quality, and service reliability by adding automated checks, test suites, monitoring, and rollback-friendly release practices.
+- Partnered with DevOps and backend teams to improve Linux service operations, container runtime behavior, and production incident response.
+- Built reusable automation scripts for capacity planning, environment validation, and operational reporting.
+
+Software Engineer, Backend Infrastructure
+Cisco | Hybrid
+October 2019 - January 2021
+- Scaled backend search infrastructure for dashboard systems serving millions of users and billions of device records.
+- Designed high-throughput data pipelines using Scala, Python, ClickHouse, Kafka, and Elasticsearch to improve ingestion reliability and query performance.
+- Improved search performance by 97% through data modeling, backend optimization, and observability-driven performance analysis.
+- Built backend endpoints, REST APIs, and internal service integrations used by engineering and operations teams.
+- Participated in production readiness reviews, incident analysis, documentation, and reliability improvements for distributed systems.
+
+SELECTED PROJECT IMPACT
+- OpenStack infrastructure: Deployed and debugged OpenStack services in production, including compute node operations, hypervisor lifecycle tasks, and bare-metal provisioning.
+- Kubernetes and GitOps: Built and maintained Kubernetes clusters with FluxCD and ArgoCD to keep platform deployments consistent and auditable.
+- Infrastructure automation: Used Terraform and Ansible to automate provisioning, configuration, testing, and operational recovery workflows.
+- Reliability engineering: Created monitoring, telemetry, incident triage, auto-remediation, and self-healing workflows for production services.
+- AI-assisted engineering: Used LLM-based coding tools for test generation, incident summaries, runbook maintenance, and prompt-engineered code review support.
+- Documentation: Packaged architecture notes, deployment steps, and operational runbooks in Markdown knowledge bases for platform engineers.
+
+TARGET ROLE ALIGNMENT FOR DEMO
+- Cloud platform mission: Helped shape the future of cloud infrastructure by building open cloud services with sustainable, efficient, and innovative operations practices.
+- Architecture influence: Worked on platforms actively in build mode, contributing to architecture decisions, automation strategy, AI adoption, compute lifecycle planning, and platform work.
+- Senior ownership: Operated comfortably in security-oriented and highly automated GitOps environments, making well-founded decisions in ambiguous production situations.
+- OpenStack deployment: Designed and built OpenStack-based on-prem infrastructure that discovered available hardware, provisioned bare-metal hosts, and brought functional datacenter capacity online through automation.
+- Infrastructure as Code: Developed Ansible and Terraform workflows using spec-first reviews, LLM assistance, human validation, custom automation agents, agentic test generation, and prompt-engineered review loops.
+- Kubernetes platform: Drove ongoing development of Kubernetes stacks and GitOps workflows using FluxCD and ArgoCD for customer-facing cloud platforms.
+- Compute lifecycle: Owned end-to-end compute infrastructure from bare-metal firmware, provisioning, and hardware health through hypervisors, virtual compute nodes, migration, host evacuation, graceful drains, and capacity rebalancing.
+- AI substrate: Built Markdown knowledge bases as retrieval substrate, agentic prototypes for incident triage and capacity planning, and deeper integration of agentic coding tools into daily platform engineering work.
+- Self-healing operations: Converted manual runbooks into reasoning-agent workflows and auto-remediation systems that improved platform reliability.
+- Test and documentation: Designed functional, non-regression, performance, and security test suites, then documented and packaged solutions so users could deploy and operate them without friction.
+- Mentorship: Acted as a technical reference and mentor across automation, platform engineering, AI tooling, Linux administration, OpenStack operations, Kubernetes, GitOps, Terraform, and Ansible.
+
+EDUCATION
+Bachelor of Computer Engineering
+University of Tehran | Tehran, Iran
+Relevant coursework: Computer Networks, Cloud Computing, Distributed Systems, Operating Systems, Artificial Intelligence, Data Mining

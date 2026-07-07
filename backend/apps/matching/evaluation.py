@@ -3,7 +3,7 @@ from math import sqrt
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from .services import calculate_text_similarity, tokenize
+from .services import calculate_hybrid_text_similarity, calculate_text_similarity, tokenize
 
 
 class EmbeddingEvaluationUnavailable(RuntimeError):
@@ -38,6 +38,10 @@ def evaluate_pair_ranking(cases, scorer):
 
 def evaluate_tfidf_pair_ranking(cases):
     return evaluate_pair_ranking(cases, calculate_text_similarity)
+
+
+def evaluate_hybrid_pair_ranking(cases):
+    return evaluate_pair_ranking(cases, calculate_hybrid_text_similarity)
 
 
 def evaluate_ollama_embedding_pair_ranking(cases, *, base_url, model, timeout=120):

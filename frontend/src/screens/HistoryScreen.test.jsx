@@ -25,15 +25,33 @@ const savedJobs = [
   },
 ];
 
+const manyJobs = Array.from({ length: 7 }, (_, index) => ({
+  id: index + 10,
+  title: `Tracked Role ${index + 1}`,
+  company: `Company ${index + 1}`,
+  location: "Montreal",
+  status: index < 4 ? "saved" : "applied",
+  notes: "",
+}));
+
 
 describe("HistoryScreen", () => {
-  it("surfaces overdue follow-ups and filters the board to attention items", () => {
+  it("shows the company name in report history cards", () => {
+    const onOpenReport = vi.fn();
     render(
       <HistoryScreen
-        history={[]}
-        savedJobs={savedJobs}
+        history={[
+          {
+            id: 10,
+            target_role: "Junior Software Engineer",
+            company: "Trane Technologies",
+            created_at: "2026-07-06T12:00:00Z",
+            summary: { readiness_score: 46 },
+          },
+        ]}
+        savedJobs={[]}
         resumeVersions={[]}
-        onOpenReport={() => {}}
+        onOpenReport={onOpenReport}
         onUseJob={() => {}}
         onDeleteJob={() => {}}
         onDeleteReport={() => {}}
@@ -41,12 +59,43 @@ describe("HistoryScreen", () => {
       />,
     );
 
+    expect(screen.getByText("Junior Software Engineer")).toBeVisible();
+    expect(screen.getByText("Trane Technologies")).toBeVisible();
+    fireEvent.click(screen.getByTitle("Open report"));
+    expect(onOpenReport).toHaveBeenCalledWith(expect.objectContaining({ id: 10 }));
+  });
+
+  it("surfaces overdue follow-ups and filters the board to attention items", () => {
+    const onNavigate = vi.fn();
+    const onUseJob = vi.fn();
+    render(
+      <HistoryScreen
+        history={[]}
+        savedJobs={savedJobs}
+        resumeVersions={[]}
+        onOpenReport={() => {}}
+        onUseJob={onUseJob}
+        onDeleteJob={() => {}}
+        onDeleteReport={() => {}}
+        onUpdateJob={() => {}}
+        onNavigate={onNavigate}
+      />,
+    );
+
+    expect(screen.getByText("Pipeline health")).toBeVisible();
+    expect(screen.getByText("Next actions")).toBeVisible();
     expect(screen.getByText("Overdue: Follow up Jan 2, 2000")).toBeVisible();
     expect(screen.getAllByText("Needs attention")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "Find jobs" }));
+    expect(onNavigate).toHaveBeenCalledWith("job");
+    fireEvent.click(screen.getByRole("button", { name: "Update resume" }));
+    expect(onNavigate).toHaveBeenCalledWith("resume");
+    fireEvent.click(screen.getByRole("button", { name: "Match" }));
+    expect(onUseJob).toHaveBeenCalledWith(expect.objectContaining({ title: "Data Analyst" }));
 
     fireEvent.click(screen.getByLabelText("Needs attention"));
     expect(screen.queryByText("Mechanical Engineer")).not.toBeInTheDocument();
-    expect(screen.getByText("Data Analyst")).toBeVisible();
+    expect(screen.getAllByText("Data Analyst")[0]).toBeVisible();
   });
 
   it("searches by recruiter name", () => {
@@ -64,8 +113,29 @@ describe("HistoryScreen", () => {
     );
 
     fireEvent.change(screen.getByLabelText("Search tracked jobs"), { target: { value: "Taylor Recruiter" } });
-    expect(screen.getByText("Data Analyst")).toBeVisible();
+    expect(screen.getAllByText("Data Analyst")[0]).toBeVisible();
     expect(screen.queryByText("Mechanical Engineer")).not.toBeInTheDocument();
+  });
+
+  it("switches to a compact list when many applications are visible", () => {
+    render(
+      <HistoryScreen
+        history={[]}
+        savedJobs={manyJobs}
+        resumeVersions={[]}
+        onOpenReport={() => {}}
+        onUseJob={() => {}}
+        onDeleteJob={() => {}}
+        onDeleteReport={() => {}}
+        onUpdateJob={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Applications list")).toBeVisible();
+    expect(screen.getByText("7 visible")).toBeVisible();
+    expect(screen.getByText("Showing a compact list because there are more than 6 visible applications.")).toBeVisible();
+    expect(screen.getByText("Tracked Role 1")).toBeVisible();
+    expect(screen.getByLabelText("Status for Tracked Role 1")).toBeVisible();
   });
 
   it("compares roles and saves packet tasks", async () => {

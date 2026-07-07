@@ -1,0 +1,72 @@
+SARA JAVAHERIAN
+Software Engineer | Backend Systems | Site Reliability | Platform Engineering
+Montreal, Canada
+sara.javaherian01@gmail.com | +1 438 738 4412
+LinkedIn: linkedin.com/in/sara-javaherian
+
+PROFESSIONAL SUMMARY
+Software Engineer with 3+ years of experience building backend services, event-driven systems, data pipelines, and cloud infrastructure. Strong background in Golang, Scala, Python, Ruby on Rails, Kafka, Kubernetes, Docker, AWS, Linux, PostgreSQL, MongoDB, Redis, Elasticsearch, ClickHouse, REST APIs, microservices, CI/CD, monitoring, observability, and workflow orchestration. Experienced in improving system performance, reliability, automation, and scalability for large production platforms.
+
+TECHNICAL SKILLS
+Languages: Golang, Scala, Python, Java, Ruby, SQL
+Backend: Microservices, REST APIs, API design, event-driven architecture, distributed systems, service integration
+Cloud and DevOps: AWS, Kubernetes, Docker, Linux, CI/CD, DevOps, workflow orchestration
+Data and Messaging: Kafka, PostgreSQL, MongoDB, Redis, Elasticsearch, ClickHouse
+Reliability: Monitoring, observability, logging, performance optimization, incident prevention, automation
+Tools: Git, Grafana, Agile, system design, clean code, technical documentation
+
+PROFESSIONAL EXPERIENCE
+
+Software Engineer
+Cisco | Ottawa, Canada | Hybrid
+October 2024 - Present
+- Scaled global search infrastructure for Cisco dashboards serving 2M+ users, 60M networking devices, 4M networks, and 10B+ end-user devices using Ruby on Rails and distributed backend systems.
+- Designed and built high-throughput Scala data pipelines to preprocess large-scale datasets for ingestion, improving reliability and accelerating downstream query performance.
+- Improved client search performance by 97% on datasets exceeding 10B entities by designing an optimized ClickHouse-based solution.
+- Automated manual operational workflows using orchestration tools, reducing manual intervention and improving platform reliability.
+- Worked with production systems requiring monitoring, observability, performance analysis, and dependable service behavior at scale.
+
+Software Engineer
+Worten | Portugal | Remote
+February 2024 - October 2024
+- Developed microservices in Golang and Scala using Akka and Lagom for high-volume e-commerce and marketplace systems.
+- Designed and enhanced scalable event-driven services processing more than 10 million marketplace offers daily using PostgreSQL, Debezium, Kafka, and AWS ECS.
+- Implemented AWS services including S3, SNS, SQS, and Kafka for efficient message processing in a Kubernetes environment.
+- Collaborated with engineering teams to improve backend reliability, deployment quality, and operational performance.
+- Supported cloud-native services using Docker, Kubernetes, Linux, REST APIs, and distributed data pipelines.
+
+Software Engineer
+SnappTrip | Tehran, Iran | Hybrid
+December 2022 - February 2024
+- Led the design and development of an event-driven Golang service using Kafka, ELK stack, and REST APIs, reducing price update time by 85% and eliminating losses from pricing discrepancies.
+- Migrated more than 10 services from Scala and Java to Golang in a Kubernetes environment, improving system efficiency, maintainability, and performance.
+- Built backend features across Java, Python, PostgreSQL, MongoDB, Docker, and REST API services for a high-traffic travel platform.
+- Built an SDK using Redis and Elasticsearch, improving response times by 70% and simplifying maintenance for internal teams.
+- Strengthened DevOps practices by improving deployment readiness, clean code quality, service integration, and backend observability.
+
+Software Engineer Intern
+SnappTrip | Tehran, Iran | Hybrid
+September 2022 - December 2022
+- Selected from 1,000+ applicants and chosen as one of three interns after a competitive software engineering bootcamp.
+- Completed a 3-month internship focused on Golang, API design, backend development, clean code, DevOps basics, and problem solving.
+- Built a Go-based developer toolkit and collaborated with engineers to improve internal backend workflows.
+
+SELECTED PROJECT IMPACT
+- Backend reliability: Improved service performance and data-processing reliability across large-scale production systems.
+- API development: Built REST APIs, backend endpoints, service integrations, and internal SDKs used by engineering teams.
+- Event-driven systems: Designed Kafka-based services and pipelines for pricing, marketplace offers, and large-scale data ingestion.
+- Infrastructure: Worked with Docker, Kubernetes, AWS, Linux, CI/CD practices, monitoring, logging, and observability tools.
+- Performance: Delivered measurable improvements including 97% faster search performance, 85% faster price updates, and 70% faster SDK response times.
+
+EDUCATION
+Bachelor of Computer Engineering
+Alzahra University | Tehran, Iran
+October 2019 - July 2023
+Relevant coursework: Computer Networking, Artificial Intelligence, Cloud Computing, Big Data, Data Mining, Theory of Languages and Automata, Basic Programming
+
+ADDITIONAL EXPERIENCE
+Teaching Assistant | Alzahra University | April 2022 - February 2023
+- Supported students in programming and computer engineering coursework.
+
+Editor | Pardazesh Magazine | February 2020 - August 2020
+- Edited and contributed to a student technology publication focused on computer engineering and tech news.

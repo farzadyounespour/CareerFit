@@ -1,10 +1,16 @@
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
 from apps.matching.evaluation import (
     EmbeddingEvaluationUnavailable,
+    evaluate_hybrid_pair_ranking,
     evaluate_ollama_embedding_pair_ranking,
     evaluate_pair_ranking,
     evaluate_tfidf_pair_ranking,
@@ -61,9 +67,10 @@ def print_summary(name, summary):
 
 
 def evaluate():
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+    load_dotenv(BACKEND_ROOT / ".env")
     print_summary("keyword_overlap", evaluate_pair_ranking(CASES, keyword_overlap_similarity))
     print_summary("tfidf_cosine", evaluate_tfidf_pair_ranking(CASES))
+    print_summary("hybrid_bm25_semantic", evaluate_hybrid_pair_ranking(CASES))
 
     model = os.getenv("OLLAMA_EMBEDDING_MODEL", "")
     try:

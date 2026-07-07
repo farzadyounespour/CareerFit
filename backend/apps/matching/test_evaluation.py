@@ -6,6 +6,7 @@ from django.test import SimpleTestCase
 from .evaluation import (
     EmbeddingEvaluationUnavailable,
     cosine_similarity,
+    evaluate_hybrid_pair_ranking,
     evaluate_ollama_embedding_pair_ranking,
     evaluate_pair_ranking,
     fetch_ollama_embeddings,
@@ -29,6 +30,21 @@ class MatchingMethodEvaluationTests(SimpleTestCase):
 
         self.assertEqual(summary["correct"], 1)
         self.assertEqual(summary["accuracy"], 1)
+
+    def test_hybrid_ranking_prefers_paraphrased_evidence(self):
+        summary = evaluate_hybrid_pair_ranking(
+            [
+                {
+                    "label": "api",
+                    "requirement": "Develop REST API services and integrate external systems.",
+                    "related": "Built backend endpoints and connected third-party services.",
+                    "unrelated": "Managed retail inventory and prepared shift schedules.",
+                }
+            ],
+        )
+
+        self.assertEqual(summary["correct"], 1)
+        self.assertGreater(summary["results"][0]["margin"], 0)
 
     def test_cosine_similarity_compares_embedding_vectors(self):
         self.assertEqual(cosine_similarity([1, 0], [1, 0]), 1)
