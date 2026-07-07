@@ -1214,36 +1214,6 @@ function serializeResumeSections(sections) {
   return [header, ...body].filter(Boolean).join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-function buildAtsResumeTemplate(resumeText, summary, skills) {
-  const parsed = parseResumeSections(resumeText);
-  const candidateName = parsed.header[0] || summary.candidate_name || "[Your name]";
-  const contactLines = parsed.header.slice(1);
-  const targetRole = summary.target_role || "[Target role]";
-  const detectedSkills = skills.matched.length ? skills.matched.join(", ") : "[Add your relevant skills]";
-
-  return [
-    candidateName,
-    targetRole,
-    contactLines.length ? contactLines.join("\n") : "[Email] | [Phone] | [City, Province or State]",
-    "",
-    "PROFESSIONAL SUMMARY",
-    sectionText(parsed.sections.summary, `[Write 2-3 lines about your real experience relevant to ${targetRole}. Mention your strongest skills and one truthful result.]`),
-    "",
-    "SKILLS",
-    sectionText(parsed.sections.skills, detectedSkills),
-    "",
-    "EXPERIENCE",
-    sectionText(parsed.sections.experience, "[Role or project] | [Organization] | [Dates]\n- [Describe a real action and its result. Add a truthful number when possible.]"),
-    "",
-    "EDUCATION",
-    sectionText(parsed.sections.education, "[Degree or diploma] | [School] | [Graduation year]"),
-    "",
-    "CERTIFICATIONS",
-    sectionText(parsed.sections.certifications, "[Add relevant certifications only if applicable. Remove this section otherwise.]"),
-    parsed.sections.projects.length ? `\nPROJECTS\n${parsed.sections.projects.join("\n")}` : "",
-  ].join("\n").replace(/\n{3,}/g, "\n\n").trim();
-}
-
 function parseResumeSections(resumeText) {
   const aliases = {
     summary: ["summary", "professional summary", "profile", "objective"],

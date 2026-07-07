@@ -1,3 +1,10 @@
+import os
+
+import django
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+django.setup()
+
 from apps.matching.services import analyze_resume_match, extract_skills
 
 
