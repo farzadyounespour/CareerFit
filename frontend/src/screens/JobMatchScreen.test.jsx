@@ -40,6 +40,8 @@ describe("JobMatchScreen", () => {
           location: "Montreal",
           description: "Build dashboards.",
           source: "Adzuna",
+          match_scope: "related",
+          search_note: "Related result for Junior Data Analyst; matched broader role Data Analyst.",
         }]}
         roleInsights={{
           postings_analyzed: 3,
@@ -71,6 +73,8 @@ describe("JobMatchScreen", () => {
     expect(screen.getByText("python · 2/3")).toBeVisible();
     expect(screen.getByText("1 provider excerpt")).toBeVisible();
     expect(screen.getByRole("button", { name: "Business Intelligence Analyst" })).toBeVisible();
+    expect(screen.queryByRole("option", { name: "Sample demo" })).not.toBeInTheDocument();
+    expect(screen.getByText("Related")).toBeVisible();
 
     fireEvent.change(screen.getByPlaceholderText("https://company.example/jobs/data-analyst"), { target: { value: "https://example.com/jobs/analyst" } });
     fireEvent.click(screen.getByRole("button", { name: "Import URL" }));

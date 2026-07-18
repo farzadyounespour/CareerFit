@@ -507,22 +507,19 @@ def search_arbeitnow_jobs(
         _format_arbeitnow_job(job)
         for job in payload.get("data", [])
     ]
-    filtered_jobs = [
-        job for job in jobs
-        if _matches_filters(
-            job,
-            title=title,
-            location=location,
-            remote=remote,
-            workplace=workplace,
-            skills=skills,
-            experience_level=experience_level,
-            employment_type=employment_type,
-            salary_min=salary_min,
-            salary_max=salary_max,
-            excluded_keywords=excluded_keywords,
-        )
-    ]
+    filter_args = {
+        "location": location,
+        "remote": remote,
+        "workplace": workplace,
+        "skills": skills,
+        "experience_level": experience_level,
+        "employment_type": employment_type,
+        "salary_min": salary_min,
+        "salary_max": salary_max,
+        "excluded_keywords": excluded_keywords,
+    }
+    filtered_jobs = _filter_provider_jobs(jobs, title=title, **filter_args)
+    filtered_jobs = _broaden_provider_results(filtered_jobs, jobs, title=title, filter_args=filter_args)
     has_next = bool((payload.get("links") or {}).get("next"))
     count = len(filtered_jobs) + (page * results_per_page if has_next else 0)
     return {
@@ -549,7 +546,7 @@ def search_remotive_jobs(
     salary_max=None,
     excluded_keywords="",
 ):
-    del country, source
+    del source
     if page > 1:
         return {
             "results": [],
@@ -575,23 +572,40 @@ def search_remotive_jobs(
 
     payload = _fetch_remotive_payload(params)
     jobs = [_format_remotive_job(job) for job in payload.get("jobs", [])]
-    filtered_jobs = [
-        job for job in jobs
-        if _remotive_location_matches(job.get("location", ""), location)
-        and _matches_filters(
-            job,
-            title=title,
-            location="",
-            remote=remote,
-            workplace=workplace,
-            skills=skills,
-            experience_level=experience_level,
-            employment_type=employment_type,
-            salary_min=salary_min,
-            salary_max=salary_max,
-            excluded_keywords=excluded_keywords,
-        )
+    filter_args = {
+        "location": "",
+        "remote": remote,
+        "workplace": workplace,
+        "skills": skills,
+        "experience_level": experience_level,
+        "employment_type": employment_type,
+        "salary_min": salary_min,
+        "salary_max": salary_max,
+        "excluded_keywords": excluded_keywords,
+    }
+    remotive_jobs = [
+        job
+        for job in jobs
+        if _remotive_location_matches(job.get("location", ""), location, country)
     ]
+    filtered_jobs = _filter_provider_jobs(remotive_jobs, title=title, **filter_args)
+    if not filtered_jobs:
+        broadened_title = _broaden_title_query(title)
+        if broadened_title:
+            broadened_params = {**params, "search": " ".join([broadened_title, skills]).strip()}
+            broadened_payload = _fetch_remotive_payload(broadened_params)
+            broadened_jobs = [_format_remotive_job(job) for job in broadened_payload.get("jobs", [])]
+            broadened_jobs = [
+                job
+                for job in broadened_jobs
+                if _remotive_location_matches(job.get("location", ""), location, country)
+            ]
+            filtered_jobs = _filter_provider_jobs(broadened_jobs, title=broadened_title, **filter_args)
+            filtered_jobs = [
+                _mark_related_provider_match(job, title, broadened_title)
+                for job in filtered_jobs
+                if _is_reasonable_related_title(job, broadened_title)
+            ]
     return {
         "results": filtered_jobs[:results_per_page],
         "count": len(filtered_jobs),
@@ -824,7 +838,7 @@ def _matches_filters(
             " ".join(job.get("tags") or []),
         ]
     ).lower()
-    if title and title.lower() not in searchable_text:
+    if title and not _matches_title_query(searchable_text, title):
         return False
     if _contains_excluded_keyword(searchable_text, excluded_keywords):
         return False
@@ -847,6 +861,59 @@ def _matches_filters(
         if job.get("salary_min") is None or job.get("salary_min") > salary_max:
             return False
     return True
+
+
+def _filter_provider_jobs(jobs, title, **filter_args):
+    return [
+        job
+        for job in jobs
+        if _matches_filters(job, title=title, **filter_args)
+    ]
+
+
+def _broaden_provider_results(filtered_jobs, jobs, *, title, filter_args):
+    if filtered_jobs:
+        return filtered_jobs
+    broadened_title = _broaden_title_query(title)
+    if not broadened_title:
+        return filtered_jobs
+    return [
+        _mark_related_provider_match(job, title, broadened_title)
+        for job in _filter_provider_jobs(jobs, title=broadened_title, **filter_args)
+        if _is_reasonable_related_title(job, broadened_title)
+    ]
+
+
+def _broaden_title_query(title):
+    broadened = re.sub(r"\([^)]*\)", " ", title or "")
+    broadened = re.sub(
+        r"\b(?:junior|senior|lead|principal|staff|entry[- ]level|graduate|internship|intern|mid[- ]level|intermediate|associate|student)\b",
+        " ",
+        broadened,
+        flags=re.IGNORECASE,
+    )
+    broadened = re.sub(r"\s+", " ", broadened).strip()
+    if not broadened or _normalize_search_text(broadened) == _normalize_search_text(title):
+        return ""
+    return broadened
+
+
+def _mark_related_provider_match(job, original_title, broadened_title):
+    return {
+        **job,
+        "match_scope": "related",
+        "search_note": f"Related result for {original_title}; matched broader role {broadened_title}.",
+    }
+
+
+def _is_reasonable_related_title(job, broadened_title):
+    title_text = _normalize_search_text(job.get("title") or "")
+    query_terms = [
+        term
+        for term in _normalize_search_text(broadened_title).split()
+        if len(term) > 2 and term not in {"job", "role", "remote", "software"}
+    ]
+    return bool(query_terms) and any(_term_matches(title_text, term) for term in query_terms)
 
 
 def _deduplicate_jobs(jobs):
@@ -879,6 +946,43 @@ def _strip_html(value):
     return re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", " ", value))).strip()
 
 
+def _matches_title_query(searchable_text, title):
+    normalized_text = _normalize_search_text(searchable_text)
+    normalized_title = _normalize_search_text(title)
+    if not normalized_title:
+        return True
+    if normalized_title in normalized_text:
+        return True
+
+    query_terms = [
+        term
+        for term in normalized_title.split()
+        if len(term) > 2 and term not in {"job", "role", "remote"}
+    ]
+    return bool(query_terms) and all(_term_matches(normalized_text, term) for term in query_terms)
+
+
+def _term_matches(normalized_text, term):
+    aliases = {
+        "dev": ["developer", "development"],
+        "developer": ["dev", "development"],
+        "development": ["dev", "developer"],
+        "engineer": ["engineering"],
+        "engineering": ["engineer"],
+        "frontend": ["front end", "front-end"],
+        "backend": ["back end", "back-end"],
+        "fullstack": ["full stack", "full-stack"],
+    }
+    return any(
+        re.search(rf"\b{re.escape(candidate)}\b", normalized_text)
+        for candidate in [term, *aliases.get(term, [])]
+    )
+
+
+def _normalize_search_text(value):
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9+#.]+", " ", (value or "").lower())).strip()
+
+
 def _fetch_remotive_payload(params):
     query = urlencode(sorted(params.items()))
     cache_key = f"careerfit:remotive:{hashlib.sha256(query.encode('utf-8')).hexdigest()}"
@@ -900,7 +1004,7 @@ def _fetch_remotive_payload(params):
     return payload
 
 
-def _remotive_location_matches(job_location, requested_location):
+def _remotive_location_matches(job_location, requested_location, country=""):
     if not requested_location:
         return True
     normalized_job_location = (job_location or "").lower()
@@ -918,7 +1022,31 @@ def _remotive_location_matches(job_location, requested_location):
         "uk": ["united kingdom", "great britain", "gb"],
         "united kingdom": ["uk", "great britain", "gb"],
     }
-    return any(alias in normalized_job_location for alias in country_aliases.get(normalized_requested, []))
+    requested_aliases = set(country_aliases.get(normalized_requested, []))
+    requested_aliases.update(country_aliases.get((country or "").lower(), []))
+    requested_aliases.update(_country_aliases_for_city(normalized_requested))
+    return any(alias in normalized_job_location for alias in requested_aliases)
+
+
+def _country_aliases_for_city(requested_location):
+    city_country_aliases = {
+        "ca": ["montreal", "toronto", "vancouver", "ottawa", "calgary", "edmonton", "quebec"],
+        "us": ["new york", "los angeles", "chicago", "boston", "seattle", "san francisco"],
+        "uk": ["london", "manchester", "birmingham"],
+    }
+    matched_countries = [
+        country
+        for country, cities in city_country_aliases.items()
+        if any(re.search(rf"\b{re.escape(city)}\b", requested_location) for city in cities)
+    ]
+    aliases = []
+    for matched_country in matched_countries:
+        aliases.extend({
+            "ca": ["canada"],
+            "us": ["usa", "united states", "u.s.", "u.s.a", "america"],
+            "uk": ["united kingdom", "great britain", "gb"],
+        }[matched_country])
+    return aliases
 
 
 def _parse_salary_range(value):

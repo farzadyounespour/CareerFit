@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="980" viewBox="0 0 1500 980" role="img" aria-labelledby="title desc">
+  <title id="title">Report generation pipeline</title>
+  <desc id="desc">CareerFit report generation pipeline from resume evidence and job requirements through requirement classification, scoring, ATS preparation, readiness score, and final recommendations.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { fill: #0f172a; font: 700 42px Arial, Helvetica, sans-serif; }
+      .subtitle { fill: #475569; font: 400 21px Arial, Helvetica, sans-serif; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 18; }
+      .box-input { fill: #eff6ff; stroke: #bfdbfe; stroke-width: 2; rx: 18; }
+      .box-class { fill: #fffbeb; stroke: #fde68a; stroke-width: 2; rx: 18; }
+      .box-score { fill: #ecfdf5; stroke: #99f6e4; stroke-width: 2; rx: 18; }
+      .box-final { fill: #f0fdfa; stroke: #5eead4; stroke-width: 2; rx: 18; }
+      .step { fill: #64748b; font: 700 15px Arial, Helvetica, sans-serif; letter-spacing: .5px; }
+      .label { fill: #0f172a; font: 700 25px Arial, Helvetica, sans-serif; }
+      .small { fill: #475569; font: 400 18px Arial, Helvetica, sans-serif; }
+      .formula { fill: #0f766e; font: 700 18px Arial, Helvetica, sans-serif; }
+      .pill { fill: #f1f5f9; stroke: #e2e8f0; stroke-width: 1.5; rx: 12; }
+      .pill-text { fill: #334155; font: 700 15px Arial, Helvetica, sans-serif; }
+      .arrow { stroke: #0f766e; stroke-width: 4; fill: none; marker-end: url(#arrowhead); }
+      .arrow-muted { stroke: #94a3b8; stroke-width: 3; fill: none; marker-end: url(#arrowhead-muted); }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#0f766e"/>
+    </marker>
+    <marker id="arrowhead-muted" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1500" height="980"/>
+  <text class="title" x="80" y="76">Report Generation Pipeline</text>
+  <text class="subtitle" x="80" y="116">CareerFit turns requirement-level evidence into explainable scores, ATS checks, and prioritized resume recommendations.</text>
+
+  <rect class="box-input" x="120" y="175" width="520" height="118"/>
+  <text class="step" x="150" y="212">INPUT</text>
+  <text class="label" x="150" y="246">Resume Evidence</text>
+  <text class="small" x="150" y="275">Skills, bullets, action verbs, strongest segments</text>
+
+  <rect class="box-input" x="860" y="175" width="520" height="118"/>
+  <text class="step" x="890" y="212">INPUT</text>
+  <text class="label" x="890" y="246">Job Requirements</text>
+  <text class="small" x="890" y="275">Required skills, responsibilities, and role signals</text>
+
+  <path class="arrow" d="M640 234 H845"/>
+
+  <rect class="box-class" x="420" y="355" width="660" height="142"/>
+  <text class="step" x="450" y="392">STEP 1</text>
+  <text class="label" x="450" y="426">Requirement Classification</text>
+  <text class="small" x="450" y="455">Each job requirement is assigned an explainable support level.</text>
+  <rect class="pill" x="450" y="472" width="108" height="34"/>
+  <text class="pill-text" x="475" y="495">Matched</text>
+  <rect class="pill" x="574" y="472" width="94" height="34"/>
+  <text class="pill-text" x="594" y="495">Partial</text>
+  <rect class="pill" x="684" y="472" width="78" height="34"/>
+  <text class="pill-text" x="707" y="495">Weak</text>
+  <rect class="pill" x="778" y="472" width="100" height="34"/>
+  <text class="pill-text" x="798" y="495">Missing</text>
+
+  <path class="arrow" d="M380 293 C430 335, 520 350, 610 355"/>
+  <path class="arrow" d="M1120 293 C1070 335, 980 350, 890 355"/>
+
+  <rect class="box-score" x="120" y="570" width="340" height="118"/>
+  <text class="step" x="150" y="607">STEP 2</text>
+  <text class="label" x="150" y="641">Requirement Evidence Score</text>
+  <text class="small" x="150" y="670">Average support across extracted requirements</text>
+
+  <rect class="box-score" x="580" y="570" width="340" height="118"/>
+  <text class="step" x="610" y="607">STEP 3</text>
+  <text class="label" x="610" y="641">Skill Coverage Score</text>
+  <text class="small" x="610" y="670">Matched skills compared with job skill needs</text>
+
+  <rect class="box-score" x="1040" y="570" width="340" height="118"/>
+  <text class="step" x="1070" y="607">STEP 4</text>
+  <text class="label" x="1070" y="641">ATS Preparation Score</text>
+  <text class="small" x="1070" y="670">Contact, sections, bullets, dates</text>
+
+  <path class="arrow" d="M580 497 C460 525, 360 545, 300 570"/>
+  <path class="arrow" d="M750 497 V555"/>
+  <path class="arrow" d="M920 497 C1040 525, 1140 545, 1200 570"/>
+
+  <rect class="box-final" x="355" y="760" width="350" height="118"/>
+  <text class="step" x="385" y="797">STEP 5</text>
+  <text class="label" x="385" y="831">Job Match Score</text>
+  <text class="small" x="385" y="860">Requirement evidence + skill coverage</text>
+
+  <rect class="box-final" x="795" y="760" width="350" height="118"/>
+  <text class="step" x="825" y="797">STEP 6</text>
+  <text class="label" x="825" y="831">Readiness Score</text>
+  <text class="small" x="825" y="860">Job match score combined with ATS score</text>
+
+  <path class="arrow" d="M290 688 C330 735, 420 750, 500 760"/>
+  <path class="arrow" d="M750 688 V745"/>
+  <path class="arrow" d="M1210 688 C1140 735, 1050 750, 1000 760"/>
+  <path class="arrow-muted" d="M705 819 H780"/>
+
+  <rect class="box" x="1185" y="760" width="195" height="118"/>
+  <text class="step" x="1215" y="797">OUTPUT</text>
+  <text class="label" x="1215" y="831">Priority Fixes</text>
+  <text class="small" x="1215" y="860">Recommendations</text>
+
+  <path class="arrow" d="M1145 819 H1170"/>
+
+  <text class="formula" x="250" y="930">Job match = weighted requirement evidence + skill coverage</text>
+  <text class="formula" x="850" y="930">Readiness = 80% job match + 20% ATS preparation</text>
+</svg>

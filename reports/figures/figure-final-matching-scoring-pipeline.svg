@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="950" viewBox="0 0 1600 950" role="img" aria-labelledby="title desc">
+  <title id="title">Final matching and scoring pipeline</title>
+  <desc id="desc">CareerFit algorithm flow from resume and job description inputs through preprocessing, extraction, hybrid matching, requirement classification, scoring, and recommendations.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { fill: #0f172a; font: 700 42px Arial, Helvetica, sans-serif; }
+      .subtitle { fill: #475569; font: 400 21px Arial, Helvetica, sans-serif; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 18; }
+      .box-soft { fill: #ecfdf5; stroke: #99f6e4; stroke-width: 2; rx: 18; }
+      .box-blue { fill: #eff6ff; stroke: #bfdbfe; stroke-width: 2; rx: 18; }
+      .box-amber { fill: #fffbeb; stroke: #fde68a; stroke-width: 2; rx: 18; }
+      .box-rose { fill: #fff1f2; stroke: #fecdd3; stroke-width: 2; rx: 18; }
+      .label { fill: #0f172a; font: 700 24px Arial, Helvetica, sans-serif; }
+      .small { fill: #475569; font: 400 18px Arial, Helvetica, sans-serif; }
+      .tiny { fill: #64748b; font: 700 15px Arial, Helvetica, sans-serif; letter-spacing: .5px; }
+      .pill { fill: #f1f5f9; stroke: #e2e8f0; stroke-width: 1.5; rx: 12; }
+      .pill-text { fill: #334155; font: 700 16px Arial, Helvetica, sans-serif; }
+      .arrow { stroke: #0f766e; stroke-width: 4; fill: none; marker-end: url(#arrowhead); }
+      .arrow-muted { stroke: #94a3b8; stroke-width: 3; fill: none; marker-end: url(#arrowhead-muted); }
+      .note { fill: #0f766e; font: 700 17px Arial, Helvetica, sans-serif; }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#0f766e"/>
+    </marker>
+    <marker id="arrowhead-muted" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="950"/>
+  <text class="title" x="80" y="78">Final Matching and Scoring Pipeline</text>
+  <text class="subtitle" x="80" y="118">CareerFit compares resume evidence against a selected job posting, then produces explainable scores and recommendations.</text>
+
+  <rect class="box-blue" x="90" y="170" width="330" height="118"/>
+  <text class="tiny" x="120" y="207">INPUT A</text>
+  <text class="label" x="120" y="241">Resume Text</text>
+  <text class="small" x="120" y="270">Uploaded, pasted, or saved version</text>
+
+  <rect class="box-blue" x="1180" y="170" width="330" height="118"/>
+  <text class="tiny" x="1210" y="207">INPUT B</text>
+  <text class="label" x="1210" y="241">Job Description</text>
+  <text class="small" x="1210" y="270">Selected posting or pasted text</text>
+
+  <rect class="box" x="595" y="170" width="410" height="118"/>
+  <text class="tiny" x="625" y="207">STEP 1</text>
+  <text class="label" x="625" y="241">Preprocessing</text>
+  <text class="small" x="625" y="270">Normalize text, split sentences, prepare segments</text>
+
+  <path class="arrow" d="M420 229 H580"/>
+  <path class="arrow" d="M1180 229 H1020"/>
+
+  <rect class="box" x="90" y="354" width="450" height="150"/>
+  <text class="tiny" x="120" y="391">STEP 2A</text>
+  <text class="label" x="120" y="425">Job Requirement Extraction</text>
+  <text class="small" x="120" y="456">Detect required skills, responsibilities,</text>
+  <text class="small" x="120" y="483">experience signals, and action phrases</text>
+
+  <rect class="box" x="1060" y="354" width="450" height="150"/>
+  <text class="tiny" x="1090" y="391">STEP 2B</text>
+  <text class="label" x="1090" y="425">Resume Evidence Extraction</text>
+  <text class="small" x="1090" y="456">Detect skills, project bullets, action verbs,</text>
+  <text class="small" x="1090" y="483">ATS signals, and strongest text segments</text>
+
+  <path class="arrow" d="M738 288 C650 320, 510 320, 405 354"/>
+  <path class="arrow" d="M862 288 C950 320, 1090 320, 1195 354"/>
+
+  <rect class="box-soft" x="485" y="555" width="630" height="170"/>
+  <text class="tiny" x="515" y="592">STEP 3</text>
+  <text class="label" x="515" y="626">Hybrid Requirement Matching</text>
+  <text class="small" x="515" y="658">Each requirement is compared with resume evidence using:</text>
+  <rect class="pill" x="515" y="681" width="116" height="34"/>
+  <text class="pill-text" x="536" y="704">Keywords</text>
+  <rect class="pill" x="645" y="681" width="96" height="34"/>
+  <text class="pill-text" x="672" y="704">TF-IDF</text>
+  <rect class="pill" x="755" y="681" width="90" height="34"/>
+  <text class="pill-text" x="778" y="704">BM25</text>
+  <rect class="pill" x="859" y="681" width="180" height="34"/>
+  <text class="pill-text" x="881" y="704">Semantic Concepts</text>
+  <rect class="pill" x="515" y="727" width="240" height="34"/>
+  <text class="pill-text" x="536" y="750">Optional Ollama Embeddings</text>
+
+  <path class="arrow" d="M540 429 C655 455, 720 505, 735 555"/>
+  <path class="arrow" d="M1060 429 C945 455, 880 505, 865 555"/>
+
+  <rect class="box-amber" x="90" y="786" width="460" height="105"/>
+  <text class="tiny" x="120" y="822">STEP 4</text>
+  <text class="label" x="120" y="856">Requirement Categories</text>
+  <text class="small" x="120" y="883">Matched, partial, weak, or missing</text>
+
+  <rect class="box-rose" x="610" y="786" width="380" height="105"/>
+  <text class="tiny" x="640" y="822">STEP 5</text>
+  <text class="label" x="640" y="856">Score Calculation</text>
+  <text class="small" x="640" y="883">Match score + ATS = readiness score</text>
+
+  <rect class="box-soft" x="1050" y="786" width="460" height="105"/>
+  <text class="tiny" x="1080" y="822">STEP 6</text>
+  <text class="label" x="1080" y="856">Report Recommendations</text>
+  <text class="small" x="1080" y="883">Skill gaps, priority fixes, evidence, ATS advice</text>
+
+  <path class="arrow" d="M640 725 C530 754, 420 770, 350 786"/>
+  <path class="arrow" d="M800 725 V786"/>
+  <path class="arrow" d="M960 725 C1070 754, 1180 770, 1250 786"/>
+
+  <path class="arrow-muted" d="M550 839 H595"/>
+  <path class="arrow-muted" d="M990 839 H1035"/>
+
+  <text class="note" x="640" y="925">Readiness score = 80% job match + 20% ATS preparation</text>
+</svg>

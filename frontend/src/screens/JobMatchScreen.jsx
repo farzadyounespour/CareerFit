@@ -184,7 +184,6 @@ export default function JobMatchScreen({
               ["arbeitnow", "Arbeitnow"],
               ["adzuna", "Adzuna"],
               ["jooble", "Jooble"],
-              ["sample", "Sample demo"],
             ]} />
             <SelectField label="Workplace" value={jobSearch.workplace} onChange={(value) => onJobSearchChange({ ...jobSearch, workplace: value, page: 1 })} options={[
               ["any", "Any workplace"],
@@ -781,6 +780,7 @@ function JobCard({ job, selected, comparisonSelected, comparisonLimitReached, on
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="font-semibold text-ink">{job.title}</h4>
             <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{job.source}</span>
+            {job.match_scope === "related" && <span title={job.search_note || "Related provider result"} className="rounded bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-800">Related</span>}
             {job.description_is_partial && <span className="rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">Excerpt</span>}
             {job.posted_at && <FreshnessBadge postedAt={job.posted_at} />}
           </div>

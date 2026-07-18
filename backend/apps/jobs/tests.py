@@ -162,7 +162,7 @@ class AdditionalJobProviderTests(SimpleTestCase):
         }
         """
 
-        jobs = search_remotive_jobs("Backend Engineer", location="Canada", workplace="remote", skills="Python API")
+        jobs = search_remotive_jobs("Backend Engineer", location="Toronto", country="ca", workplace="remote", skills="Python API")
 
         self.assertEqual(jobs["results"][0]["source"], "Remotive")
         self.assertEqual(jobs["results"][0]["company"], "Remote Co")
@@ -171,6 +171,85 @@ class AdditionalJobProviderTests(SimpleTestCase):
         self.assertEqual(jobs["results"][0]["description"], "Build Python API services.")
         self.assertEqual(jobs["results"][0]["salary_min"], 80000)
         self.assertEqual(jobs["results"][0]["salary_max"], 110000)
+
+    @patch("apps.jobs.services.urlopen")
+    def test_provider_title_filter_matches_related_word_forms(self, mock_urlopen):
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = b"""
+        {
+          "data": [
+            {
+              "slug": "backend-engineer",
+              "title": "Backend Engineer",
+              "company_name": "Example Co",
+              "location": "Remote",
+              "remote": true,
+              "description": "<p>Build platform services.</p>",
+              "url": "https://arbeitnow.com/jobs/backend-engineer",
+              "job_types": ["full_time"]
+            }
+          ],
+          "links": {"next": null}
+        }
+        """
+
+        jobs = search_arbeitnow_jobs("Backend Engineering", workplace="remote")
+
+        self.assertEqual(jobs["results"][0]["title"], "Backend Engineer")
+
+    @patch("apps.jobs.services.urlopen")
+    def test_arbeitnow_broadens_empty_seniority_specific_searches(self, mock_urlopen):
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = b"""
+        {
+          "data": [
+            {
+              "slug": "software-engineer",
+              "title": "Software Engineer",
+              "company_name": "Example Co",
+              "location": "Berlin, Germany",
+              "remote": false,
+              "description": "<p>Build backend services.</p>",
+              "url": "https://arbeitnow.com/jobs/software-engineer",
+              "job_types": ["full_time"]
+            }
+          ],
+          "links": {"next": null}
+        }
+        """
+
+        jobs = search_arbeitnow_jobs("Junior Software Engineer")
+
+        self.assertEqual(jobs["results"][0]["source"], "Arbeitnow")
+        self.assertEqual(jobs["results"][0]["match_scope"], "related")
+        self.assertIn("Software Engineer", jobs["results"][0]["search_note"])
+
+    @patch("apps.jobs.services._fetch_remotive_payload")
+    def test_remotive_broadens_empty_seniority_specific_searches(self, mock_fetch):
+        mock_fetch.side_effect = [
+            {"jobs": []},
+            {
+                "jobs": [
+                    {
+                        "id": 456,
+                        "url": "https://remotive.com/remote-jobs/software-dev/software-engineer-456",
+                        "title": "Software Engineer",
+                        "company_name": "Remote Co",
+                        "category": "Software Development",
+                        "job_type": "full_time",
+                        "publication_date": "2026-07-01T10:00:00",
+                        "candidate_required_location": "Canada",
+                        "salary": "",
+                        "tags": ["api"],
+                        "description": "<p>Build API services.</p>",
+                    }
+                ]
+            },
+        ]
+
+        jobs = search_remotive_jobs("Junior Software Engineer", country="ca")
+
+        self.assertEqual(jobs["results"][0]["source"], "Remotive")
+        self.assertEqual(jobs["results"][0]["match_scope"], "related")
+        self.assertEqual(mock_fetch.call_count, 2)
 
     @patch("apps.jobs.services.urlopen")
     def test_remotive_skips_non_remote_workplace_filters(self, mock_urlopen):

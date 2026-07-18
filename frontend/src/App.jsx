@@ -386,15 +386,15 @@ export default function App() {
       setJobResults(result.results);
       setRoleInsights(result.role_insights || null);
       setJobPagination(result.pagination);
-      if (result.using_sample_data) {
+      if (result.results.length === 0) {
+        setJobSearchError(buildNoJobResultsMessage(nextSearch, result));
+        setJobSearchNotice(result.provider_errors?.length ? "Some job providers are temporarily unavailable." : "");
+      } else if (result.using_sample_data) {
         setJobSearchNotice("Live job providers are unavailable. Showing local sample postings.");
       } else if (result.provider_errors?.length) {
         setJobSearchNotice(`Showing live postings from ${result.providers.join(", ")}. Some job providers are temporarily unavailable.`);
       } else {
         setJobSearchNotice(`Showing live postings from ${result.providers.join(", ")}.`);
-      }
-      if (result.results.length === 0) {
-        setJobSearchError("No jobs found. Try a broader title or location.");
       }
     } catch (searchError) {
       setJobSearchError(searchError.message);
@@ -876,4 +876,19 @@ function getInitialDarkMode() {
     return savedTheme === "dark";
   }
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches || false;
+}
+
+function buildNoJobResultsMessage(search, result) {
+  const selectedSource = search.source || "all";
+  if (["remotive", "arbeitnow"].includes(selectedSource) && result.providers?.length) {
+    const sourceName = selectedSource === "remotive" ? "Remotive" : "Arbeitnow";
+    const filterHint = selectedSource === "remotive"
+      ? "Try clearing Location or using Remote/Any workplace."
+      : "Try clearing Location and Workplace, or search All websites.";
+    return `${sourceName} responded without an API key, but no jobs matched the active filters. ${filterHint}`;
+  }
+  if (result.providers?.length) {
+    return "The selected provider responded, but no jobs matched the active filters. Try a broader title or location.";
+  }
+  return "No jobs found. Try a broader title or location.";
 }
