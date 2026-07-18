@@ -67,7 +67,7 @@ def add_cover_page(document):
     document.add_paragraph()
     note = document.add_paragraph()
     note.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = note.add_run("Working draft: finalize screenshots, diagrams, semantic evaluation, and discussion before submission.")
+    run = note.add_run("Working draft: refresh final screenshots, diagrams, and case-study discussion before submission.")
     run.italic = True
     run.font.size = Pt(10)
     run.font.color.rgb = RGBColor.from_string(SLATE)

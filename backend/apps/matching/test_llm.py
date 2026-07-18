@@ -148,4 +148,7 @@ class OptionalLlmCoachingTests(SimpleTestCase):
         self.assertEqual(coaching["model"], "gemma3:4b")
         self.assertEqual(coaching["recommendations"][0]["priority"], "high")
         request = mock_urlopen.call_args.args[0]
+        payload = json.loads(request.data.decode("utf-8"))
         self.assertEqual(request.full_url, "http://127.0.0.1:11434/api/chat")
+        self.assertIn("Do not leave job_requirement empty", payload["messages"][1]["content"])
+        self.assertIn("Do not leave resume_evidence empty", payload["messages"][1]["content"])

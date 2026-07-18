@@ -333,7 +333,10 @@ def _build_prompt(match_result, resume_text, job_description):
     ][:5]
     return (
         "Return recommendation objects with job_requirement, resume_evidence, where_to_add, "
-        "what_to_add, bullet_template, and truthfulness_note whenever possible. Keep every "
+        "what_to_add, bullet_template, and truthfulness_note. Do not leave job_requirement empty: "
+        "copy the exact job ask from CareerFit priority fixes or the job posting. Do not leave "
+        "resume_evidence empty: copy the related resume proof when CareerFit found it, or write "
+        "'No related resume evidence detected.' Keep every "
         "suggestion grounded in the resume and CareerFit findings. Do not recommend adding "
         "legal notices, hiring-process text, benefits, privacy language, source URLs, or application instructions to the resume.\n\n"
         f"Target role: {summary.get('target_role') or 'Not provided'}\n"

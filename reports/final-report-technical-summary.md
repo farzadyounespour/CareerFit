@@ -116,7 +116,7 @@ CareerFit implements job discovery and direct resume-job comparison as one conne
 
 - Implemented in two forms.
 - Rule-based semantic concept matching: `SEMANTIC_CONCEPT_GROUPS`, `semantic_concept_score`.
-- Optional embedding similarity: Ollama `/api/embed`, model from `OLLAMA_EMBEDDING_MODEL`.
+- Optional local AI embedding similarity: Ollama `/api/embed`, model from `OLLAMA_EMBEDDING_MODEL`.
 - Compares job requirement to resume evidence segments.
 - Cosine similarity is used for embeddings.
 - Embedding semantic match threshold: best segment embedding score >= 78.
@@ -195,16 +195,16 @@ Actual output from current code:
   - score ordering: strong `83`, partial `58`, unrelated `3`
   - ordering correct: `True`
 
-Method comparison output when run with `DJANGO_SETTINGS_MODULE=config.settings`:
+Method comparison output from `python -m scripts.evaluate_matching_methods`:
 
-| Method | Precision | Recall | F1-score | Strength | Limitation | Finding |
+| Method | Correct rankings | Accuracy | Average margin | Strength | Limitation | Finding |
 |---|---:|---:|---:|---|---|---|
-| Keyword overlap | not calculated in this script | not calculated | not calculated | Simple and explainable | Only 2/5 pair-ranking accuracy; misses paraphrases | Good for exact terms, weak for semantic matches |
-| TF-IDF cosine | not calculated in this script | not calculated | not calculated | Better weighted lexical comparison than raw overlap | Also 2/5 pair-ranking accuracy in controlled paraphrase cases | Still misses related wording with few shared tokens |
-| Hybrid BM25 + TF-IDF + semantic concepts | not calculated | not calculated | not calculated | 5/5 pair-ranking accuracy | Rule-based concept groups may need expansion | Best current deterministic method in controlled comparison |
-| Ollama embeddings | not available | not available | not available | True semantic similarity possible | Skipped unless local embedding model configured | Implemented but optional; not part of default result |
+| Keyword overlap | 2/5 | 0.400 | 11.43 | Simple and explainable | Misses paraphrases | Good for exact terms, weak for semantic matches |
+| TF-IDF cosine | 2/5 | 0.400 | 6.16 | Better weighted lexical comparison than raw overlap | Still misses related wording with few shared tokens | Not enough by itself for paraphrased resume evidence |
+| Hybrid BM25 + TF-IDF + semantic concepts | 5/5 | 1.000 | 45.80 | Transparent semantic evidence scoring | Rule-based concept groups need expansion | Strongest current finding: hybrid evidence beats lexical-only methods in controlled paraphrase cases |
+| Ollama embeddings | skipped | not calculated | not calculated | True local AI semantic similarity possible | Requires a dedicated local embedding model | Implemented as an optional AI signal; current machine has only `gemma3:4b`, which does not support embeddings |
 
-Important limitation: `backend/scripts/evaluate_matching_methods.py` currently fails if run exactly as `python -m scripts.evaluate_matching_methods` because it does not initialize Django settings before calling matcher code that reads settings. It works when `DJANGO_SETTINGS_MODULE=config.settings` is set. This should be mentioned or fixed before presenting it as a polished evaluation command.
+The method-comparison script now initializes Django settings itself, so it can be run directly from the backend directory.
 
 ## 5. Example Cases For Final Report
 
@@ -284,7 +284,7 @@ Hybrid semantic concept matching handles paraphrased collaboration evidence.
 
 Why this case matters:
 
-Strong final-report finding.
+Strong final-report finding because it shows why CareerFit needs semantic evidence instead of only keyword or TF-IDF matching.
 
 ### Case 4: Missing Docker/Kubernetes Requirement
 
@@ -375,7 +375,7 @@ Existing tests:
 |---|---|---|---|---|---|
 | Backend tests | `.venv/bin/python manage.py test` | All pass | 88 tests pass in prior run | done | Covers API/workflow/matching/job/resume/account |
 | Skill extraction eval | `python -m scripts.evaluate_matching` | Precision/recall/F1 printed | 1.000/1.000/1.000 | done | Small controlled set |
-| Method comparison | `DJANGO_SETTINGS_MODULE=config.settings python -m scripts.evaluate_matching_methods` | Accuracy by method | keyword 0.4, TF-IDF 0.4, hybrid 1.0, embeddings skipped | partial | Script needs environment/settings setup |
+| Method comparison | `python -m scripts.evaluate_matching_methods` | Accuracy by method | keyword 0.4, TF-IDF 0.4, hybrid 1.0, embeddings skipped | done | Script initializes settings; embeddings need a dedicated local model |
 | Frontend lint | `npm run lint` | No ESLint errors | passed in prior run | done | CI step |
 | Frontend unit | `npm run test` | Tests pass | 9 files, 37 tests passed in prior run | done | UI/service tests |
 | Frontend build | `npm run build` | Production build | passed in prior run | done | CI step |
@@ -398,7 +398,7 @@ CareerFit is implemented as an academic prototype and has several limitations. J
 
 Resume parsing supports PDF, DOCX, and TXT, but extracted text quality depends on the original file structure. The ATS checks are approximate regex-based checks rather than a real commercial ATS simulation. Requirement extraction is rule-based, so it can miss unusual phrasing or include imperfect fragments, although boilerplate filtering is implemented.
 
-The matching algorithm is explainable and deterministic, but the skill dictionary and semantic concept groups are manually curated, so coverage is incomplete. Optional embedding similarity requires a local Ollama embedding model and is skipped if not configured. The evaluation dataset is small, controlled, and not representative of all industries. The method-comparison script currently requires Django settings to be supplied externally. Optional AI coaching is implemented but depends on OpenAI or Ollama configuration, rate limits, and model availability. The code includes deployment settings, but the final report should not claim production deployment unless deployment was actually completed.
+The matching algorithm is explainable, but the skill dictionary and semantic concept groups are manually curated, so coverage is incomplete. Optional embedding similarity requires a dedicated local Ollama embedding model and is skipped if not configured. The evaluation dataset is small, controlled, and not representative of all industries. Optional AI coaching is implemented but depends on OpenAI or Ollama configuration, rate limits, and model availability. The code includes deployment settings, but the final report should not claim production deployment unless deployment was actually completed.
 
 ## 9. Final Report Structure
 
@@ -425,4 +425,4 @@ The matching algorithm is explainable and deterministic, but the skill dictionar
 
 ## Strong Final-Report Claim
 
-CareerFit's final implementation demonstrates a connected resume-to-job workflow: users can manage a profile and resume, discover jobs from live or sample sources, select a job, receive an immediate preview, generate an explainable readiness report, and save the role into an application tracker. The matching system combines skill extraction, alias handling, requirement-level evidence ranking, TF-IDF cosine similarity, BM25-style lexical ranking, semantic concept matching, optional Ollama embeddings, ATS checks, and rule-based recommendations. Controlled evaluation shows that exact keyword and TF-IDF methods perform well only when wording overlaps, while the hybrid method better handles paraphrased evidence in the included test cases.
+CareerFit's final implementation demonstrates a connected resume-to-job workflow: users can manage a profile and resume, discover jobs from live or sample sources, select a job, receive an immediate preview, generate an explainable readiness report, and save the role into an application tracker. The matching system combines skill extraction, alias handling, requirement-level evidence ranking, TF-IDF cosine similarity, BM25-style lexical ranking, semantic concept matching, optional local AI embeddings, ATS checks, and rule-based recommendations. The strongest controlled finding is that keyword overlap and TF-IDF each rank only 2/5 paraphrased evidence pairs correctly, while the hybrid BM25/TF-IDF/semantic-concept method ranks 5/5 correctly with a 45.80 average margin.

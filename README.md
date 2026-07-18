@@ -179,7 +179,7 @@ source .venv/bin/activate
 python -m scripts.evaluate_matching_methods
 ```
 
-This script compares normalized keyword overlap, TF-IDF cosine similarity, and optional local Ollama semantic embeddings on paraphrased requirement-evidence pairs. If `OLLAMA_EMBEDDING_MODEL` is not configured, the semantic method is reported as skipped while the deterministic baselines still run.
+This script compares normalized keyword overlap, TF-IDF cosine similarity, the production hybrid BM25/TF-IDF/semantic-concept method, and optional local Ollama semantic embeddings on paraphrased requirement-evidence pairs. If `OLLAMA_EMBEDDING_MODEL` is not configured, the embedding method is reported as skipped while the deterministic baselines still run.
 
 Run frontend checks:
 
@@ -231,7 +231,7 @@ CareerFit combines available Adzuna, Remotive, Arbeitnow, and optional Jooble re
 }
 ```
 
-The response includes score summaries, an explainable score breakdown, matched and missing skills, weighted requirement-level evidence, a best-segment TF-IDF cosine similarity signal for each reviewed requirement, and the optional AI coaching status.
+The response includes score summaries, an explainable score breakdown, matched and missing skills, weighted requirement-level evidence, best-segment BM25/TF-IDF/concept evidence signals, optional embedding evidence when configured, and the optional AI coaching status.
 
 ### Preview Match
 

@@ -1403,12 +1403,36 @@ def requirement_fix_detail(status, job_signal):
 
 
 def requirement_evidence_needed(requirement, skills, status):
-    primary = skills[0] if skills else "this requirement"
+    if not skills:
+        return requirement_specific_evidence_needed(requirement, status)
+    primary = skills[0]
     if status == "semantic_match":
         return f"Make the existing evidence explicitly mention {primary} or the job wording, if truthful."
     if status in {"weak", "partial"}:
         return f"Add the project context, your specific action, and a result connected to {primary}."
     return f"One truthful bullet that maps your real work directly to {primary}."
+
+
+def requirement_specific_evidence_needed(requirement, status):
+    prefix = {
+        "semantic_match": "Clarify the existing bullet with",
+        "partial": "Complete the partial evidence with",
+        "weak": "Strengthen the weak match with",
+    }.get(status, "Add a truthful bullet with")
+    text = requirement.lower()
+    if re.search(r"test|quality|qa|sdlc|software development lifecycle", text):
+        return f"{prefix} the test type, feature or workflow tested, tool or method used, and defect, reliability, or release-quality result."
+    if re.search(r"api|backend|service|endpoint|integration", text):
+        return f"{prefix} the API/service name, integration or endpoint you built, your implementation role, and the reliability, latency, automation, or user-workflow result."
+    if re.search(r"data|sql|database|analytics|dashboard|reporting|pipeline", text):
+        return f"{prefix} the dataset, query/dashboard/pipeline work, decision you made, and the reporting, quality, speed, or business result."
+    if re.search(r"react|frontend|front.?end|ui|typescript|javascript|full.?stack", text):
+        return f"{prefix} the user-facing feature, frontend/backend tools, your contribution, and the usability, performance, or delivery result."
+    if re.search(r"cloud|aws|azure|gcp|docker|kubernetes|deployment|devops|ci/cd", text):
+        return f"{prefix} the environment, deployment or infrastructure task, tool used, and reliability, scale, or delivery result."
+    if re.search(r"lead|collaborat|stakeholder|communicat|mentor|cross-functional|team", text):
+        return f"{prefix} the team or stakeholder context, your communication or leadership action, and the decision, delivery, or alignment result."
+    return f"{prefix} the exact requirement wording, a concrete project or system, your action, and the outcome you can truthfully support."
 
 
 def requirement_fix_why(status):

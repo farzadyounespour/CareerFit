@@ -9,7 +9,7 @@
 5. Frontend sends the combined request to the Django API.
 6. Backend extracts text from uploaded resumes when needed.
 7. Backend extracts requirement-style phrases and skills from the job description.
-8. Backend compares each requirement with resume evidence and TF-IDF cosine similarity.
+8. Backend compares each requirement with resume evidence using BM25 ranking, TF-IDF cosine similarity, semantic concept groups, skill coverage, and optional local embedding evidence.
 9. Backend checks ATS-oriented resume structure and contact information.
 10. With explicit user consent, the backend may request structured coaching suggestions from local Ollama or OpenAI.
 11. Frontend displays an explainable report, ATS preparation checks, and interview prompts.
@@ -29,7 +29,7 @@
 - `accounts`: token-based registration, login, logout, and user profile API.
 - `resumes`: resume text, PDF/DOCX/TXT parsing, upload API, and reusable resume versions.
 - `jobs`: job description domain, multi-provider search aggregation, search alerts, and application-tracker details.
-- `matching`: explainable matching service, optional structured LLM coaching, and API endpoint.
+- `matching`: explainable matching service, semantic evidence scoring, optional structured LLM coaching, and API endpoint.
 
 ## Deployment
 
@@ -41,11 +41,11 @@
 ## Research Evaluation
 
 - A labeled baseline measures precision, recall, F1-score, and strong/partial/unrelated ordering.
-- A controlled method-comparison script evaluates normalized keyword overlap and TF-IDF cosine similarity on paraphrased evidence pairs.
-- The method-comparison script optionally evaluates semantic embeddings through the local Ollama `/api/embed` endpoint.
+- A controlled method-comparison script evaluates normalized keyword overlap, TF-IDF cosine similarity, and the production hybrid BM25/TF-IDF/semantic-concept method on paraphrased evidence pairs.
+- The method-comparison script optionally evaluates local semantic embeddings through the Ollama `/api/embed` endpoint.
 
 ## Planned Upgrades
 
 - Complete human-reviewed case-study validation and score calibration.
 - Add optional The Muse job search integration.
-- Evaluate whether semantic embeddings should remain research-only or become an optional production signal.
+- Calibrate the local embedding signal on a larger reviewed dataset before enabling it by default.

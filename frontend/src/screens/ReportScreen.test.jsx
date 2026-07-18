@@ -103,6 +103,9 @@ describe("ReportScreen", () => {
     expect(screen.getByText("Open these only when you need the extra detail")).toBeVisible();
     expect(screen.getByRole("navigation", { name: "Report sections" })).toBeVisible();
 
+    fireEvent.click(screen.getByRole("button", { name: "Use AI" }));
+    expect(onRequestAiCoaching).toHaveBeenCalledOnce();
+
     const resumeDraft = screen.getByRole("button", { name: "Resume draft" });
     const scrollIntoView = vi.fn();
     document.getElementById("resume-draft").scrollIntoView = scrollIntoView;
@@ -113,11 +116,54 @@ describe("ReportScreen", () => {
     expect(screen.getByText(/1 of \d+ complete/)).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Get specific improvements" }));
-    expect(onRequestAiCoaching).toHaveBeenCalledOnce();
+    expect(onRequestAiCoaching).toHaveBeenCalledTimes(2);
 
     expect(screen.getByText("Semantic match")).toBeVisible();
     expect(screen.getByText("Built backend endpoints and integrated third-party services")).toBeVisible();
     expect(screen.getByText("Different wording, related technical meaning")).toBeVisible();
+  });
+
+  it("uses requirement-specific proof guidance for missing requirements", () => {
+    render(
+      <ReportScreen
+        report={{
+          ...report,
+          skills: {
+            matched: ["python"],
+            missing: [],
+            missing_details: [],
+          },
+          requirements: {
+            matched: [],
+            partial: [],
+            weak: [{
+              text: "Validate software development lifecycle quality with functional and performance testing.",
+              score: 25,
+              evidence: ["testing"],
+              priority: "medium",
+            }],
+            missing: [{
+              text: "Design REST API endpoints and integrate external systems.",
+              score: 0,
+              evidence: [],
+              priority: "high",
+            }],
+          },
+          recommendations: [],
+          priority_fixes: [],
+        }}
+        resumeText="Resume text"
+        jobDescription="Job description text"
+        onNavigate={() => {}}
+        onRequestAiCoaching={() => {}}
+        history={[]}
+      />,
+    );
+
+    expect(screen.getByText(/API\/service name/)).toBeVisible();
+    expect(screen.getByText(/integration or endpoint/)).toBeVisible();
+    expect(screen.getAllByText(/test type/)[0]).toBeVisible();
+    expect(screen.getByText(/release-quality result/)).toBeVisible();
   });
 
   it("shows completed specific improvements when coaching is available", () => {
@@ -149,10 +195,13 @@ describe("ReportScreen", () => {
     );
 
     expect(screen.getByText("Specific improvements")).toBeVisible();
-    expect(screen.getByText("Add a Tableau bullet")).toBeVisible();
+    expect(within(document.getElementById("priority-improvements")).getByText("Add a Tableau bullet")).toBeVisible();
+    expect(screen.getAllByText("Add a Tableau bullet")).toHaveLength(2);
+    expect(screen.getByText("AI suggestions added")).toBeVisible();
+    expect(screen.getAllByText("AI suggested")[0]).toBeVisible();
     expect(screen.getByText("Where to add")).toBeVisible();
     expect(screen.getAllByText("Projects")[0]).toBeVisible();
-    expect(screen.getByText("Built [dashboard] for [audience], improving [decision or workflow].")).toBeVisible();
+    expect(screen.getAllByText("Built [dashboard] for [audience], improving [decision or workflow].")[0]).toBeVisible();
 
     fireEvent.click(screen.getByTitle("Accept Add a Tableau bullet"));
     expect(screen.getByText("Added to your tailoring checklist")).toBeVisible();
@@ -160,7 +209,60 @@ describe("ReportScreen", () => {
     fireEvent.change(screen.getByDisplayValue("Describe a real Tableau dashboard result."), { target: { value: "Add the measurable dashboard result." } });
     expect(screen.getByDisplayValue("Add the measurable dashboard result.")).toBeVisible();
     fireEvent.click(screen.getByTitle("Dismiss Add a Tableau bullet"));
-    expect(screen.queryByText("Add a Tableau bullet")).not.toBeInTheDocument();
+    expect(within(document.getElementById("specific-improvements")).queryByText("Add a Tableau bullet")).not.toBeInTheDocument();
+    expect(within(document.getElementById("priority-improvements")).getByText("Add a Tableau bullet")).toBeVisible();
+  });
+
+  it("backfills empty AI job and resume evidence fields from requirement analysis", () => {
+    render(
+      <ReportScreen
+        report={{
+          ...report,
+          skills: {
+            matched: ["aws"],
+            missing: [],
+            missing_details: [],
+          },
+          requirements: {
+            matched: [],
+            partial: [{
+              text: "AWS hands-on ownership - has provisioned, deployed, monitored, and debugged AWS infrastructure.",
+              score: 48,
+              priority: "high",
+              evidence: ["AWS", "ECS"],
+              best_evidence: "Software Engineer: deployed Kafka on AWS ECS and monitored service health.",
+            }],
+            weak: [],
+            missing: [],
+          },
+          priority_fixes: [],
+          ai_coaching: {
+            status: "completed",
+            headline: "Strengthen cloud proof",
+            summary: "Expand the AWS evidence.",
+            recommendations: [{
+              priority: "high",
+              title: "Strengthen AWS evidence",
+              detail: "Expand your specific contributions to align with the job posting's requirement for 'AWS hands-on ownership'.",
+              job_requirement: "",
+              resume_evidence: "",
+              where_to_add: "Experience or Projects",
+              what_to_add: "Detail the AWS services you used and the actions you took.",
+              bullet_template: "Implemented [AWS service name] for [project name], resulting in [quantifiable benefit].",
+              truthfulness_note: "Use only if this reflects your real experience.",
+            }],
+          },
+        }}
+        resumeText="Software Engineer: deployed Kafka on AWS ECS and monitored service health."
+        jobDescription="AWS hands-on ownership - has provisioned, deployed, monitored, and debugged AWS infrastructure."
+        onNavigate={() => {}}
+      />,
+    );
+
+    const prioritySection = within(document.getElementById("priority-improvements"));
+    expect(prioritySection.getByText("AWS hands-on ownership - has provisioned, deployed, monitored, and debugged AWS infrastructure.")).toBeVisible();
+    expect(prioritySection.getByText("Software Engineer: deployed Kafka on AWS ECS and monitored service health.")).toBeVisible();
+    expect(within(document.getElementById("specific-improvements")).getByText("AWS hands-on ownership - has provisioned, deployed, monitored, and debugged AWS infrastructure.")).toBeVisible();
   });
 
   it("does not turn hiring boilerplate into resume improvement actions", () => {

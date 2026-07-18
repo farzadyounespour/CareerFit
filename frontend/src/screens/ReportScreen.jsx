@@ -38,7 +38,7 @@ export default function ReportScreen({
   resumeText,
   jobDescription,
   onNavigate,
-  onRequestAiCoaching,
+  onRequestAiCoaching = () => {},
   isLoadingAiCoaching = false,
   aiCoachingError = "",
   history = [],
@@ -71,9 +71,10 @@ export default function ReportScreen({
   const atsIssues = ats.issues || [];
   const requirementGaps = requirements.missing.length + requirements.weak.length;
   const hasSemanticMatches = Object.values(requirements).some((items) => items.some((item) => item.match_label));
-  const priorityActions = buildPriorityActions(skills, requirements, atsIssues, recommendations, priorityFixes);
-  const completedActionCount = priorityActions.filter((item) => completedActions.has(actionKey(item))).length;
   const aiCompleted = aiCoaching?.status === "completed";
+  const aiRecommendations = aiCompleted ? enrichAiRecommendations(aiCoaching.recommendations || [], requirements) : [];
+  const priorityActions = buildPriorityActions(skills, requirements, atsIssues, recommendations, priorityFixes, aiRecommendations);
+  const completedActionCount = priorityActions.filter((item) => completedActions.has(actionKey(item))).length;
   const scoreBreakdown = summary.score_breakdown || {
     requirement_evidence: { score: matchScore, weight: 65 },
     skill_coverage: { score: matchScore, weight: 35 },
@@ -139,10 +140,34 @@ export default function ReportScreen({
                   <h3 className="text-lg font-semibold text-ink">Improve these first</h3>
                   <p className="mt-1 text-sm text-slate-600">Mark each fix as you tailor your resume, then update the resume and rescan.</p>
                 </div>
-                <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-teal">
-                  {completedActionCount} of {priorityActions.length} complete
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {aiCompleted ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-teal">
+                      <Sparkles size={13} />
+                      AI suggestions added
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onRequestAiCoaching}
+                      disabled={isLoadingAiCoaching}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-teal hover:border-teal disabled:cursor-wait disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500"
+                    >
+                      <Sparkles size={14} />
+                      {isLoadingAiCoaching ? "Generating..." : "Use AI"}
+                    </button>
+                  )}
+                  <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-teal">
+                    {completedActionCount} of {priorityActions.length} complete
+                  </span>
+                </div>
               </div>
+              {aiCoachingError && (
+                <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{aiCoachingError}</p>
+              )}
+              {aiCoaching?.detail && aiCoaching.status !== "skipped" && !aiCompleted && (
+                <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{aiCoaching.detail}</p>
+              )}
               <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100">
                 <div className="h-full rounded-full bg-teal transition-all" style={{ width: `${priorityActions.length ? (completedActionCount / priorityActions.length) * 100 : 100}%` }} />
               </div>
@@ -163,6 +188,12 @@ export default function ReportScreen({
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold text-ink">{item.title}</p>
                       <ImpactBadge priority={item.priority} />
+                      {item.source === "ai" && (
+                        <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal">
+                          <Sparkles size={11} />
+                          AI suggested
+                        </span>
+                      )}
                     </div>
                     <p className="mt-1 text-sm leading-6 text-slate-600">{item.detail}</p>
                     <EvidenceGapCard item={item} />
@@ -184,7 +215,7 @@ export default function ReportScreen({
           </section>
 
           {aiCompleted ? (
-            <SpecificImprovements coaching={aiCoaching} />
+            <SpecificImprovements coaching={{ ...aiCoaching, recommendations: aiRecommendations }} />
           ) : (
             <section id="specific-improvements" className="scroll-mt-24 rounded-md border border-emerald-200 bg-emerald-50 p-5">
               <div className="flex items-start gap-3">
@@ -942,12 +973,49 @@ function SummaryRow({ label, value }) {
   );
 }
 
-function buildPriorityActions(skills, requirements, atsIssues, recommendations, backendFixes = []) {
+function enrichAiRecommendations(recommendations = [], requirements = {}) {
+  const requirementItems = flattenRequirementItems(requirements);
+  return recommendations.map((fix) => {
+    const relatedRequirement = findRelatedRequirement(fix, requirementItems);
+    const jobRequirement = firstMeaningfulText(
+      fix.job_requirement,
+      fix.jobSignal,
+      relatedRequirement?.text,
+      quotedRequirementSignal(fix),
+      topicRequirementSignal(fix),
+    );
+    const resumeEvidence = firstResumeEvidenceText(
+      fix.resume_evidence,
+      fix.resumeSignal,
+      requirementResumeSignal(relatedRequirement),
+    );
+    const whatToAdd = firstMeaningfulText(
+      fix.what_to_add,
+      fix.evidenceNeeded,
+      requirementEvidenceNeeded(relatedRequirement?.text || jobRequirement || fix.title || "", relatedRequirement?.score >= 20 ? "weak" : "missing"),
+    );
+
+    return {
+      ...fix,
+      job_requirement: jobRequirement,
+      resume_evidence: resumeEvidence,
+      where_to_add: firstMeaningfulText(fix.where_to_add, fix.where, "Experience or Projects"),
+      what_to_add: whatToAdd,
+      truthfulness_note: firstMeaningfulText(fix.truthfulness_note, fix.truthfulnessNote, "Use this only if it reflects work you actually did."),
+    };
+  });
+}
+
+function buildPriorityActions(skills, requirements, atsIssues, recommendations, backendFixes = [], aiFixes = []) {
+  const aiActions = aiFixes
+    .filter(isActionableRecommendation)
+    .map((fix) => normalizePriorityFix(fix, "ai"));
+
   if (backendFixes.length) {
-    return backendFixes
+    const backendActions = backendFixes
       .filter((item) => isActionableRequirement({ text: `${item.title || ""} ${item.detail || ""} ${item.jobSignal || ""}` }))
       .map(normalizePriorityFix)
-      .slice(0, 5);
+    return uniqueActions([...aiActions, ...backendActions]).slice(0, 5);
   }
 
   const actions = [];
@@ -975,7 +1043,7 @@ function buildPriorityActions(skills, requirements, atsIssues, recommendations, 
       detail: `The resume does not yet show clear evidence for this job requirement: ${item.text}`,
       priority: item.priority || "high",
       where: "Most relevant experience, project, or summary line",
-      evidenceNeeded: "One truthful bullet that maps your work directly to this requirement.",
+      evidenceNeeded: requirementEvidenceNeeded(item.text, "missing"),
       jobSignal: item.text,
       resumeSignal: requirementEvidenceSignal(item),
       checklist: ["Requirement keyword", "Concrete project", "Your action", "Outcome"],
@@ -989,7 +1057,7 @@ function buildPriorityActions(skills, requirements, atsIssues, recommendations, 
       detail: `CareerFit found related wording, but the resume needs a clearer example for: ${item.text}`,
       priority: item.priority || "medium",
       where: "Rewrite an existing bullet under the closest role or project",
-      evidenceNeeded: "Add the method, context, and measurable or observable result.",
+      evidenceNeeded: requirementEvidenceNeeded(item.text, "weak"),
       jobSignal: item.text,
       resumeSignal: requirementEvidenceSignal(item),
       checklist: ["Specific feature/system", "Method or tool", "Scope or scale", "Result"],
@@ -1013,10 +1081,10 @@ function buildPriorityActions(skills, requirements, atsIssues, recommendations, 
     .filter(isActionableRecommendation)
     .forEach((item) => actions.push({ ...item, priority: item.priority || "medium" }));
 
-  return uniqueActions(actions).slice(0, 5);
+  return uniqueActions([...aiActions, ...actions]).slice(0, 5);
 }
 
-function normalizePriorityFix(fix) {
+function normalizePriorityFix(fix, source = fix.source) {
   return {
     title: fix.title,
     detail: fix.detail,
@@ -1030,7 +1098,124 @@ function normalizePriorityFix(fix) {
     example: fix.example || fix.bullet_template,
     truthfulnessNote: fix.truthfulnessNote || fix.truthfulness_note,
     status: fix.status,
+    source,
   };
+}
+
+function flattenRequirementItems(requirements = {}) {
+  return Object.values(requirements || {})
+    .flat()
+    .filter((item) => item?.text);
+}
+
+function findRelatedRequirement(fix, requirementItems = []) {
+  const sourceText = [
+    fix.title,
+    fix.detail,
+    fix.job_requirement,
+    fix.jobSignal,
+    fix.what_to_add,
+    fix.bullet_template,
+  ].filter(Boolean).join(" ");
+  const sourceTokens = new Set(meaningfulActionTokens(sourceText));
+  const quotedRequirement = quotedRequirementSignal(fix)?.toLowerCase();
+  const explicitRequirement = firstMeaningfulText(fix.job_requirement, fix.jobSignal)?.toLowerCase();
+  let bestMatch = null;
+  let bestScore = 0;
+
+  requirementItems.forEach((item) => {
+    const requirementText = item.text || "";
+    const normalizedRequirement = requirementText.toLowerCase();
+    const requirementTokens = meaningfulActionTokens(requirementText);
+    const overlapScore = requirementTokens.filter((token) => sourceTokens.has(token)).length;
+    const explicitScore = explicitRequirement && normalizedRequirement.includes(explicitRequirement) ? 8 : 0;
+    const quotedScore = quotedRequirement && normalizedRequirement.includes(quotedRequirement) ? 6 : 0;
+    const score = overlapScore + explicitScore + quotedScore;
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = item;
+    }
+  });
+
+  return bestScore > 0 ? bestMatch : null;
+}
+
+function firstMeaningfulText(...values) {
+  return values.find((value) => typeof value === "string" && value.trim())?.trim() || "";
+}
+
+function firstResumeEvidenceText(...values) {
+  const candidates = values
+    .filter((value) => typeof value === "string" && value.trim())
+    .map((value) => value.trim());
+  return candidates.find((value) => !isNoResumeEvidenceText(value)) || candidates[0] || "No related resume evidence detected yet.";
+}
+
+function isNoResumeEvidenceText(value) {
+  return /\b(no|none|not)\b.*\b(evidence|proof|detected|found|related)\b/i.test(value);
+}
+
+function requirementResumeSignal(requirement) {
+  if (!requirement) return "No related resume evidence detected yet.";
+  if (requirement.semantic_evidence) return requirement.semantic_evidence;
+  if (requirement.best_evidence) return requirement.best_evidence;
+  if (requirement.evidence?.length) return `Related wording found: ${formatList(requirement.evidence.slice(0, 5))}.`;
+  return "No related resume evidence detected yet.";
+}
+
+function quotedRequirementSignal(fix) {
+  const text = [fix.detail, fix.what_to_add, fix.title].filter(Boolean).join(" ");
+  const match = text.match(/["'“”‘’]([^"'“”‘’]{5,220})["'“”‘’]/);
+  return match?.[1]?.trim() || "";
+}
+
+function topicRequirementSignal(fix) {
+  const topic = (fix.title || "")
+    .replace(/^(add|address|clarify|expand|improve|mention|show|strengthen)\s+/i, "")
+    .replace(/\s+evidence$/i, "")
+    .trim();
+  return topic ? `Job requirement related to ${topic}.` : "Job requirement from the selected posting.";
+}
+
+const ACTION_TOKEN_STOPWORDS = new Set([
+  "add",
+  "align",
+  "and",
+  "are",
+  "bullet",
+  "careerfit",
+  "clear",
+  "detail",
+  "easier",
+  "evidence",
+  "experience",
+  "found",
+  "high",
+  "impact",
+  "improve",
+  "indicates",
+  "job",
+  "match",
+  "medium",
+  "partial",
+  "posting",
+  "proof",
+  "related",
+  "requirement",
+  "resume",
+  "show",
+  "shows",
+  "specific",
+  "strengthen",
+  "the",
+  "this",
+  "with",
+  "your",
+]);
+
+function meaningfulActionTokens(text = "") {
+  return (text.toLowerCase().match(/[a-z0-9+#.]+/g) || [])
+    .filter((token) => token.length > 2 && !ACTION_TOKEN_STOPWORDS.has(token));
 }
 
 function formatList(items) {
@@ -1115,6 +1300,29 @@ function requirementBulletExample(requirement) {
     return "Delivered [full-stack feature] using [frontend/backend tools], connecting [data/API] to [user workflow] and improving [specific outcome].";
   }
   return `Built or improved [specific project/system] related to "${shortenText(requirement, 80)}", using [tools/method] to achieve [truthful result].`;
+}
+
+function requirementEvidenceNeeded(requirement, status) {
+  const prefix = status === "weak" ? "Strengthen the weak match with" : "Add a truthful bullet with";
+  if (/test|quality|qa|sdlc|software development lifecycle/i.test(requirement)) {
+    return `${prefix} the test type, feature or workflow tested, tool or method used, and defect, reliability, or release-quality result.`;
+  }
+  if (/api|backend|service|endpoint|integration/i.test(requirement)) {
+    return `${prefix} the API/service name, integration or endpoint you built, your implementation role, and the reliability, latency, automation, or user-workflow result.`;
+  }
+  if (/data|sql|database|analytics|dashboard|reporting|pipeline/i.test(requirement)) {
+    return `${prefix} the dataset, query/dashboard/pipeline work, decision you made, and the reporting, quality, speed, or business result.`;
+  }
+  if (/react|frontend|front.?end|ui|typescript|javascript|full.?stack/i.test(requirement)) {
+    return `${prefix} the user-facing feature, frontend/backend tools, your contribution, and the usability, performance, or delivery result.`;
+  }
+  if (/cloud|aws|azure|gcp|docker|kubernetes|deployment|devops|ci\/cd/i.test(requirement)) {
+    return `${prefix} the environment, deployment or infrastructure task, tool used, and reliability, scale, or delivery result.`;
+  }
+  if (/lead|collaborat|stakeholder|communicat|mentor|cross-functional|team/i.test(requirement)) {
+    return `${prefix} the team or stakeholder context, your communication or leadership action, and the decision, delivery, or alignment result.`;
+  }
+  return `${prefix} the exact requirement wording, a concrete project or system, your action, and the outcome you can truthfully support.`;
 }
 
 function resumeSectionForAtsIssue(issue) {

@@ -8,7 +8,7 @@
 **Supervisor:** Professor Joumana Dargham  
 **Term:** Summer 2026  
 
-> Draft status: This document is the working final-report structure. Sections marked `[FINALIZE]` require the completed semantic experiment, final screenshots, or final discussion.
+> Draft status: This document is the working final-report structure. Final screenshots and case-study examples should be refreshed before submission.
 
 ---
 
@@ -16,7 +16,7 @@
 
 CareerFit is a web-based prototype for explainable resume-job matching and application-readiness assessment. The system allows job seekers to upload or paste a resume, retrieve job postings from accessible providers or provide a specific description, and generate a transparent readiness report. CareerFit combines normalized skill extraction, requirement-level evidence mapping, TF-IDF cosine similarity, weighted scoring, ATS-oriented checks, and deterministic recommendations. The prototype also provides recurring role insights from retrieved postings, optional local or cloud AI coaching, and an application tracker.
 
-The project evaluates the strengths and limitations of lexical matching methods using controlled resume-job cases and paraphrased evidence pairs. The labeled skill baseline currently produces precision, recall, and F1-score values of 1.000 across ten controlled cases. A separate paraphrase experiment shows that normalized keyword overlap and TF-IDF cosine similarity each correctly rank 2 of 5 related evidence pairs, illustrating the need to examine semantic embeddings. `[FINALIZE: add Ollama embedding result and final conclusion.]`
+The project evaluates the strengths and limitations of lexical and semantic matching methods using controlled resume-job cases and paraphrased evidence pairs. The labeled skill baseline produces precision, recall, and F1-score values of 1.000 across ten controlled cases. A separate paraphrase experiment shows that normalized keyword overlap and TF-IDF cosine similarity each correctly rank only 2 of 5 related evidence pairs, while CareerFit's hybrid BM25, TF-IDF, skill, and semantic-concept method ranks 5 of 5 pairs correctly with an average margin of 45.80 points.
 
 The main contribution of CareerFit is an explainable framework that keeps the production score deterministic while exposing the evidence behind it. The project demonstrates how practical resume guidance, job discovery, role-based insights, and measurable NLP evaluation can be integrated into a single academic prototype.
 
@@ -105,7 +105,7 @@ The project makes five main contributions:
 1. A working end-to-end web application for resume preparation and job comparison.
 2. A deterministic explainable scoring framework with requirement-level evidence.
 3. A lightweight role-based knowledge summary built from multiple live postings.
-4. A controlled evaluation workflow for keyword overlap, TF-IDF, and optional semantic embeddings.
+4. A controlled evaluation workflow for keyword overlap, TF-IDF, hybrid semantic evidence, and optional local embeddings.
 5. A practical analysis of real data-quality problems, including truncated job excerpts and PDF extraction artifacts.
 
 ## 4. Related Platforms and Technical Background
@@ -334,14 +334,16 @@ Users can explicitly add selected jobs to the tracker. Tracked records support:
 - Cover-letter and follow-up-email drafts.
 - Optional AI-generated application-packet drafts.
 
-### 7.5 Optional AI Coaching
+### 7.5 AI and Semantic Assistance
 
-AI coaching is opt-in. Users can configure:
+CareerFit uses AI-related functionality in two separated ways. First, the matching service can use a local embedding model as an additional semantic evidence signal when `CAREERFIT_ENABLE_EMBEDDINGS` and `OLLAMA_EMBEDDING_MODEL` are configured. This signal can affect requirement evidence scoring, but it is still combined with transparent BM25, TF-IDF, skill coverage, and concept evidence instead of replacing them.
+
+Second, AI coaching and resume drafts are opt-in generated-text features. Users can configure:
 
 - A local Ollama model for free local inference.
 - An OpenAI API key for cloud inference.
 
-The deterministic score, ATS checks, and baseline recommendations work without AI. This separation improves transparency and prevents the core workflow from depending on external credentials.
+This separation keeps the score auditable while still allowing AI to strengthen semantic evidence and practical coaching.
 
 ## 8. Explainable Matching Framework
 
@@ -409,7 +411,7 @@ The evaluation asks:
 1. Can the skill extractor identify expected overlaps in controlled cases?
 2. Does the deterministic score rank strong, partial, and unrelated resumes correctly?
 3. Where do keyword overlap and TF-IDF fail on paraphrased evidence?
-4. Do local semantic embeddings improve ranking on paraphrased pairs?
+4. Does CareerFit's hybrid BM25/TF-IDF/semantic-concept method improve paraphrased evidence ranking?
 5. Does the implemented application remain stable across backend, frontend, and browser tests?
 
 ### 9.2 Labeled Baseline
@@ -436,7 +438,8 @@ Five requirement-evidence pairs compare a related sentence and an unrelated sent
 
 1. Normalized keyword overlap.
 2. TF-IDF cosine similarity.
-3. Optional local Ollama embeddings with cosine similarity.
+3. CareerFit's production hybrid BM25/TF-IDF/semantic-concept method.
+4. Optional local Ollama embeddings with cosine similarity.
 
 The semantic evaluator uses a local embedding model and Ollama's batch `/api/embed` endpoint [7].
 
@@ -466,9 +469,9 @@ The project includes:
 
 | Resume Type | Match Score |
 |---|---:|
-| Strong | 80 |
-| Partial | 47 |
-| Unrelated | 0 |
+| Strong | 83 |
+| Partial | 58 |
+| Unrelated | 3 |
 
 The ordering behaves as intended. The score is sensitive to meaningful evidence and does not assign high values to unrelated resumes.
 
@@ -478,11 +481,12 @@ The ordering behaves as intended. The score is sensitive to meaningful evidence 
 |---|---:|---:|---:|
 | Normalized keyword overlap | 2/5 | 0.400 | 11.43 |
 | TF-IDF cosine similarity | 2/5 | 0.400 | 6.16 |
-| Ollama semantic embeddings | `[FINALIZE]` | `[FINALIZE]` | `[FINALIZE]` |
+| Hybrid BM25 + TF-IDF + semantic concepts | 5/5 | 1.000 | 45.80 |
+| Ollama semantic embeddings | skipped locally | not calculated | not calculated |
 
 The lexical methods perform well when words overlap but fail on several paraphrased pairs. For example, a requirement using `collaborate with cross-functional teams` may be supported by a resume stating `partnered with product and support groups`, even though exact token overlap is limited.
 
-`[FINALIZE: run embeddinggemma evaluation and discuss whether semantic vectors improve ranking accuracy.]`
+The strongest evaluation finding is that a transparent hybrid method outperforms both raw keyword overlap and TF-IDF on paraphrased evidence without making the final score a black-box LLM judgment. Local embeddings remain implemented as an additional AI semantic signal, but the current machine did not have a dedicated embedding model installed during this run.
 
 ### 10.4 Real Case Studies
 
@@ -621,7 +625,7 @@ Resume content is sensitive personal information. A real deployment should inclu
 - Role insights summarize only the retrieved result set.
 - ATS preparation checks approximate common best practices rather than simulating every commercial ATS.
 - The controlled evaluation dataset is intentionally small.
-- Semantic embeddings remain evaluation-only until reviewed and calibrated.
+- Local embedding evidence requires a dedicated Ollama embedding model and should be calibrated on more reviewed cases before being enabled by default.
 - Optional AI coaching may produce imperfect recommendations.
 
 ### 13.2 Future Work
@@ -629,7 +633,7 @@ Resume content is sensitive personal information. A real deployment should inclu
 1. Expand the manually reviewed resume-job dataset.
 2. Add category-level evaluation for matched, partial, weak, and missing requirements.
 3. Calibrate thresholds using more domains and candidate levels.
-4. Evaluate semantic embeddings on a larger labeled set.
+4. Evaluate local embeddings on a larger labeled set and compare them against the current hybrid semantic-concept method.
 5. Add confidence indicators when provider descriptions are incomplete.
 6. Add more job providers where terms permit integration.
 7. Add structured education, certification, and experience-year extraction.
@@ -637,11 +641,9 @@ Resume content is sensitive personal information. A real deployment should inclu
 
 ## 14. Conclusion
 
-CareerFit demonstrates that a resume-job matching tool can be both practical and explainable. The prototype combines editable resume ingestion, multi-provider job discovery, role insights, deterministic requirement-level scoring, ATS checks, recommendations, optional AI coaching, and application tracking. Its controlled evaluation scripts make the behavior of lexical methods measurable and create a clear path for evaluating semantic embeddings.
+CareerFit demonstrates that a resume-job matching tool can be both practical and explainable. The prototype combines editable resume ingestion, multi-provider job discovery, role insights, requirement-level scoring, ATS checks, recommendations, optional AI coaching, and application tracking. Its strongest technical finding is that the hybrid BM25/TF-IDF/semantic-concept matcher correctly ranks all five paraphrased evidence pairs in the controlled method comparison, while keyword overlap and TF-IDF each rank only two correctly.
 
 The project does not treat a score as a hiring prediction. Instead, it uses transparent evidence to help users make better-informed application decisions and improve how their real experience is communicated.
-
-`[FINALIZE: add final semantic-evaluation conclusion and any user-study findings.]`
 
 ## 15. References
 
@@ -692,6 +694,7 @@ ollama pull embeddinggemma
 
 ```env
 OLLAMA_EMBEDDING_MODEL=embeddinggemma
+CAREERFIT_ENABLE_EMBEDDINGS=True
 ```
 
 ### Appendix D: Figure Checklist

@@ -11,6 +11,7 @@ from .services import (
     calculate_hybrid_text_similarity,
     calculate_text_similarity,
     extract_skills,
+    requirement_evidence_needed,
     requirement_priority,
     satisfied_skill_alternatives,
     split_requirements,
@@ -357,6 +358,24 @@ class AnalyzeResumeMatchTests(SimpleTestCase):
             len([fix for fix in fixes if "api" in fix.get("skills", []) or "rest" in fix.get("skills", [])]),
             2,
         )
+
+    def test_requirement_proof_guidance_varies_without_detected_skills(self):
+        testing_guidance = requirement_evidence_needed(
+            "Deep understanding of software development lifecycle and testing methodologies.",
+            [],
+            "weak",
+        )
+        api_guidance = requirement_evidence_needed(
+            "Own backend service integration work across external systems.",
+            [],
+            "missing",
+        )
+
+        self.assertIn("test type", testing_guidance)
+        self.assertIn("release-quality result", testing_guidance)
+        self.assertIn("API/service name", api_guidance)
+        self.assertIn("integration or endpoint", api_guidance)
+        self.assertNotEqual(testing_guidance, api_guidance)
 
     @override_settings(CAREERFIT_ENABLE_EMBEDDINGS=True, OLLAMA_EMBEDDING_MODEL="embeddinggemma")
     @patch("apps.matching.services.urlopen")
