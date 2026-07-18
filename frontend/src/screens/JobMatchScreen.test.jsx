@@ -234,13 +234,21 @@ describe("JobMatchScreen", () => {
       />,
     );
 
-    expect(screen.getByText("Quick resume comparison")).toBeVisible();
+    expect(screen.getByText("Quick comparison")).toBeVisible();
     expect(screen.getByText("Strong fit")).toBeVisible();
     expect(screen.getByText("76%")).toBeVisible();
     expect(screen.getByText("68%")).toBeVisible();
     expect(screen.getByText("Requirement gaps")).toBeVisible();
     expect(screen.getByText("2 open, 1 partial")).toBeVisible();
+    expect(screen.getByText(/Medium confidence:/)).toBeVisible();
+    expect(screen.getByText(/Full posting may change the score/)).toBeVisible();
     expect(screen.getByText("Score breakdown")).toBeVisible();
+    expect(screen.getByText("Evidence and gaps")).toBeVisible();
+    fireEvent.click(screen.getByText("Score breakdown"));
+    expect(screen.getByText("Requirement evidence")).toBeVisible();
+    expect(screen.getByText("Skill coverage")).toBeVisible();
+    expect(screen.getByText("ATS preparation")).toBeVisible();
+    fireEvent.click(screen.getByText("Evidence and gaps"));
     expect(screen.getByText("Review before applying")).toBeVisible();
     expect(screen.getByText("Add proof for missing job skills")).toBeVisible();
     expect(screen.getByText("One real Tableau example with a project and result.")).toBeVisible();
@@ -248,11 +256,6 @@ describe("JobMatchScreen", () => {
     expect(screen.getByText("Matched 1")).toBeVisible();
     expect(screen.getByText("Build Tableau dashboards for stakeholders.")).toBeVisible();
     expect(screen.getByText("Built Python reporting workflow.")).toBeVisible();
-    expect(screen.getByText(/Medium confidence:/)).toBeVisible();
-    expect(screen.getByText(/a full posting may change the result/)).toBeVisible();
-    expect(screen.getByText("Requirement evidence")).toBeVisible();
-    expect(screen.getByText("Skill coverage")).toBeVisible();
-    expect(screen.getByText("ATS preparation")).toBeVisible();
     expect(screen.getByText("python")).toBeVisible();
     expect(screen.getByText("Semantic evidence")).toBeVisible();
     expect(screen.getByText("Semantic match")).toBeVisible();
@@ -260,7 +263,7 @@ describe("JobMatchScreen", () => {
     expect(screen.getByText("Built backend endpoints and integrated third-party services")).toBeVisible();
     expect(screen.getByText("Different wording, related technical meaning")).toBeVisible();
     expect(screen.getByText("tableau · optional")).toBeVisible();
-    expect(screen.getByText("This provider shared a shortened excerpt")).toBeVisible();
+    expect(screen.getByText("Short excerpt.")).toBeVisible();
     expect(screen.getByRole("link", { name: "Open source posting" })).toHaveAttribute("href", "https://example.com/job?utm_medium=api");
     expect(screen.getByText("Job text used for scoring")).toBeVisible();
     fireEvent.click(screen.getByText("Job text used for scoring"));

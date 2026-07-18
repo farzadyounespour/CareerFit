@@ -280,38 +280,38 @@ export default function JobMatchScreen({
           )}
         </section>
 
-        <aside className="h-fit rounded-md border border-slate-200 bg-white p-5 shadow-panel xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:overscroll-contain">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-md bg-sky-50 text-sky-700">
-              <FileSearch size={18} />
+        <aside className="h-fit rounded-md border border-slate-200 bg-white p-4 shadow-panel xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:overscroll-contain">
+          <div className="flex items-center gap-2">
+            <span className="grid h-8 w-8 place-items-center rounded-md bg-sky-50 text-sky-700">
+              <FileSearch size={16} />
             </span>
             <div>
-              <h3 className="font-semibold text-ink">Resume comparison</h3>
-              <p className="text-sm text-slate-500">Select a job to check your fit.</p>
+              <h3 className="text-sm font-semibold text-ink">Resume comparison</h3>
+              <p className="text-xs text-slate-500">{selectedJob ? "Preview before the full report." : "Select a job to check your fit."}</p>
             </div>
           </div>
 
           {selectedJob && (
-            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3">
+            <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3">
               <div className="flex items-start gap-2">
                 <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-600" />
-                <div>
-                  <p className="text-sm font-semibold text-emerald-900">{selectedJob.title}</p>
-                  <p className="mt-1 text-xs leading-5 text-emerald-700">{selectedJob.company || "Selected posting"}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-emerald-900">{selectedJob.title}</p>
+                  <p className="mt-0.5 truncate text-xs text-emerald-700">{selectedJob.company || "Selected posting"}</p>
                   {selectedJob.url && (
-                    <a href={selectedJob.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex max-w-full items-center gap-1 text-xs font-semibold text-teal hover:underline">
+                    <a href={selectedJob.url} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex max-w-full items-center gap-1 text-xs font-semibold text-teal hover:underline">
                       <ExternalLink size={13} />
                       Open source posting
                     </a>
                   )}
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-emerald-200 pt-3">
-                <button type="button" onClick={() => onSaveJob(selectedJob)} className="inline-flex items-center gap-2 rounded-md bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal/90">
+              <div className="mt-2 flex flex-wrap gap-2 border-t border-emerald-200 pt-2">
+                <button type="button" onClick={() => onSaveJob(selectedJob)} className="inline-flex items-center gap-1.5 rounded-md bg-teal px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-teal/90">
                   <BookmarkPlus size={15} />
                   Add to tracker
                 </button>
-                <button type="button" onClick={onOpenTracker} className="inline-flex items-center gap-2 rounded-md border border-emerald-300 bg-white px-3 py-2 text-xs font-semibold text-teal hover:bg-emerald-100">
+                <button type="button" onClick={onOpenTracker} className="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-teal hover:bg-emerald-100">
                   <ListChecks size={15} />
                   Open tracker
                 </button>
@@ -320,9 +320,9 @@ export default function JobMatchScreen({
           )}
 
           {selectedJob?.description_is_partial && (
-            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
-              <p className="font-bold">This provider shared a shortened excerpt</p>
-              <p className="mt-1">The quick score is preliminary. Open the posting and paste the full description below before generating your final report.</p>
+            <div className="mt-2 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+              <AlertCircle size={14} className="mt-0.5 shrink-0" />
+              <p><span className="font-bold">Short excerpt.</span> Paste the full posting before the final report.</p>
             </div>
           )}
 
@@ -431,21 +431,18 @@ function MatchPreview({ preview }) {
   const priorityFixes = (preview.priority_fixes || []).slice(0, 3);
 
   return (
-    <section className="mt-4 overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+    <section className="mt-3 overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 bg-slate-50 p-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-teal">Quick resume comparison</p>
-            <p className="mt-1 text-xs leading-5 text-slate-600">A decision preview using requirement evidence, skills, ATS readiness, and semantic matches.</p>
-          </div>
-          <span className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-bold ${decisionBadgeClass(preview.summary.match_score)}`}>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-teal">Quick comparison</p>
+          <span className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-1 text-xs font-bold ${decisionBadgeClass(preview.summary.match_score)}`}>
             <Gauge size={13} />
             {guidance.shortLabel}
           </span>
         </div>
         {confidence && (
-          <div className={`mt-2 rounded border px-2 py-1.5 text-xs leading-5 ${confidenceClassName(confidence.level)}`}>
-            <span className="font-bold">{confidence.label}:</span> {confidence.detail}
+          <div className={`mt-2 rounded border px-2 py-1.5 text-xs ${confidenceClassName(confidence.level)}`}>
+            <span className="font-bold">{confidence.label}:</span> {shortConfidenceDetail(confidence)}
           </div>
         )}
       </div>
@@ -460,37 +457,39 @@ function MatchPreview({ preview }) {
           requirementGaps={(counts.missing || 0) + (counts.weak || 0)}
           partialRequirements={counts.partial || 0}
         />
-        <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Score breakdown</p>
+        <details className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-slate-500">Score breakdown</summary>
           <div className="mt-3 space-y-3">
             <ScoreMeter label="Requirement evidence" value={requirementScore} />
             <ScoreMeter label="Skill coverage" value={skillScore} />
             <ScoreMeter label="ATS preparation" value={atsScore} />
           </div>
-        </div>
-        <PriorityFixPreview fixes={priorityFixes} gaps={topGaps} />
-        <RequirementSnapshot counts={counts} topGaps={topGaps} topEvidence={topEvidence} />
-        <SkillSummary label="Matched skills" skills={matchedSkills} emptyText="No clear skill matches yet" tone="emerald" />
-        {semanticMatches.length > 0 && (
-          <div className="mt-3 space-y-2">
-            <p className="text-xs font-semibold text-slate-600">Semantic evidence</p>
-            {semanticMatches.map((match) => (
-              <article key={`${match.requirement}-${match.evidence}`} className="rounded-md border border-emerald-100 bg-emerald-50/50 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="rounded bg-white px-2 py-1 text-xs font-bold text-teal">{match.label}</span>
-                  <span className="text-xs font-bold text-slate-500">{match.score}%</span>
-                </div>
-                <p className="mt-2 text-xs font-semibold leading-5 text-slate-700">{match.requirement}</p>
-                {match.evidence && <p className="mt-1 text-xs leading-5 text-slate-600">{match.evidence}</p>}
-                {match.explanation && <p className="mt-1 text-xs leading-5 text-slate-500">{match.explanation}</p>}
-              </article>
-            ))}
-          </div>
-        )}
-        <SkillSummary label="Missing or weak skills" skills={missingSkills} priorities={missingPriorities} emptyText="No priority skill gaps detected in the extracted job text" tone="amber" />
+        </details>
+        <details className="mt-3 rounded-md border border-slate-200 bg-white p-3">
+          <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-slate-500">Evidence and gaps</summary>
+          <PriorityFixPreview fixes={priorityFixes} gaps={topGaps} />
+          <RequirementSnapshot counts={counts} topGaps={topGaps} topEvidence={topEvidence} />
+          <SkillSummary label="Matched skills" skills={matchedSkills} emptyText="No clear skill matches yet" tone="emerald" />
+          {semanticMatches.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs font-semibold text-slate-600">Semantic evidence</p>
+              {semanticMatches.map((match) => (
+                <article key={`${match.requirement}-${match.evidence}`} className="rounded-md border border-emerald-100 bg-emerald-50/50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="rounded bg-white px-2 py-1 text-xs font-bold text-teal">{match.label}</span>
+                    <span className="text-xs font-bold text-slate-500">{match.score}%</span>
+                  </div>
+                  <p className="mt-2 text-xs font-semibold leading-5 text-slate-700">{match.requirement}</p>
+                  {match.evidence && <p className="mt-1 text-xs leading-5 text-slate-600">{match.evidence}</p>}
+                  {match.explanation && <p className="mt-1 text-xs leading-5 text-slate-500">{match.explanation}</p>}
+                </article>
+              ))}
+            </div>
+          )}
+          <SkillSummary label="Missing or weak skills" skills={missingSkills} priorities={missingPriorities} emptyText="No priority skill gaps detected in the extracted job text" tone="amber" />
+        </details>
         <div className={`mt-3 rounded-md border px-3 py-2 ${guidance.className}`}>
           <p className="text-xs font-bold">{guidance.title}</p>
-          <p className="mt-1 text-xs leading-5">{guidance.detail}</p>
         </div>
       </div>
     </section>
@@ -705,12 +704,18 @@ function confidenceClassName(level) {
   return "border-amber-200 bg-amber-50 text-amber-900";
 }
 
+function shortConfidenceDetail(confidence) {
+  if (confidence.level === "high") return "Enough text for a useful preview.";
+  if (confidence.level === "medium") return "Full posting may change the score.";
+  return "Use the full posting before trusting the score.";
+}
+
 function ScoreSummary({ label, value, detail }) {
   return (
-    <div className="rounded-md border border-emerald-100 bg-white p-3">
+    <div className="rounded-md border border-emerald-100 bg-white p-2.5">
       <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-ink">{value}%</p>
-      <p className="mt-1 text-xs text-slate-500">{detail} · {value >= 75 ? "At target" : "Below 75% target"}</p>
+      <p className="mt-0.5 text-xl font-bold text-ink">{value}%</p>
+      <p className="mt-0.5 truncate text-xs text-slate-500">{detail}</p>
     </div>
   );
 }
