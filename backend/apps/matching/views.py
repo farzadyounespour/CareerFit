@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,7 +9,7 @@ from apps.resumes.models import Resume
 
 from .models import MatchReport
 from .serializers import AnalyzeMatchRequestSerializer, CoachMatchRequestSerializer, PreviewMatchRequestSerializer, ResumeDraftRequestSerializer
-from .llm_services import enrich_match_report, generate_tailored_resume
+from .llm_services import coaching_status, enrich_match_report, generate_tailored_resume
 from .services import analyze_resume_match
 from .throttles import LlmCoachingThrottle
 
@@ -26,11 +27,15 @@ class AnalyzeMatchView(APIView):
             job_description=serializer.validated_data["job_description"],
         )
         use_llm = serializer.validated_data["use_llm"]
-        if use_llm:
+        ai_coaching = None
+        if use_llm and settings.CAREERFIT_ENABLE_LLM:
             throttle = LlmCoachingThrottle()
             if not throttle.allow_request(request, self):
-                self.throttled(request, throttle.wait())
-        result["ai_coaching"] = enrich_match_report(
+                ai_coaching = coaching_status(
+                    "rate_limited",
+                    "AI report guidance is temporarily rate limited. The deterministic report is shown instead; retry AI guidance later.",
+                )
+        result["ai_coaching"] = ai_coaching or enrich_match_report(
             match_result=result,
             resume_text=serializer.validated_data["resume_text"],
             job_description=serializer.validated_data["job_description"],

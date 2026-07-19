@@ -152,3 +152,25 @@ class OptionalLlmCoachingTests(SimpleTestCase):
         self.assertEqual(request.full_url, "http://127.0.0.1:11434/api/chat")
         self.assertIn("Do not leave job_requirement empty", payload["messages"][1]["content"])
         self.assertIn("Do not leave resume_evidence empty", payload["messages"][1]["content"])
+
+    @override_settings(
+        CAREERFIT_ENABLE_LLM=True,
+        CAREERFIT_LLM_PROVIDER="ollama",
+        OLLAMA_BASE_URL="http://127.0.0.1:11434",
+        OLLAMA_HEALTH_TIMEOUT_SECONDS=0.5,
+    )
+    @patch("apps.matching.llm_services.urlopen", side_effect=OSError("connection refused"))
+    def test_ollama_down_returns_deterministic_fallback_status(self, mock_urlopen):
+        coaching = enrich_match_report(
+            self.result,
+            "Python SQL dashboard experience",
+            "Build Tableau dashboards with Python and SQL.",
+            requested=True,
+            authorized=True,
+        )
+
+        self.assertEqual(coaching["status"], "unavailable")
+        self.assertIn("deterministic report", coaching["detail"])
+        request = mock_urlopen.call_args.args[0]
+        self.assertEqual(request.full_url, "http://127.0.0.1:11434/api/tags")
+        self.assertEqual(mock_urlopen.call_args.kwargs["timeout"], 0.5)

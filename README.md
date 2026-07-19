@@ -70,6 +70,7 @@ Add these values to `backend/.env`:
 CAREERFIT_ENABLE_LLM=True
 CAREERFIT_LLM_PROVIDER=ollama
 OLLAMA_MODEL=gemma3:4b
+OLLAMA_HEALTH_TIMEOUT_SECONDS=2
 ```
 
 Ollama runs on the same computer as CareerFit, so this option does not require a paid API key. You can still use OpenAI instead:
@@ -83,7 +84,7 @@ OPENAI_RESUME_MAX_OUTPUT_TOKENS=3500
 
 ChatGPT Plus and the OpenAI API are separate products. A ChatGPT Plus subscription does not automatically give the Django backend API access; create an API key in the OpenAI platform dashboard and put it in `backend/.env`.
 
-AI report highlights and priority fixes are requested automatically for full reports when a provider is configured. The explainable CareerFit score, ATS checks, and deterministic recommendations still work when AI is disabled or the configured provider is unavailable.
+AI report highlights and priority fixes are requested automatically for full reports when a provider is configured. CareerFit checks the local Ollama service first, so Ollama guidance is shown when available and the explainable deterministic report appears quickly when Ollama is off, disabled, rate limited, or unavailable.
 
 To run the optional local semantic-similarity evaluation described below, or to add local embedding evidence to the report score, pull a dedicated embedding model:
 

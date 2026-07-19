@@ -380,7 +380,8 @@ function AiReportHighlights({ sections, provider, model }) {
 
 function EvidenceGapCard({ item }) {
   const hasGapDetails = item.jobSignal || item.resumeSignal || item.evidenceNeeded;
-  if (!hasGapDetails && !item.example && !item.checklist?.length && !item.why) return null;
+  const suggestedBullet = suggestedResumeBullet(item);
+  if (!hasGapDetails && !suggestedBullet && !item.checklist?.length && !item.why) return null;
 
   return (
     <div className="mt-3 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
@@ -432,10 +433,10 @@ function EvidenceGapCard({ item }) {
             {item.why}
           </p>
         )}
-        {item.example && (
+        {suggestedBullet && (
           <div className="rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2">
             <p className="text-xs font-bold uppercase tracking-wide text-teal">Suggested resume bullet</p>
-            <p className="mt-1 text-xs leading-5 text-slate-700">{item.example}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-700">{suggestedBullet}</p>
           </div>
         )}
         {item.truthfulnessNote && (
@@ -446,6 +447,14 @@ function EvidenceGapCard({ item }) {
         )}
       </div>
     </div>
+  );
+}
+
+function suggestedResumeBullet(item) {
+  return firstMeaningfulText(
+    item.example,
+    aiRecommendationBulletTemplate(item.jobSignal, item.evidenceNeeded, item.title),
+    requirementBulletExample(item.title || ""),
   );
 }
 
@@ -845,6 +854,11 @@ function enrichAiRecommendations(recommendations = [], requirements = {}) {
       fix.evidenceNeeded,
       requirementEvidenceNeeded(relatedRequirement?.text || jobRequirement || fix.title || "", relatedRequirement?.score >= 20 ? "weak" : "missing"),
     );
+    const bulletTemplate = firstMeaningfulText(
+      fix.bullet_template,
+      fix.example,
+      aiRecommendationBulletTemplate(jobRequirement, whatToAdd, fix.title),
+    );
 
     return {
       ...fix,
@@ -852,6 +866,7 @@ function enrichAiRecommendations(recommendations = [], requirements = {}) {
       resume_evidence: resumeEvidence,
       where_to_add: firstMeaningfulText(fix.where_to_add, fix.where, "Experience or Projects"),
       what_to_add: whatToAdd,
+      bullet_template: bulletTemplate,
       truthfulness_note: firstMeaningfulText(fix.truthfulness_note, fix.truthfulnessNote, "Use this only if it reflects work you actually did."),
     };
   });
@@ -936,21 +951,28 @@ function buildPriorityActions(skills, requirements, atsIssues, recommendations, 
 }
 
 function normalizePriorityFix(fix, source = fix.source) {
+  const jobSignal = fix.jobSignal || fix.job_requirement;
+  const evidenceNeeded = fix.evidenceNeeded || fix.what_to_add;
   return {
     title: fix.title,
     detail: fix.detail,
     priority: fix.priority || "medium",
     where: fix.where || fix.where_to_add,
-    evidenceNeeded: fix.evidenceNeeded || fix.what_to_add,
-    jobSignal: fix.jobSignal || fix.job_requirement,
+    evidenceNeeded,
+    jobSignal,
     resumeSignal: fix.resumeSignal || fix.resume_evidence,
     checklist: fix.checklist || [],
     why: fix.why,
-    example: fix.example || fix.bullet_template,
+    example: firstMeaningfulText(fix.example, fix.bullet_template, source === "ai" ? aiRecommendationBulletTemplate(jobSignal, evidenceNeeded, fix.title) : ""),
     truthfulnessNote: fix.truthfulnessNote || fix.truthfulness_note,
     status: fix.status,
     source,
   };
+}
+
+function aiRecommendationBulletTemplate(jobRequirement, whatToAdd, title) {
+  const sourceText = firstMeaningfulText(jobRequirement, whatToAdd, title);
+  return sourceText ? requirementBulletExample(sourceText) : "";
 }
 
 function flattenRequirementItems(requirements = {}) {
@@ -1143,6 +1165,9 @@ function skillBulletExample(skill) {
 function requirementBulletExample(requirement) {
   if (/test|quality|sdlc|software development lifecycle/i.test(requirement)) {
     return "Applied [testing methodology] during [SDLC phase/project], validating [feature/system] through [test type/tool] and improving [release quality, reliability, or defect detection].";
+  }
+  if (/aws|cloud|ecs|ec2|lambda|terraform|kubernetes|infrastructure|deploy|monitor/i.test(requirement)) {
+    return "Provisioned or improved [cloud service/infrastructure] for [project/system], using [AWS service/tool] to improve [reliability, deployment speed, monitoring, or cost].";
   }
   if (/api|backend|service|endpoint/i.test(requirement)) {
     return "Built [backend service/API endpoint] for [use case], integrating [system/tool] and improving [latency, reliability, automation, or user workflow].";

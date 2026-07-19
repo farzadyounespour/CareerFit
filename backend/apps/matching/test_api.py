@@ -43,7 +43,7 @@ class MatchPersistenceApiTests(APITestCase):
             {
                 "user_profile": {"target_role": "Data Analyst"},
                 "resume_text": "Python SQL dashboard experience",
-                "job_description": "Build dashboards with Python, SQL, and Tableau.",
+                "job_description": "Build dashboards with Python and SQL. Manage Kubernetes clusters and Terraform infrastructure.",
             },
             format="json",
         )
@@ -266,12 +266,23 @@ class MatchPersistenceApiTests(APITestCase):
         self.assertEqual(delete_response.status_code, 204)
         self.assertFalse(MatchReport.objects.filter(user=user).exists())
 
-    @override_settings(CAREERFIT_ENABLE_LLM=False, OPENAI_API_KEY="")
+    @override_settings(CAREERFIT_ENABLE_LLM=True, CAREERFIT_LLM_PROVIDER="openai", OPENAI_API_KEY="test-key", OPENAI_MODEL="test-model")
+    @patch("apps.matching.views.enrich_match_report")
     @patch("apps.matching.throttles.LlmCoachingThrottle.get_rate", return_value="1/hour")
-    def test_ai_coaching_has_dedicated_rate_limit(self, _mock_rate):
+    def test_full_analysis_keeps_report_when_automatic_ai_is_rate_limited(self, _mock_rate, mock_enrich):
         user = User.objects.create_user(username="limit@example.com", password="careerfit-pass")
         token = Token.objects.create(user=user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        mock_enrich.return_value = {
+            "status": "completed",
+            "provider": "openai",
+            "model": "test-model",
+            "headline": "AI guidance ready",
+            "summary": "AI guidance completed.",
+            "recommendations": [{"title": "Add dashboard proof", "detail": "Add a truthful result.", "priority": "high"}],
+            "report_sections": [],
+            "skill_insights": [],
+        }
         payload = {
             "resume_text": "Python SQL dashboard experience",
             "job_description": "Build dashboards with Python and SQL.",
@@ -280,6 +291,28 @@ class MatchPersistenceApiTests(APITestCase):
 
         first_response = self.client.post("/api/matches/analyze/", payload, format="json")
         second_response = self.client.post("/api/matches/analyze/", payload, format="json")
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(first_response.data["ai_coaching"]["status"], "completed")
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(second_response.data["ai_coaching"]["status"], "rate_limited")
+        self.assertIn("deterministic report", second_response.data["ai_coaching"]["detail"])
+        self.assertIn("report_id", second_response.data)
+        self.assertEqual(MatchReport.objects.filter(user=user).count(), 2)
+        mock_enrich.assert_called_once()
+
+    @patch("apps.matching.throttles.LlmCoachingThrottle.get_rate", return_value="1/hour")
+    def test_manual_ai_coaching_retry_still_has_dedicated_rate_limit(self, _mock_rate):
+        user = User.objects.create_user(username="retry-limit@example.com", password="careerfit-pass")
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        payload = {
+            "resume_text": "Python SQL dashboard experience",
+            "job_description": "Build dashboards with Python and SQL.",
+        }
+
+        first_response = self.client.post("/api/matches/coach/", payload, format="json")
+        second_response = self.client.post("/api/matches/coach/", payload, format="json")
 
         self.assertEqual(first_response.status_code, 200)
         self.assertEqual(second_response.status_code, 429)

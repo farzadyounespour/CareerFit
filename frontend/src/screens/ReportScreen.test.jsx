@@ -254,7 +254,7 @@ describe("ReportScreen", () => {
               resume_evidence: "",
               where_to_add: "Experience or Projects",
               what_to_add: "Detail the AWS services you used and the actions you took.",
-              bullet_template: "Implemented [AWS service name] for [project name], resulting in [quantifiable benefit].",
+              bullet_template: "",
               truthfulness_note: "Use only if this reflects your real experience.",
             }],
           },
@@ -268,6 +268,8 @@ describe("ReportScreen", () => {
     const prioritySection = within(document.getElementById("priority-improvements"));
     expect(prioritySection.getByText("AWS hands-on ownership - has provisioned, deployed, monitored, and debugged AWS infrastructure.")).toBeVisible();
     expect(prioritySection.getByText("Software Engineer: deployed Kafka on AWS ECS and monitored service health.")).toBeVisible();
+    expect(prioritySection.getAllByText("Suggested resume bullet")[0]).toBeVisible();
+    expect(prioritySection.getByText("Provisioned or improved [cloud service/infrastructure] for [project/system], using [AWS service/tool] to improve [reliability, deployment speed, monitoring, or cost].")).toBeVisible();
     expect(screen.queryByText("Specific improvements")).not.toBeInTheDocument();
   });
 
@@ -328,7 +330,6 @@ describe("ReportScreen", () => {
               where: "Projects",
               evidenceNeeded: "Mention REST API design or integration if truthful.",
               checklist: ["API or service", "Your action", "Result"],
-              example: "Built REST API endpoints for [feature], integrating [service] and improving [result].",
               truthfulnessNote: "Use this only if it reflects work you actually did.",
             },
           ],
@@ -344,6 +345,7 @@ describe("ReportScreen", () => {
     expect(screen.getAllByText("Experience with REST API development")[0]).toBeVisible();
     expect(screen.getAllByText("Built backend endpoints and integrated third-party services")[0]).toBeVisible();
     expect(screen.getByText("Mention REST API design or integration if truthful.")).toBeVisible();
+    expect(screen.getByText("Built [backend service/API endpoint] for [use case], integrating [system/tool] and improving [latency, reliability, automation, or user workflow].")).toBeVisible();
     expect(screen.getByText("Use this only if it reflects work you actually did.")).toBeVisible();
     expect(screen.queryByText("Add evidence for missing skills")).not.toBeInTheDocument();
   });

@@ -76,6 +76,8 @@ def enrich_match_report(match_result, resume_text, job_description, requested=Fa
 
     try:
         if settings.CAREERFIT_LLM_PROVIDER == "ollama":
+            if not _ollama_is_available():
+                return _status("unavailable", "Local Ollama is not running. The deterministic report is shown instead.")
             coaching = _request_ollama_coaching(match_result, resume_text, job_description)
             model = settings.OLLAMA_MODEL
         elif settings.CAREERFIT_LLM_PROVIDER == "openai":
@@ -103,6 +105,10 @@ def enrich_match_report(match_result, resume_text, job_description, requested=Fa
         if settings.CAREERFIT_LLM_PROVIDER == "ollama":
             return _status("unavailable", "Local Ollama is unavailable. Start Ollama and download the configured model, then try again. The deterministic report is complete.")
         return _status("unavailable", "AI coaching is temporarily unavailable. The deterministic report is complete.")
+
+
+def coaching_status(status, detail):
+    return _status(status, detail)
 
 
 def generate_tailored_resume(match_result, resume_text, job_description, requested=False, authorized=False):
@@ -218,6 +224,20 @@ def _request_ollama_coaching(match_result, resume_text, job_description):
     with urlopen(request, timeout=settings.OLLAMA_TIMEOUT_SECONDS) as response:
         payload = json.loads(response.read().decode("utf-8"))
     return LLMCoachingResult.model_validate_json(payload["message"]["content"])
+
+
+def _ollama_is_available():
+    request = Request(
+        f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/tags",
+        headers={"Content-Type": "application/json"},
+        method="GET",
+    )
+    try:
+        with urlopen(request, timeout=settings.OLLAMA_HEALTH_TIMEOUT_SECONDS):
+            return True
+    except Exception:
+        logger.info("Local Ollama health check failed")
+        return False
 
 
 def _request_ollama_resume_draft(match_result, resume_text, job_description):
@@ -363,7 +383,8 @@ def _build_prompt(match_result, resume_text, job_description):
         "Use status='supported' only when the resume clearly proves the skill, status='missing' when the job asks for it but the resume does not prove it, "
         "and status='related' when the resume has adjacent evidence but needs clearer wording. "
         "Return recommendation objects with job_requirement, resume_evidence, where_to_add, "
-        "what_to_add, bullet_template, and truthfulness_note. Do not leave job_requirement empty: "
+        "what_to_add, bullet_template, and truthfulness_note. The bullet_template must be a resume-ready bullet sentence with bracketed placeholders for unknown facts. "
+        "Do not leave bullet_template empty. Do not leave job_requirement empty: "
         "copy the exact job ask from CareerFit priority fixes or the job posting. Do not leave "
         "resume_evidence empty: copy the related resume proof when CareerFit found it, or write "
         "'No related resume evidence detected.' Keep every "
