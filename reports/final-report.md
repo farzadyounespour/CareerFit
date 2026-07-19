@@ -82,7 +82,7 @@ CareerFit was developed to:
 7. Categorize requirements as matched, partial, weak, or missing.
 8. Calculate explainable job-match and application-readiness scores.
 9. Evaluate ATS-oriented resume structure.
-10. Provide practical recommendations and optional AI coaching.
+10. Provide practical recommendations and AI-assisted priority coaching.
 11. Summarize recurring role skills across retrieved postings.
 12. Support reusable resume versions and tracked job applications.
 13. Compare lexical and semantic text-matching methods using controlled cases.
@@ -147,7 +147,7 @@ The evaluation module also supports semantic embeddings through Ollama. Ollama's
 | FR-07 | Compare a selected job immediately with the active resume | Implemented |
 | FR-08 | Generate a detailed readiness report | Implemented |
 | FR-09 | Show ATS preparation checks | Implemented |
-| FR-10 | Offer optional AI coaching with user consent | Implemented |
+| FR-10 | Automatically add configured AI coaching and report highlights to full reports | Implemented |
 | FR-11 | Add a job to the application tracker | Implemented |
 | FR-12 | Store application stages, notes, reminders, and drafts | Implemented |
 | FR-13 | Show recurring role skills across retrieved postings | Implemented |
@@ -179,7 +179,7 @@ The implementation was organized around a traceable workflow rather than isolate
 | Understand a score | Requirement categories, evidence mapping, ATS breakdown, and recommendations | Matching tests and report-screen tests |
 | Recover from incomplete provider text | Excerpt detection, Adzuna enrichment, warning, and manual paste path | Provider tests and manual case review |
 | Keep applications organized | Explicit add-to-tracker action, stages, tasks, dates, notes, and linked resume versions | Tracker API and UI tests |
-| Use AI only when desired | Opt-in local or cloud coaching separated from scoring | Coaching service tests |
+| Keep AI controllable | Default-enabled local or cloud coaching can be turned off and remains separated from scoring | Coaching service tests |
 
 ## 6. System Architecture and Design
 
@@ -238,7 +238,7 @@ Django Backend
 | `UserProfileScreen` | Candidate profile and target role |
 | `ResumeUploadScreen` | Resume workspace and ATS preparation preview |
 | `JobMatchScreen` | Search, filters, role insights, quick comparison, tracker actions |
-| `ReportScreen` | Detailed report, recommendations, draft template, interview preparation |
+| `ReportScreen` | Detailed report, AI highlights, recommendations, and interview preparation |
 | `DashboardScreen` | Progress metrics and alerts |
 | `HistoryScreen` | Application tracker and report history |
 
@@ -338,7 +338,7 @@ Users can explicitly add selected jobs to the tracker. Tracked records support:
 
 CareerFit uses AI-related functionality in two separated ways. First, the matching service can use a local embedding model as an additional semantic evidence signal when `CAREERFIT_ENABLE_EMBEDDINGS` and `OLLAMA_EMBEDDING_MODEL` are configured. This signal can affect requirement evidence scoring, but it is still combined with transparent BM25, TF-IDF, skill coverage, and concept evidence instead of replacing them.
 
-Second, AI coaching and resume drafts are opt-in generated-text features. Users can configure:
+Second, AI coaching is requested automatically for full-report priority fixes and report highlights when a provider is configured. Resume drafts remain explicitly requested generated-text features. Users can configure:
 
 - A local Ollama model for free local inference.
 - An OpenAI API key for cloud inference.
@@ -520,7 +520,7 @@ For each case, include:
 
 ## 11. User Interface and HCI Design
 
-CareerFit is designed around a visible, reversible workflow. Users can review and edit resume text, replace incorrect uploads, inspect job descriptions, see provider-excerpt warnings, and decide whether to request optional AI coaching.
+CareerFit is designed around a visible, reversible workflow. Users can review and edit resume text, replace incorrect uploads, inspect job descriptions, see provider-excerpt warnings, and retry AI guidance when a configured provider is unavailable.
 
 ### 11.1 Design Goals
 
@@ -530,7 +530,7 @@ CareerFit is designed around a visible, reversible workflow. Users can review an
 | Reduce repeated work | Profile autofill, reusable resume versions, saved search alerts, and tracker records |
 | Keep analysis understandable | Separate match, readiness, ATS preparation, evidence, and recommendation areas |
 | Support recovery | Editable text, clear resume action, replace upload, clear filters, and manual posting input |
-| Protect user choice | Explicit tracker save and opt-in AI coaching |
+| Protect user choice | Explicit tracker save, truthful AI guidance, and deterministic fallback |
 
 ### 11.2 Screen-by-Screen Design
 
@@ -540,7 +540,7 @@ CareerFit is designed around a visible, reversible workflow. Users can review an
 | Profile | Candidate preferences and contact information | Save profile | Validation and saved confirmation |
 | Resume | Upload, text editor, versions, ATS preview | Continue to jobs | Empty, uploading, parsed, invalid file, cleared |
 | Jobs | Import URL, search, filters, exclusions, related roles, freshness, comparison table, results, selected-job panel | Use this job | Loading, provider notice, excerpt warning, no resume, quick comparison |
-| Report | Scores, summary, evidence, ATS checks, improvements, template, interview preparation | Rescan after edits | Deterministic report, optional coaching loading and result |
+| Report | Scores, AI highlights, evidence, ATS checks, improvements, and interview preparation | Rescan after edits | Deterministic report, AI loading, AI result, and fallback |
 | Tracker | Application stages, details, tasks, drafts, dates, resume version | Save changes | Empty tracker, selected role, overdue follow-up |
 
 ### 11.3 Progressive Disclosure
@@ -551,9 +551,9 @@ The detailed report is intentionally layered:
 2. Highest-priority improvements.
 3. Requirement categories and resume evidence.
 4. ATS preparation checks.
-5. Resume-specific examples and template draft.
+5. Resume-specific examples.
 6. Interview preparation.
-7. Optional AI coaching.
+7. Automatic AI coaching when configured.
 
 This order helps users act on the report without reading every technical detail first.
 
@@ -641,7 +641,7 @@ Resume content is sensitive personal information. A real deployment should inclu
 
 ## 14. Conclusion
 
-CareerFit demonstrates that a resume-job matching tool can be both practical and explainable. The prototype combines editable resume ingestion, multi-provider job discovery, role insights, requirement-level scoring, ATS checks, recommendations, optional AI coaching, and application tracking. Its strongest technical finding is that the hybrid BM25/TF-IDF/semantic-concept matcher correctly ranks all five paraphrased evidence pairs in the controlled method comparison, while keyword overlap and TF-IDF each rank only two correctly.
+CareerFit demonstrates that a resume-job matching tool can be both practical and explainable. The prototype combines editable resume ingestion, multi-provider job discovery, role insights, requirement-level scoring, ATS checks, recommendations, AI-assisted priority coaching, and application tracking. Its strongest technical finding is that the hybrid BM25/TF-IDF/semantic-concept matcher correctly ranks all five paraphrased evidence pairs in the controlled method comparison, while keyword overlap and TF-IDF each rank only two correctly.
 
 The project does not treat a score as a hiring prediction. Instead, it uses transparent evidence to help users make better-informed application decisions and improve how their real experience is communicated.
 

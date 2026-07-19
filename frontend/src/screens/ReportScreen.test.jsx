@@ -66,8 +66,9 @@ const report = {
 
 
 describe("ReportScreen", () => {
-  it("leads with scores, priorities, and optional specific improvements", () => {
+  it("leads with scores, priorities, and AI retry controls", () => {
     const onRequestAiCoaching = vi.fn();
+    const onAddToTracker = vi.fn();
     render(
       <ReportScreen
         report={report}
@@ -75,6 +76,7 @@ describe("ReportScreen", () => {
         jobDescription="Job description text"
         onNavigate={() => {}}
         onRequestAiCoaching={onRequestAiCoaching}
+        onAddToTracker={onAddToTracker}
         history={[
           { id: 2, target_role: "Data Analyst", summary: { readiness_score: 56 } },
           { id: 1, target_role: "Data Analyst", summary: { readiness_score: 48 } },
@@ -97,26 +99,22 @@ describe("ReportScreen", () => {
     expect(screen.getByText("Readiness improvement history")).toBeVisible();
     expect(screen.getByText("65% of job match")).toBeVisible();
     expect(screen.getByText("optional")).toBeVisible();
-    expect(screen.getByText("Want more specific improvements?")).toBeVisible();
-    expect(screen.getByText("Resume draft workspace")).toBeVisible();
+    expect(screen.queryByText("Resume draft workspace")).not.toBeInTheDocument();
+    expect(screen.queryByText("Specific improvements")).not.toBeInTheDocument();
     expect(screen.getAllByText("Additional tools")[0]).toBeVisible();
     expect(screen.getByText("Open these only when you need the extra detail")).toBeVisible();
     expect(screen.getByRole("navigation", { name: "Report sections" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Update resume" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add to tracker" }));
+    expect(onAddToTracker).toHaveBeenCalledOnce();
 
-    fireEvent.click(screen.getByRole("button", { name: "Use AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry AI" }));
     expect(onRequestAiCoaching).toHaveBeenCalledOnce();
 
-    const resumeDraft = screen.getByRole("button", { name: "Resume draft" });
-    const scrollIntoView = vi.fn();
-    document.getElementById("resume-draft").scrollIntoView = scrollIntoView;
-    fireEvent.click(resumeDraft);
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    expect(screen.queryByRole("button", { name: "Resume draft" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Mark priority 1: Add evidence for missing skills complete"));
     expect(screen.getByText(/1 of \d+ complete/)).toBeVisible();
-
-    fireEvent.click(screen.getByRole("button", { name: "Get specific improvements" }));
-    expect(onRequestAiCoaching).toHaveBeenCalledTimes(2);
 
     expect(screen.getByText("Semantic match")).toBeVisible();
     expect(screen.getByText("Built backend endpoints and integrated third-party services")).toBeVisible();
@@ -166,7 +164,7 @@ describe("ReportScreen", () => {
     expect(screen.getByText(/release-quality result/)).toBeVisible();
   });
 
-  it("shows completed specific improvements when coaching is available", () => {
+  it("adds completed AI guidance to the priority checklist when coaching is available", () => {
     render(
       <ReportScreen
         report={{
@@ -186,6 +184,19 @@ describe("ReportScreen", () => {
               bullet_template: "Built [dashboard] for [audience], improving [decision or workflow].",
               truthfulness_note: "Use only if this reflects your real experience.",
             }],
+            report_sections: [{
+              title: "Dashboard gap",
+              summary: "The job asks for dashboard proof, and the resume needs a clearer example.",
+              evidence: "Python SQL dashboard experience",
+              next_step: "Add one truthful dashboard result.",
+            }],
+            skill_insights: [{
+              skill: "tableau",
+              status: "missing",
+              detail: "The job mentions Tableau, but the resume does not prove Tableau work.",
+              evidence: "No related resume evidence detected.",
+              next_step: "Add Tableau only if you have a real project.",
+            }],
           },
         }}
         resumeText="Resume text"
@@ -194,23 +205,18 @@ describe("ReportScreen", () => {
       />,
     );
 
-    expect(screen.getByText("Specific improvements")).toBeVisible();
+    expect(screen.queryByText("Specific improvements")).not.toBeInTheDocument();
     expect(within(document.getElementById("priority-improvements")).getByText("Add a Tableau bullet")).toBeVisible();
-    expect(screen.getAllByText("Add a Tableau bullet")).toHaveLength(2);
-    expect(screen.getByText("AI suggestions added")).toBeVisible();
-    expect(screen.getAllByText("AI suggested")[0]).toBeVisible();
-    expect(screen.getByText("Where to add")).toBeVisible();
+    expect(screen.getAllByText("Add a Tableau bullet")).toHaveLength(1);
+    expect(screen.getByText("AI report highlights")).toBeVisible();
+    expect(screen.getByText("Dashboard gap")).toBeVisible();
+    expect(screen.getByText("Add one truthful dashboard result.")).toBeVisible();
+    expect(screen.getByText("Ollama guidance ready")).toBeVisible();
+    expect(screen.queryByText("AI suggested")).not.toBeInTheDocument();
+    expect(screen.getByText("The job mentions Tableau, but the resume does not prove Tableau work.")).toBeVisible();
+    expect(screen.getAllByText("Best place")[0]).toBeVisible();
     expect(screen.getAllByText("Projects")[0]).toBeVisible();
     expect(screen.getAllByText("Built [dashboard] for [audience], improving [decision or workflow].")[0]).toBeVisible();
-
-    fireEvent.click(screen.getByTitle("Accept Add a Tableau bullet"));
-    expect(screen.getByText("Added to your tailoring checklist")).toBeVisible();
-    fireEvent.click(screen.getByTitle("Edit Add a Tableau bullet"));
-    fireEvent.change(screen.getByDisplayValue("Describe a real Tableau dashboard result."), { target: { value: "Add the measurable dashboard result." } });
-    expect(screen.getByDisplayValue("Add the measurable dashboard result.")).toBeVisible();
-    fireEvent.click(screen.getByTitle("Dismiss Add a Tableau bullet"));
-    expect(within(document.getElementById("specific-improvements")).queryByText("Add a Tableau bullet")).not.toBeInTheDocument();
-    expect(within(document.getElementById("priority-improvements")).getByText("Add a Tableau bullet")).toBeVisible();
   });
 
   it("backfills empty AI job and resume evidence fields from requirement analysis", () => {
@@ -262,7 +268,7 @@ describe("ReportScreen", () => {
     const prioritySection = within(document.getElementById("priority-improvements"));
     expect(prioritySection.getByText("AWS hands-on ownership - has provisioned, deployed, monitored, and debugged AWS infrastructure.")).toBeVisible();
     expect(prioritySection.getByText("Software Engineer: deployed Kafka on AWS ECS and monitored service health.")).toBeVisible();
-    expect(within(document.getElementById("specific-improvements")).getByText("AWS hands-on ownership - has provisioned, deployed, monitored, and debugged AWS infrastructure.")).toBeVisible();
+    expect(screen.queryByText("Specific improvements")).not.toBeInTheDocument();
   });
 
   it("does not turn hiring boilerplate into resume improvement actions", () => {
@@ -342,49 +348,4 @@ describe("ReportScreen", () => {
     expect(screen.queryByText("Add evidence for missing skills")).not.toBeInTheDocument();
   });
 
-  it("builds a professional resume tailoring workspace from the uploaded resume", () => {
-    const onUseResumeTemplate = vi.fn();
-    render(
-      <ReportScreen
-        report={report}
-        resumeText={`Student User
-student@example.com | +1 514 555 1212 | Montreal
-
-Summary
-Data analyst with reporting experience.
-
-Skills
-Python, SQL
-
-Experience
-- Built a dashboard for a student project.
-
-Education
-Example University`}
-        jobDescription="Job description text"
-        onNavigate={() => {}}
-        onUseResumeTemplate={onUseResumeTemplate}
-      />,
-    );
-
-    fireEvent.click(screen.getByText("Resume draft workspace"));
-    expect(screen.getByText("Resume tailoring workspace")).toBeVisible();
-    expect(screen.getByText("Create a tailored resume version")).toBeVisible();
-    expect(screen.getByText("Resume preview")).toBeVisible();
-    expect(screen.getByText("Truthfulness check")).toBeVisible();
-
-    const summaryEditor = screen.getByLabelText("Edit Professional summary");
-    expect(summaryEditor.value).toContain("Data analyst with reporting experience.");
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit Experience section" }));
-    const experienceEditor = screen.getByLabelText("Edit Experience");
-    expect(experienceEditor.value).toContain("- Built a dashboard for a student project.");
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit Education section" }));
-    const educationEditor = screen.getByLabelText("Edit Education");
-    expect(educationEditor.value).toContain("Example University");
-
-    fireEvent.click(screen.getByRole("button", { name: "Use this resume version" }));
-    expect(onUseResumeTemplate).toHaveBeenCalledWith(expect.stringContaining("EDUCATION\nExample University"));
-  });
 });

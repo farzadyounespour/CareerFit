@@ -58,7 +58,7 @@ If live providers are unavailable, CareerFit still works locally by returning sa
 
 If an Adzuna key has been shared publicly, revoke it in the Adzuna dashboard, create a new key, and update `backend/.env`.
 
-To enable free optional AI resume coaching locally, install [Ollama](https://ollama.com/download), download a model, and enable the feature:
+To enable free AI report coaching locally, install [Ollama](https://ollama.com/download), download a model, and enable the feature:
 
 ```bash
 ollama pull gemma3:4b
@@ -83,7 +83,7 @@ OPENAI_RESUME_MAX_OUTPUT_TOKENS=3500
 
 ChatGPT Plus and the OpenAI API are separate products. A ChatGPT Plus subscription does not automatically give the Django backend API access; create an API key in the OpenAI platform dashboard and put it in `backend/.env`.
 
-AI coaching and AI resume drafts are opt-in for each scan. The explainable CareerFit score, ATS checks, and deterministic recommendations still work when AI is disabled or the configured provider is unavailable.
+AI report highlights and priority fixes are requested automatically for full reports when a provider is configured. The explainable CareerFit score, ATS checks, and deterministic recommendations still work when AI is disabled or the configured provider is unavailable.
 
 To run the optional local semantic-similarity evaluation described below, or to add local embedding evidence to the report score, pull a dedicated embedding model:
 
@@ -156,7 +156,7 @@ VITE_API_BASE_URL=/api
 - Explainable weighted requirement matching, best-segment BM25/TF-IDF evidence, skill coverage, optional local embedding evidence, missing-skill analysis, and recommendations.
 - Role-specific interview questions, STAR answer prompts, and a progress dashboard.
 - Persistent light and dark appearance modes across the public site and private workspace.
-- Optional local Ollama or OpenAI-powered coaching with explicit user consent and deterministic fallback.
+- Local Ollama or OpenAI-powered report highlights and priority coaching with deterministic fallback.
 - Expiring sessions, email verification, password reset, account deletion, and saved-data cleanup.
 
 ## Evaluation
@@ -227,11 +227,11 @@ CareerFit combines available Adzuna, Remotive, Arbeitnow, and optional Jooble re
   },
   "resume_text": "Python, SQL, dashboards, projects...",
   "job_description": "We need Python, SQL, Tableau, communication...",
-  "use_llm": false
+  "use_llm": true
 }
 ```
 
-The response includes score summaries, an explainable score breakdown, matched and missing skills, weighted requirement-level evidence, best-segment BM25/TF-IDF/concept evidence signals, optional embedding evidence when configured, and the optional AI coaching status.
+The response includes score summaries, an explainable score breakdown, matched and missing skills, weighted requirement-level evidence, best-segment BM25/TF-IDF/concept evidence signals, optional embedding evidence when configured, and automatic AI coaching status.
 
 ### Preview Match
 
@@ -243,7 +243,7 @@ Returns the deterministic score summary and skill gaps for the current resume an
 
 `POST /api/matches/coach/`
 
-Returns optional AI coaching for the current resume and selected job without saving a duplicate report. The endpoint uses the configured Ollama or OpenAI provider and applies the dedicated coaching rate limit.
+Returns AI coaching for the current resume and selected job without saving a duplicate report. The endpoint uses the configured Ollama or OpenAI provider and applies the dedicated coaching rate limit.
 
 `POST /api/matches/resume-draft/`
 

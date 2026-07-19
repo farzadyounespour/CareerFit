@@ -11,8 +11,8 @@
 7. Backend extracts requirement-style phrases and skills from the job description.
 8. Backend compares each requirement with resume evidence using BM25 ranking, TF-IDF cosine similarity, semantic concept groups, skill coverage, and optional local embedding evidence.
 9. Backend checks ATS-oriented resume structure and contact information.
-10. With explicit user consent, the backend may request structured coaching suggestions from local Ollama or OpenAI.
-11. Frontend displays an explainable report, ATS preparation checks, and interview prompts.
+10. For full reports, the backend automatically requests structured AI highlights and coaching from local Ollama or OpenAI when configured.
+11. Frontend displays an explainable report, AI highlights when available, ATS preparation checks, and interview prompts.
 12. Signed-in users save resume versions, search alerts, and application-tracker details.
 
 ## Main Frontend Screens
@@ -21,7 +21,7 @@
 - `DashboardScreen`: pipeline metrics, upcoming follow-ups, interviews, and saved search alerts.
 - `ResumeUploadScreen`: pasted resume text and file upload controls.
 - `JobMatchScreen`: multi-provider job search, filters, related roles, freshness badges, side-by-side comparison, job selection, pasted job description, and sample job loading.
-- `ReportScreen`: score, requirement categories, missing skills, and recommendations.
+- `ReportScreen`: score, AI highlights, requirement categories, missing skills, and recommendations.
 - `HistoryScreen`: application tracker board and prior readiness reports.
 
 ## Main Backend Areas
@@ -29,7 +29,7 @@
 - `accounts`: token-based registration, login, logout, and user profile API.
 - `resumes`: resume text, PDF/DOCX/TXT parsing, upload API, and reusable resume versions.
 - `jobs`: job description domain, multi-provider search aggregation, search alerts, and application-tracker details.
-- `matching`: explainable matching service, semantic evidence scoring, optional structured LLM coaching, and API endpoint.
+- `matching`: explainable matching service, semantic evidence scoring, structured LLM coaching, and API endpoint.
 
 ## Deployment
 

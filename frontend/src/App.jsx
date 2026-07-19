@@ -119,7 +119,6 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [resumeVersions, setResumeVersions] = useState([]);
   const [searchAlerts, setSearchAlerts] = useState([]);
-  const [useAiCoaching, setUseAiCoaching] = useState(false);
   const [authLinkParams, setAuthLinkParams] = useState({});
   const [accountNotice, setAccountNotice] = useState("");
 
@@ -234,7 +233,7 @@ export default function App() {
         job_location: selectedJob?.location || "",
         job_source: selectedJob?.source || "",
         job_url: selectedJob?.url || "",
-        use_llm: useAiCoaching,
+        use_llm: true,
       });
       setReport(result);
       setHistory((currentHistory) => [
@@ -322,15 +321,6 @@ export default function App() {
     setResumeText(text);
     appliedResumeSearchDefaults.current = "";
     resumeSearchSourceName.current = "";
-  }
-
-  function handleUseResumeTemplate(text) {
-    setResumeText(text);
-    setUploadedResumeId(null);
-    appliedResumeSearchDefaults.current = "";
-    resumeSearchSourceName.current = "";
-    setResumeUploadStatus("Loaded your ATS-friendly draft. Review every placeholder, then save it as a new resume version.");
-    setActiveScreen("resume");
   }
 
   function handleDismissResumeError() {
@@ -500,11 +490,24 @@ export default function App() {
   async function handleSaveJob(job) {
     if (!isSignedIn) {
       setAuthMode("login");
-      return;
+      return null;
     }
     const result = await saveJob(job);
     setSavedJobs((currentJobs) => [result.job, ...currentJobs.filter((item) => item.id !== result.job.id)]);
     setJobSearchNotice("Added to your tracker. Open the tracker to manage application progress.");
+    return result.job;
+  }
+
+  async function handleAddSelectedJobToTracker() {
+    if (!selectedJob) {
+      await handleLoadHistory();
+      return;
+    }
+
+    const savedJob = await handleSaveJob(selectedJob);
+    if (savedJob) {
+      await loadSavedWorkspace("history");
+    }
   }
 
   async function handleImportJobUrl(url) {
@@ -746,8 +749,6 @@ export default function App() {
           onAnalyze={handleAnalyze}
           isLoading={isLoading}
           error={error}
-          useAiCoaching={useAiCoaching}
-          onAiCoachingChange={setUseAiCoaching}
         />
       );
     }
@@ -761,6 +762,7 @@ export default function App() {
             setReport(selectedReport.result);
             setResumeText(selectedReport.resume_text);
             setJobDescription(selectedReport.job_description);
+            setSelectedJob(null);
             setUploadedResumeId(null);
             setActiveScreen("report");
           }}
@@ -787,7 +789,8 @@ export default function App() {
         isLoadingAiCoaching={isLoadingAiCoaching}
         aiCoachingError={aiCoachingError}
         history={history}
-        onUseResumeTemplate={handleUseResumeTemplate}
+        onAddToTracker={handleAddSelectedJobToTracker}
+        canAddToTracker={Boolean(selectedJob)}
       />
     );
   }

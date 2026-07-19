@@ -55,8 +55,6 @@ export default function JobMatchScreen({
   onAnalyze,
   isLoading,
   error,
-  useAiCoaching,
-  onAiCoachingChange,
 }) {
   const [jobUrl, setJobUrl] = useState("");
   const [isImportingUrl, setIsImportingUrl] = useState(false);
@@ -367,20 +365,9 @@ export default function JobMatchScreen({
 
           {error && <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
-          <details className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-700">Full report options</summary>
-            <label className="mt-3 flex items-start gap-3 border-t border-slate-200 pt-3">
-              <input type="checkbox" checked={useAiCoaching} onChange={(event) => onAiCoachingChange(event.target.checked)} className="mt-1 h-4 w-4 accent-teal" />
-              <span>
-                <span className="block text-sm font-semibold text-slate-700">Add optional AI coaching</span>
-                <span className="mt-1 block text-xs leading-5 text-slate-500">Uses your configured AI coach for tailored suggestions.</span>
-              </span>
-            </label>
-          </details>
-
           <button type="button" onClick={onAnalyze} disabled={isLoading || !hasJobDescription} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-300">
             <Sparkles size={16} />
-            {isLoading ? "Analyzing..." : "Generate full readiness report"}
+            {isLoading ? "Analyzing with AI..." : "Generate AI readiness report"}
           </button>
         </aside>
       </div>
@@ -414,16 +401,18 @@ function WorkflowSteps() {
 }
 
 function MatchPreview({ preview }) {
+  const matchScore = safeScore(preview.summary.match_score);
+  const readinessScore = safeScore(preview.summary.readiness_score);
   const matchedSkills = preview.skills.matched.slice(0, 5);
   const missingSkills = preview.skills.missing.slice(0, 5);
   const missingPriorities = new Map((preview.skills.missing_details || []).map((item) => [item.name, item.priority]));
   const semanticMatches = (preview.semantic_matches || []).slice(0, 2);
-  const guidance = getMatchGuidance(preview.summary.match_score);
+  const guidance = getMatchGuidance(matchScore);
   const confidence = preview.summary.confidence;
   const breakdown = preview.summary.score_breakdown || {};
-  const requirementScore = breakdown.requirement_evidence?.score ?? preview.summary.match_score;
-  const skillScore = breakdown.skill_coverage?.score ?? preview.summary.match_score;
-  const atsScore = breakdown.ats_preparation?.score ?? preview.summary.readiness_score;
+  const requirementScore = breakdown.requirement_evidence?.score ?? matchScore;
+  const skillScore = breakdown.skill_coverage?.score ?? matchScore;
+  const atsScore = breakdown.ats_preparation?.score ?? readinessScore;
   const requirementsSummary = preview.requirements_summary || {};
   const counts = requirementsSummary.counts || {};
   const topGaps = requirementsSummary.top_gaps || [];
@@ -435,9 +424,9 @@ function MatchPreview({ preview }) {
       <div className="border-b border-slate-200 bg-slate-50 p-3">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-bold uppercase tracking-wide text-teal">Quick comparison</p>
-          <span className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-1 text-xs font-bold ${decisionBadgeClass(preview.summary.match_score)}`}>
+          <span className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-1 text-xs font-bold ${decisionBadgeClass(matchScore)}`}>
             <Gauge size={13} />
-            {guidance.shortLabel}
+            {matchScore}% match · {guidance.shortLabel}
           </span>
         </div>
         {confidence && (
@@ -448,8 +437,8 @@ function MatchPreview({ preview }) {
       </div>
       <div className="p-3">
         <div className="grid grid-cols-2 gap-2">
-          <ScoreSummary label="Job match" value={preview.summary.match_score} detail="Content fit" />
-          <ScoreSummary label="Readiness" value={preview.summary.readiness_score} detail="Match + ATS" />
+          <ScoreSummary label="Job match" value={matchScore} detail="Content fit" />
+          <ScoreSummary label="Readiness" value={readinessScore} detail="Match + ATS" />
         </div>
         <DecisionSignals
           confidence={confidence}
@@ -718,6 +707,11 @@ function ScoreSummary({ label, value, detail }) {
       <p className="mt-0.5 truncate text-xs text-slate-500">{detail}</p>
     </div>
   );
+}
+
+function safeScore(value) {
+  const score = Number(value);
+  return Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0;
 }
 
 function ScoreMeter({ label, value }) {

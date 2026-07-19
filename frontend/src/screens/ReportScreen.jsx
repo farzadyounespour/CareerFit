@@ -1,21 +1,17 @@
 import {
   AlertCircle,
   ArrowRight,
+  BookmarkPlus,
   Calculator,
   CheckCircle2,
   ChevronDown,
-  Copy,
-  Download,
   FileText,
   ListChecks,
   MessagesSquare,
-  Pencil,
-  PenLine,
   Printer,
   RotateCcw,
   Sparkles,
   Target,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -42,7 +38,8 @@ export default function ReportScreen({
   isLoadingAiCoaching = false,
   aiCoachingError = "",
   history = [],
-  onUseResumeTemplate = () => {},
+  onAddToTracker = () => {},
+  canAddToTracker = true,
 }) {
   const [activeDocument, setActiveDocument] = useState("resume");
   const [completedActions, setCompletedActions] = useState(new Set());
@@ -73,6 +70,8 @@ export default function ReportScreen({
   const hasSemanticMatches = Object.values(requirements).some((items) => items.some((item) => item.match_label));
   const aiCompleted = aiCoaching?.status === "completed";
   const aiRecommendations = aiCompleted ? enrichAiRecommendations(aiCoaching.recommendations || [], requirements) : [];
+  const aiReportSections = aiCompleted ? normalizedReportSections(aiCoaching.report_sections || []) : [];
+  const aiSkillInsights = aiCompleted ? normalizedSkillInsights(aiCoaching.skill_insights || []) : [];
   const priorityActions = buildPriorityActions(skills, requirements, atsIssues, recommendations, priorityFixes, aiRecommendations);
   const completedActionCount = priorityActions.filter((item) => completedActions.has(actionKey(item))).length;
   const scoreBreakdown = summary.score_breakdown || {
@@ -133,6 +132,14 @@ export default function ReportScreen({
             <ScoreHistory history={history} targetRole={summary.target_role} />
           </section>
 
+          {aiReportSections.length > 0 && (
+            <AiReportHighlights
+              sections={aiReportSections}
+              provider={aiCoaching.provider}
+              model={aiCoaching.model}
+            />
+          )}
+
           <section id="priority-improvements" className="scroll-mt-24 rounded-md border border-slate-200 bg-white shadow-panel">
             <div className="border-b border-slate-200 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -144,7 +151,7 @@ export default function ReportScreen({
                   {aiCompleted ? (
                     <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-teal">
                       <Sparkles size={13} />
-                      AI suggestions added
+                      Ollama guidance ready
                     </span>
                   ) : (
                     <button
@@ -154,7 +161,7 @@ export default function ReportScreen({
                       className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-teal hover:border-teal disabled:cursor-wait disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500"
                     >
                       <Sparkles size={14} />
-                      {isLoadingAiCoaching ? "Generating..." : "Use AI"}
+                      {isLoadingAiCoaching ? "Generating..." : "Retry AI"}
                     </button>
                   )}
                   <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-teal">
@@ -188,12 +195,6 @@ export default function ReportScreen({
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold text-ink">{item.title}</p>
                       <ImpactBadge priority={item.priority} />
-                      {item.source === "ai" && (
-                        <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal">
-                          <Sparkles size={11} />
-                          AI suggested
-                        </span>
-                      )}
                     </div>
                     <p className="mt-1 text-sm leading-6 text-slate-600">{item.detail}</p>
                     <EvidenceGapCard item={item} />
@@ -209,41 +210,23 @@ export default function ReportScreen({
               <p className="mt-1 text-sm text-slate-600">Add missing skills only when your real experience supports them.</p>
             </div>
             <div className="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">
-              <SkillBlock title="Supported in your resume" skills={skills.matched} tone="matched" empty="No explicit skill matches found yet." />
-              <SkillBlock title="Missing from your resume" skills={skills.missing} details={skills.missing_details} tone="missing" empty="No important skill gaps detected." />
+              <SkillBlock
+                title="Supported in your resume"
+                skills={skills.matched}
+                insights={skillInsightsFor(aiSkillInsights, skills.matched, ["supported", "related"])}
+                tone="matched"
+                empty="No explicit skill matches found yet."
+              />
+              <SkillBlock
+                title="Missing from your resume"
+                skills={skills.missing}
+                details={skills.missing_details}
+                insights={skillInsightsFor(aiSkillInsights, skills.missing, ["missing", "related"])}
+                tone="missing"
+                empty="No important skill gaps detected."
+              />
             </div>
           </section>
-
-          {aiCompleted ? (
-            <SpecificImprovements coaching={{ ...aiCoaching, recommendations: aiRecommendations }} />
-          ) : (
-            <section id="specific-improvements" className="scroll-mt-24 rounded-md border border-emerald-200 bg-emerald-50 p-5">
-              <div className="flex items-start gap-3">
-                <Sparkles className="mt-0.5 shrink-0 text-teal" size={20} />
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-ink">Want more specific improvements?</h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-700">
-                    Ask the optional AI coach for tailored resume changes based on this resume and job posting. It will not invent experience or create another saved report.
-                  </p>
-                  {aiCoaching?.detail && aiCoaching.status !== "skipped" && (
-                    <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{aiCoaching.detail}</p>
-                  )}
-                  {aiCoachingError && (
-                    <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{aiCoachingError}</p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={onRequestAiCoaching}
-                    disabled={isLoadingAiCoaching}
-                    className="mt-4 inline-flex items-center gap-2 rounded-md bg-teal px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal/90 disabled:cursor-wait disabled:bg-slate-400"
-                  >
-                    <Sparkles size={16} />
-                    {isLoadingAiCoaching ? "Generating improvements..." : "Get specific improvements"}
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
 
           <ReportDisclosure
             id="ats-checks"
@@ -270,14 +253,6 @@ export default function ReportScreen({
           >
             <RequirementDetails requirements={requirements} />
           </ReportDisclosure>
-
-          <TailoredResumeTemplate
-            key={`${summary.target_role}-${resumeText}`}
-            resumeText={resumeText}
-            summary={summary}
-            skills={skills}
-            onUseTemplate={onUseResumeTemplate}
-          />
 
           <section id="additional-tools" className="scroll-mt-24 space-y-3">
             <div className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
@@ -331,19 +306,20 @@ export default function ReportScreen({
           </button>
           <button
             type="button"
-            onClick={() => onNavigate("resume")}
-            className="mt-3 w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal"
+            onClick={onAddToTracker}
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal"
           >
-            Update resume
+            {canAddToTracker ? <BookmarkPlus size={16} /> : <ListChecks size={16} />}
+            {canAddToTracker ? "Add to tracker" : "Open tracker"}
           </button>
           <nav aria-label="Report sections" className="mt-6 border-t border-slate-100 pt-5">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Jump to section</p>
             <div className="mt-2 space-y-1">
+              {aiReportSections.length > 0 && <ReportJumpLink target="ai-highlights">AI highlights</ReportJumpLink>}
               <ReportJumpLink target="priority-improvements">Priority fixes</ReportJumpLink>
               <ReportJumpLink target="skill-review">Skills</ReportJumpLink>
               <ReportJumpLink target="ats-checks">ATS checks</ReportJumpLink>
               <ReportJumpLink target="requirement-evidence">Requirement evidence</ReportJumpLink>
-              <ReportJumpLink target="resume-draft">Resume draft</ReportJumpLink>
               <ReportJumpLink target="additional-tools">Additional tools</ReportJumpLink>
             </div>
           </nav>
@@ -359,139 +335,46 @@ export default function ReportScreen({
   );
 }
 
-function TailoredResumeTemplate({ resumeText, summary, skills, onUseTemplate }) {
-  const [sections, setSections] = useState(() => buildResumeWorkspaceSections(resumeText, summary, skills));
-  const [activeSectionId, setActiveSectionId] = useState("summary");
-  const [copied, setCopied] = useState(false);
-  const activeSection = sections.find((section) => section.id === activeSectionId) || sections[0];
-  const draft = serializeResumeSections(sections);
-  const placeholderCount = (draft.match(/\[[^\]]+\]/g) || []).length;
-  const completedRequiredSections = sections.filter((section) => section.required && section.content.trim() && !section.content.includes("[")).length;
-  const requiredSectionCount = sections.filter((section) => section.required).length;
-
-  async function copyDraft() {
-    await navigator.clipboard?.writeText(draft);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
-  }
-
-  function downloadDraft() {
-    const url = URL.createObjectURL(new Blob([draft], { type: "text/plain;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "careerfit-ats-resume-draft.txt";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  function updateSection(sectionId, content) {
-    setSections((currentSections) => currentSections.map((section) => section.id === sectionId ? { ...section, content } : section));
-  }
-
+function AiReportHighlights({ sections, provider, model }) {
   return (
-    <details id="resume-draft" className="group scroll-mt-24 rounded-md border border-slate-200 bg-white shadow-panel">
-      <summary className="flex cursor-pointer list-none items-center gap-3 p-5">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-emerald-50 text-teal">
-          <PenLine size={18} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-ink">Resume draft workspace</span>
-          <span className="mt-1 block text-sm leading-5 text-slate-500">
-            Create a tailored plain-text resume only after you review the priority fixes.
-          </span>
-        </span>
-        <span className="hidden rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600 sm:block">
-          {placeholderCount ? `${placeholderCount} placeholders` : "Ready to review"}
-        </span>
-        <ChevronDown className="shrink-0 text-slate-400 transition group-open:rotate-180" size={18} />
-      </summary>
-      <div className="border-t border-slate-200 bg-slate-50 p-5">
+    <section id="ai-highlights" className="scroll-mt-24 rounded-md border border-emerald-200 bg-white shadow-panel">
+      <div className="border-b border-emerald-200 bg-emerald-50 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-teal">Resume tailoring workspace</p>
-            <h3 className="mt-1 text-lg font-semibold text-ink">Create a tailored resume version</h3>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              Review each section, keep only truthful details, and replace bracketed placeholders before using the resume.
-            </p>
-          </div>
-          <span className="rounded bg-white px-2 py-1 text-xs font-bold text-teal">Review required</span>
-        </div>
-      </div>
-      <div className="grid divide-y divide-slate-100 xl:grid-cols-[220px_minmax(0,1fr)_360px] xl:divide-x xl:divide-y-0">
-        <aside className="p-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Sections</p>
-          <div className="mt-3 space-y-1">
-            {sections.map((section) => (
-              <button
-                key={section.id}
-                type="button"
-                aria-label={`Edit ${section.label} section`}
-                onClick={() => setActiveSectionId(section.id)}
-                className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold ${activeSectionId === section.id ? "bg-emerald-50 text-teal" : "text-slate-600 hover:bg-slate-50 hover:text-teal"}`}
-              >
-                {section.label}
-                {section.required && <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Required</span>}
-              </button>
-            ))}
-          </div>
-          <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Readiness</p>
-            <p className="mt-2 text-sm font-semibold text-ink">{completedRequiredSections} of {requiredSectionCount} core sections reviewed</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">{placeholderCount ? `${placeholderCount} placeholder${placeholderCount === 1 ? "" : "s"} still need truthful detail.` : "No bracketed placeholders remain."}</p>
-          </div>
-        </aside>
-
-        <div className="p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-0.5 shrink-0 text-teal" size={20} />
             <div>
-              <p className="text-sm font-semibold text-ink">{activeSection.label}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">{activeSection.helper}</p>
+              <h3 className="text-lg font-semibold text-ink">AI report highlights</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Tailored guidance from {provider || "AI"}{model ? ` (${model})` : ""}, grounded in the resume, job posting, and CareerFit evidence.
+              </p>
             </div>
-            <span className="rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">Section editor</span>
           </div>
-          <textarea
-            aria-label={`Edit ${activeSection.label}`}
-            value={activeSection.content}
-            onChange={(event) => updateSection(activeSection.id, event.target.value)}
-            className="mt-4 min-h-[360px] w-full resize-y rounded-md border border-slate-300 bg-white px-4 py-4 font-mono text-sm leading-6 text-slate-700 focus:border-teal focus:outline-none"
-          />
-          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-amber-900">Truthfulness check</p>
-            <p className="mt-1 text-xs leading-5 text-amber-900">
-              Remove any line you cannot support in an interview. Add job keywords only when your real work or projects prove them.
-            </p>
-          </div>
-        </div>
-
-        <aside className="p-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-ink">Resume preview</p>
-            <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-teal">ATS plain text</span>
-          </div>
-          <div className="mt-4 max-h-[620px] overflow-auto rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <ResumePreview sections={sections} />
-          </div>
-        </aside>
-      </div>
-      <div className="border-t border-slate-100 p-5">
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={copyDraft} className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal">
-            <Copy size={16} />
-            {copied ? "Copied resume" : "Copy resume"}
-          </button>
-          <button type="button" onClick={downloadDraft} className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal hover:text-teal">
-            <Download size={16} />
-            Download TXT
-          </button>
-          <button type="button" onClick={() => onUseTemplate(draft)} className="inline-flex items-center gap-2 rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal/90">
-            Use this resume version
-            <ArrowRight size={16} />
-          </button>
+          <span className="rounded bg-white px-2 py-1 text-xs font-bold text-teal">
+            {provider === "ollama" ? "Ollama enriched" : "AI enriched"}
+          </span>
         </div>
       </div>
-    </details>
+      <div className="grid divide-y divide-slate-100 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+        {sections.map((section) => (
+          <article key={`${section.title}-${section.summary}`} className="p-5">
+            <p className="text-sm font-semibold text-ink">{section.title}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{section.summary}</p>
+            {section.evidence && (
+              <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+                <span className="font-semibold text-slate-700">Evidence: </span>
+                {section.evidence}
+              </p>
+            )}
+            {section.next_step && (
+              <p className="mt-2 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-5 text-slate-700">
+                <span className="font-semibold text-teal">Next step: </span>
+                {section.next_step}
+              </p>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -585,30 +468,6 @@ function EvidenceGapColumn({ label, value, empty, tone }) {
   );
 }
 
-function ResumePreview({ sections }) {
-  const header = sections.find((section) => section.id === "header");
-  const bodySections = sections.filter((section) => section.id !== "header" && section.content.trim());
-  const headerLines = (header?.content || "").split(/\r?\n/).filter(Boolean);
-  return (
-    <div className="text-sm leading-6 text-slate-700">
-      <div className="border-b border-slate-200 pb-3 text-center">
-        <p className="text-lg font-bold uppercase tracking-wide text-ink">{headerLines[0] || "[Your name]"}</p>
-        {headerLines.slice(1).map((line) => (
-          <p key={line} className="text-xs text-slate-500">{line}</p>
-        ))}
-      </div>
-      <div className="mt-4 space-y-4">
-        {bodySections.map((section) => (
-          <section key={section.id}>
-            <p className="border-b border-slate-200 pb-1 text-xs font-bold uppercase tracking-wide text-teal">{section.outputLabel}</p>
-            <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-700">{section.content}</div>
-          </section>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function actionKey(item) {
   return `${item.title}-${item.detail}`;
 }
@@ -686,9 +545,10 @@ function ScoreDial({ value }) {
   );
 }
 
-function SkillBlock({ title, skills, details = [], tone, empty }) {
+function SkillBlock({ title, skills, details = [], insights = [], tone, empty }) {
   const className = tone === "matched" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800";
   const priorities = new Map(details.map((item) => [item.name, item.priority]));
+  const visibleInsights = insights.slice(0, 4);
   return (
     <div className="p-5">
       <p className="text-sm font-semibold text-slate-700">{title}</p>
@@ -700,91 +560,30 @@ function SkillBlock({ title, skills, details = [], tone, empty }) {
           </span>
         )) : <span className="text-sm text-slate-500">{empty}</span>}
       </div>
-    </div>
-  );
-}
-
-function SpecificImprovements({ coaching }) {
-  const [suggestions, setSuggestions] = useState(() => coaching.recommendations.map((item, index) => ({ ...item, id: `${index}-${item.title}`, status: "open" })));
-  const [editingId, setEditingId] = useState(null);
-
-  function updateSuggestion(id, values) {
-    setSuggestions((current) => current.map((item) => item.id === id ? { ...item, ...values } : item));
-  }
-
-  return (
-    <section id="specific-improvements" className="scroll-mt-24 rounded-md border border-emerald-200 bg-white shadow-panel">
-      <div className="border-b border-emerald-200 bg-emerald-50 p-5">
-        <div className="flex items-start gap-3">
-          <Sparkles className="mt-0.5 shrink-0 text-teal" size={20} />
-          <div>
-            <h3 className="text-lg font-semibold text-ink">Specific improvements</h3>
-            <p className="mt-1 text-sm font-medium text-slate-700">{coaching.headline}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{coaching.summary}</p>
-          </div>
-        </div>
-      </div>
-      <div className="divide-y divide-slate-100">
-        {suggestions.filter((item) => item.status !== "dismissed").map((item) => (
-          <article key={item.id} className={`p-5 ${item.status === "accepted" ? "bg-emerald-50/40" : ""}`}>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold uppercase tracking-wide text-teal">{item.priority} priority</p>
-                <p className="mt-1 text-sm font-semibold text-ink">{item.title}</p>
+      {visibleInsights.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {visibleInsights.map((insight) => (
+            <div key={`${insight.skill}-${insight.status}-${insight.detail}`} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-teal">{insight.skill}</p>
+                <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">{formatLabel(insight.status)}</span>
               </div>
-              <div className="flex gap-1">
-                <button type="button" title={`Accept ${item.title}`} onClick={() => updateSuggestion(item.id, { status: item.status === "accepted" ? "open" : "accepted" })} className="rounded p-2 text-slate-500 hover:bg-emerald-50 hover:text-teal"><CheckCircle2 size={16} /></button>
-                <button type="button" title={`Edit ${item.title}`} onClick={() => setEditingId(editingId === item.id ? null : item.id)} className="rounded p-2 text-slate-500 hover:bg-sky-50 hover:text-sky-700"><Pencil size={16} /></button>
-                <button type="button" title={`Dismiss ${item.title}`} onClick={() => updateSuggestion(item.id, { status: "dismissed" })} className="rounded p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><X size={16} /></button>
-              </div>
-            </div>
-            {editingId === item.id ? (
-              <textarea value={item.detail} onChange={(event) => updateSuggestion(item.id, { detail: event.target.value })} className="mt-3 min-h-24 w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 focus:border-teal focus:outline-none" />
-            ) : (
-              <p className="mt-1 text-sm leading-6 text-slate-600">{item.detail}</p>
-            )}
-            <AiRecommendationDetails item={item} />
-            {item.status === "accepted" && <p className="mt-2 text-xs font-semibold text-emerald-700">Added to your tailoring checklist</p>}
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function AiRecommendationDetails({ item }) {
-  const detailItems = [
-    ["Job ask", item.job_requirement],
-    ["Resume evidence", item.resume_evidence],
-    ["Where to add", item.where_to_add],
-    ["What to add", item.what_to_add],
-  ].filter(([, value]) => value);
-
-  if (!detailItems.length && !item.bullet_template && !item.truthfulness_note) return null;
-
-  return (
-    <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-      {!!detailItems.length && (
-        <div className="grid gap-2 sm:grid-cols-2">
-          {detailItems.map(([label, value]) => (
-            <div key={label} className="rounded bg-white px-3 py-2">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-700">{value}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-700">{insight.detail}</p>
+              {insight.evidence && (
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  <span className="font-semibold text-slate-600">Evidence: </span>
+                  {insight.evidence}
+                </p>
+              )}
+              {insight.next_step && (
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  <span className="font-semibold text-slate-600">Next step: </span>
+                  {insight.next_step}
+                </p>
+              )}
             </div>
           ))}
         </div>
-      )}
-      {item.bullet_template && (
-        <div className="mt-2 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-teal">Suggested resume bullet</p>
-          <p className="mt-1 text-xs leading-5 text-slate-700">{item.bullet_template}</p>
-        </div>
-      )}
-      {item.truthfulness_note && (
-        <p className="mt-2 text-xs leading-5 text-slate-500">
-          <span className="font-semibold text-slate-600">Truthfulness note: </span>
-          {item.truthfulness_note}
-        </p>
       )}
     </div>
   );
@@ -971,6 +770,58 @@ function SummaryRow({ label, value }) {
       <dd className="font-semibold text-slate-700">{value}</dd>
     </div>
   );
+}
+
+function normalizedReportSections(sections = []) {
+  return sections
+    .map((section) => ({
+      title: cleanText(section.title),
+      summary: cleanText(section.summary),
+      evidence: cleanText(section.evidence),
+      next_step: cleanText(section.next_step),
+    }))
+    .filter((section) => section.title && section.summary)
+    .slice(0, 4);
+}
+
+function normalizedSkillInsights(insights = []) {
+  return insights
+    .map((insight) => ({
+      skill: cleanText(insight.skill),
+      status: normalizeSkillInsightStatus(insight.status),
+      detail: cleanText(insight.detail),
+      evidence: cleanText(insight.evidence),
+      next_step: cleanText(insight.next_step),
+    }))
+    .filter((insight) => insight.skill && insight.detail)
+    .slice(0, 8);
+}
+
+function skillInsightsFor(insights = [], skills = [], allowedStatuses = []) {
+  const normalizedSkills = new Set(skills.map(normalizeSkillKey));
+  return insights.filter((insight) => {
+    const allowed = allowedStatuses.includes(insight.status);
+    if (!allowed) return false;
+    return normalizedSkills.size === 0 || normalizedSkills.has(normalizeSkillKey(insight.skill));
+  });
+}
+
+function normalizeSkillInsightStatus(status = "") {
+  const normalized = cleanText(status).toLowerCase();
+  if (["supported", "missing", "related"].includes(normalized)) return normalized;
+  return "related";
+}
+
+function normalizeSkillKey(skill = "") {
+  return cleanText(skill).toLowerCase();
+}
+
+function cleanText(value = "") {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function formatLabel(value = "") {
+  return cleanText(value).replaceAll("_", " ").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function enrichAiRecommendations(recommendations = [], requirements = {}) {
@@ -1342,117 +1193,6 @@ function atsEvidenceDetail(issue) {
 
 function shortenText(text, maxLength) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 3).trim()}...` : text;
-}
-
-function buildResumeWorkspaceSections(resumeText, summary, skills) {
-  const parsed = parseResumeSections(resumeText);
-  const candidateName = parsed.header[0] || summary.candidate_name || "[Your name]";
-  const contactLines = parsed.header.slice(1);
-  const targetRole = summary.target_role || "[Target role]";
-  const detectedSkills = skills.matched.length ? skills.matched.join(", ") : "[Add your relevant skills]";
-  return [
-    {
-      id: "header",
-      label: "Header",
-      outputLabel: "",
-      required: true,
-      helper: "Confirm your name, target role, and contact details. Keep this short and recruiter-friendly.",
-      content: [
-        candidateName,
-        targetRole,
-        contactLines.length ? contactLines.join(" | ") : "[Email] | [Phone] | [City, Province or State]",
-      ].join("\n"),
-    },
-    {
-      id: "summary",
-      label: "Professional summary",
-      outputLabel: "Professional Summary",
-      required: true,
-      helper: "Use 2-3 lines that connect your real background to the selected job.",
-      content: sectionText(parsed.sections.summary, `[Write 2-3 lines about your real experience relevant to ${targetRole}. Mention your strongest skills and one truthful result.]`),
-    },
-    {
-      id: "skills",
-      label: "Skills",
-      outputLabel: "Skills",
-      required: true,
-      helper: "Group skills that are supported by your resume. Do not add unsupported keywords.",
-      content: sectionText(parsed.sections.skills, detectedSkills),
-    },
-    {
-      id: "experience",
-      label: "Experience",
-      outputLabel: "Experience",
-      required: true,
-      helper: "Use role, organization, dates, and outcome-focused bullets. Add numbers only when truthful.",
-      content: sectionText(parsed.sections.experience, "[Role or project] | [Organization] | [Dates]\n- [Describe a real action and its result. Add a truthful number when possible.]"),
-    },
-    {
-      id: "projects",
-      label: "Projects",
-      outputLabel: "Projects",
-      required: false,
-      helper: "Use this for academic, portfolio, or personal projects that support missing job evidence.",
-      content: sectionText(parsed.sections.projects, ""),
-    },
-    {
-      id: "education",
-      label: "Education",
-      outputLabel: "Education",
-      required: true,
-      helper: "Keep education simple: degree, school, dates, and relevant coursework if useful.",
-      content: sectionText(parsed.sections.education, "[Degree or diploma] | [School] | [Graduation year]"),
-    },
-    {
-      id: "certifications",
-      label: "Certifications",
-      outputLabel: "Certifications",
-      required: false,
-      helper: "Include this only when you have a relevant credential. Leave blank otherwise.",
-      content: sectionText(parsed.sections.certifications, ""),
-    },
-  ];
-}
-
-function serializeResumeSections(sections) {
-  const header = sections.find((section) => section.id === "header")?.content.trim();
-  const body = sections
-    .filter((section) => section.id !== "header" && section.content.trim())
-    .map((section) => `${section.outputLabel.toUpperCase()}\n${section.content.trim()}`);
-  return [header, ...body].filter(Boolean).join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
-}
-
-function parseResumeSections(resumeText) {
-  const aliases = {
-    summary: ["summary", "professional summary", "profile", "objective"],
-    skills: ["skills", "technical skills", "core skills", "competencies"],
-    experience: ["experience", "work experience", "professional experience", "employment"],
-    education: ["education", "academic background"],
-    certifications: ["certifications", "certification", "licenses", "credentials"],
-    projects: ["projects", "selected projects", "academic projects"],
-  };
-  const sections = Object.fromEntries(Object.keys(aliases).map((key) => [key, []]));
-  const header = [];
-  let activeSection = "";
-
-  resumeText.split(/\r?\n/).forEach((rawLine) => {
-    const line = rawLine.trim();
-    if (!line) return;
-    const normalized = line.toLowerCase().replace(/:$/, "");
-    const section = Object.entries(aliases).find((entry) => entry[1].includes(normalized))?.[0];
-    if (section) {
-      activeSection = section;
-    } else if (activeSection) {
-      sections[activeSection].push(line);
-    } else {
-      header.push(line);
-    }
-  });
-  return { header, sections };
-}
-
-function sectionText(lines, fallback) {
-  return lines.length ? lines.join("\n") : fallback;
 }
 
 function comparePriority(first, second) {

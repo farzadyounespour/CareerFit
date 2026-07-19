@@ -15,7 +15,7 @@ This summary is based on the CareerFit codebase inspection. It is intended to co
 | Job selection/comparison panel | done, backend-connected | `frontend/src/screens/JobMatchScreen.jsx`, `frontend/src/App.jsx`, `backend/apps/matching/views.py` | Selecting a job fills description and calls `/matches/preview/`. |
 | Readiness report | done, backend-connected | `frontend/src/screens/ReportScreen.jsx`, `backend/apps/matching/views.py`, `backend/apps/matching/services.py` | Detailed report with score breakdown, requirement evidence, ATS checks, and recommendations. |
 | Semantic similarity example/result display | partial/done | `frontend/src/screens/ReportScreen.jsx`, `backend/apps/matching/views.py`, `backend/apps/matching/services.py` | Semantic matches appear in preview/report when detected. No separate standalone semantic-demo page was found. |
-| Recommendations section | done | `frontend/src/screens/ReportScreen.jsx`, `backend/apps/matching/services.py`, `backend/apps/matching/llm_services.py` | Rule-based recommendations plus optional AI coaching. |
+| Recommendations section | done | `frontend/src/screens/ReportScreen.jsx`, `backend/apps/matching/services.py`, `backend/apps/matching/llm_services.py` | AI-first priority recommendations when configured, with rule-based fallback. |
 | Application tracker | done, backend-connected | `frontend/src/screens/HistoryScreen.jsx`, `frontend/src/screens/DashboardScreen.jsx`, `backend/apps/jobs/views.py`, `backend/apps/jobs/models.py` | Saved jobs, statuses, notes, dates, tasks, drafts, CSV import/export. |
 
 ### Backend Features
@@ -41,7 +41,7 @@ This summary is based on the CareerFit codebase inspection. It is intended to co
 | ATS score/checks | done | `backend/apps/matching/services.py`, `frontend/src/screens/ResumeUploadScreen.jsx` | Approximate regex checks. |
 | Report generation | done | `backend/apps/matching/views.py`, `backend/apps/matching/models.py` | Full analysis saved to `MatchReport`. |
 | Application tracker saving/updating | done | `backend/apps/jobs/views.py`, `backend/apps/jobs/models.py` | Save/update jobs and application packet fields. |
-| Optional AI coaching | done/optional | `backend/apps/matching/llm_services.py`, `backend/apps/jobs/views.py` | Supports OpenAI or Ollama if configured. Deterministic report works without it. |
+| AI coaching | done/optional | `backend/apps/matching/llm_services.py`, `backend/apps/jobs/views.py` | Supports OpenAI or Ollama if configured. Full reports request it by default, and deterministic fallback works without it. |
 
 ## 2. Job Search And Direct Resume-Job Fitting
 
@@ -93,7 +93,7 @@ CareerFit implements job discovery and direct resume-job comparison as one conne
 - Tokenization: implemented with regex in `tokenize`.
 - Sentence/requirement splitting: implemented in `split_requirements`; splits on newlines, semicolons, and sentence boundaries.
 - Stemming/lemmatization: partial only; simple plural normalization and token aliases. No full stemming/lemmatization library was found.
-- Resume section/evidence extraction: implemented in `_resume_evidence_segments`; frontend also parses resume sections for ATS draft UI.
+- Resume section/evidence extraction: implemented in `_resume_evidence_segments`; frontend uses the extracted evidence in the report and priority guidance.
 - Skill extraction: implemented in `extract_skills`.
 - Requirement extraction: implemented in `split_requirements` and `is_requirement_candidate`.
 
@@ -169,7 +169,7 @@ Overall score:
 - Backend rule-based recommendations come from `build_recommendations` and `build_priority_fixes`.
 - They are linked to missing skills, missing requirements, weak/partial requirements, and ATS issues.
 - Frontend normalizes and displays them as priority actions.
-- Optional AI coaching can add structured recommendations, but it is opt-in and depends on configured OpenAI/Ollama.
+- AI coaching can add structured priority recommendations when configured, and the frontend falls back to deterministic recommendations if the provider is unavailable.
 
 ## 4. Algorithm Comparison And Research Findings
 
@@ -202,7 +202,7 @@ Method comparison output from `python -m scripts.evaluate_matching_methods`:
 | Keyword overlap | 2/5 | 0.400 | 11.43 | Simple and explainable | Misses paraphrases | Good for exact terms, weak for semantic matches |
 | TF-IDF cosine | 2/5 | 0.400 | 6.16 | Better weighted lexical comparison than raw overlap | Still misses related wording with few shared tokens | Not enough by itself for paraphrased resume evidence |
 | Hybrid BM25 + TF-IDF + semantic concepts | 5/5 | 1.000 | 45.80 | Transparent semantic evidence scoring | Rule-based concept groups need expansion | Strongest current finding: hybrid evidence beats lexical-only methods in controlled paraphrase cases |
-| Ollama embeddings | skipped | not calculated | not calculated | True local AI semantic similarity possible | Requires a dedicated local embedding model | Implemented as an optional AI signal; current machine has only `gemma3:4b`, which does not support embeddings |
+| Ollama embeddings | environment-dependent | not calculated in the cited baseline | not calculated in the cited baseline | True local AI semantic similarity possible | Requires a dedicated local embedding model such as `embeddinggemma` | Implemented as an optional AI signal; rerun the method script after configuring `OLLAMA_EMBEDDING_MODEL` to capture embedding results |
 
 The method-comparison script now initializes Django settings itself, so it can be run directly from the backend directory.
 

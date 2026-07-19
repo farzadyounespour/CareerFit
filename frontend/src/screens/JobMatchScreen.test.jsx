@@ -63,8 +63,6 @@ describe("JobMatchScreen", () => {
         onAnalyze={() => {}}
         isLoading={false}
         error=""
-        useAiCoaching={false}
-        onAiCoachingChange={() => {}}
       />,
     );
 
@@ -119,8 +117,6 @@ describe("JobMatchScreen", () => {
         onAnalyze={() => {}}
         isLoading={false}
         error=""
-        useAiCoaching={false}
-        onAiCoachingChange={() => {}}
       />,
     );
 
@@ -229,13 +225,11 @@ describe("JobMatchScreen", () => {
         onAnalyze={() => {}}
         isLoading={false}
         error=""
-        useAiCoaching={false}
-        onAiCoachingChange={() => {}}
       />,
     );
 
     expect(screen.getByText("Quick comparison")).toBeVisible();
-    expect(screen.getByText("Strong fit")).toBeVisible();
+    expect(screen.getByText(/76% match · Strong fit/)).toBeVisible();
     expect(screen.getByText("76%")).toBeVisible();
     expect(screen.getByText("68%")).toBeVisible();
     expect(screen.getByText("Requirement gaps")).toBeVisible();
@@ -268,7 +262,7 @@ describe("JobMatchScreen", () => {
     expect(screen.getByText("Job text used for scoring")).toBeVisible();
     fireEvent.click(screen.getByText("Job text used for scoring"));
     expect(screen.getByText(/job description text only/)).toBeVisible();
-    expect(screen.getByRole("button", { name: "Generate full readiness report" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Generate AI readiness report" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Add to tracker" }));
     fireEvent.click(screen.getByRole("button", { name: "Open tracker" }));
     expect(onSaveJob).toHaveBeenCalledWith(expect.objectContaining({ id: "job-1" }));
@@ -310,8 +304,6 @@ describe("JobMatchScreen", () => {
         onAnalyze={() => {}}
         isLoading={false}
         error=""
-        useAiCoaching={false}
-        onAiCoachingChange={() => {}}
       />,
     );
 
@@ -372,8 +364,6 @@ describe("JobMatchScreen", () => {
         onAnalyze={() => {}}
         isLoading={false}
         error=""
-        useAiCoaching={false}
-        onAiCoachingChange={() => {}}
       />,
     );
 

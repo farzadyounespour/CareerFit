@@ -29,10 +29,27 @@ class LLMRecommendation(BaseModel):
     truthfulness_note: str = Field(default="Use only if this reflects your real experience.", max_length=220)
 
 
+class LLMReportSection(BaseModel):
+    title: str = Field(min_length=1, max_length=100)
+    summary: str = Field(min_length=1, max_length=520)
+    evidence: str = Field(default="", max_length=420)
+    next_step: str = Field(default="", max_length=420)
+
+
+class LLMSkillInsight(BaseModel):
+    skill: str = Field(min_length=1, max_length=80)
+    status: str = Field(pattern="^(supported|missing|related)$")
+    detail: str = Field(min_length=1, max_length=420)
+    evidence: str = Field(default="", max_length=420)
+    next_step: str = Field(default="", max_length=420)
+
+
 class LLMCoachingResult(BaseModel):
     headline: str = Field(min_length=1, max_length=180)
     summary: str = Field(min_length=1, max_length=700)
     recommendations: list[LLMRecommendation] = Field(min_length=1, max_length=5)
+    report_sections: list[LLMReportSection] = Field(default_factory=list, max_length=4)
+    skill_insights: list[LLMSkillInsight] = Field(default_factory=list, max_length=8)
 
 
 class LLMPacketDraftResult(BaseModel):
@@ -326,12 +343,25 @@ def _build_prompt(match_result, resume_text, job_description):
     summary = match_result["summary"]
     skills = match_result["skills"]
     priority_fixes = match_result.get("priority_fixes", [])[:5]
+    ats = match_result.get("ats", {})
     missing_requirements = [
         item["text"]
         for category in ("missing", "weak")
         for item in match_result["requirements"][category]
     ][:5]
+    supported_requirements = [
+        item["text"]
+        for category in ("matched", "partial")
+        for item in match_result["requirements"][category]
+    ][:5]
     return (
+        "Return a complete AI-enriched report add-on for the CareerFit report page. "
+        "Include: headline, summary, recommendation objects, report_sections, and skill_insights. "
+        "For report_sections, write 3-4 concise sections covering the fit summary, skills, requirement evidence, "
+        "ATS/readability, and resume strategy when useful. Each section must include a specific summary, evidence when available, "
+        "and a practical next_step. For skill_insights, cover the most important matched and missing skills. "
+        "Use status='supported' only when the resume clearly proves the skill, status='missing' when the job asks for it but the resume does not prove it, "
+        "and status='related' when the resume has adjacent evidence but needs clearer wording. "
         "Return recommendation objects with job_requirement, resume_evidence, where_to_add, "
         "what_to_add, bullet_template, and truthfulness_note. Do not leave job_requirement empty: "
         "copy the exact job ask from CareerFit priority fixes or the job posting. Do not leave "
@@ -344,8 +374,11 @@ def _build_prompt(match_result, resume_text, job_description):
         f"Deterministic readiness score: {summary['readiness_score']}\n"
         f"Matched skills: {', '.join(skills['matched']) or 'None'}\n"
         f"Missing skills: {', '.join(skills['missing']) or 'None'}\n\n"
+        f"ATS score: {ats.get('score', 0)}\n"
+        f"ATS issues: {', '.join(ats.get('issues', [])) or 'None'}\n\n"
         f"CareerFit priority fixes: {json.dumps(priority_fixes, ensure_ascii=False)}\n\n"
         f"Missing or weak requirements: {' | '.join(missing_requirements) or 'None'}\n\n"
+        f"Matched or partial requirements: {' | '.join(supported_requirements) or 'None'}\n\n"
         f"RESUME:\n{resume_text[:MAX_LLM_TEXT_LENGTH]}\n\n"
         f"JOB POSTING:\n{job_description[:MAX_LLM_TEXT_LENGTH]}"
     )
@@ -358,4 +391,6 @@ def _status(status, detail):
         "model": settings.OLLAMA_MODEL if settings.CAREERFIT_LLM_PROVIDER == "ollama" else settings.OPENAI_MODEL,
         "detail": detail,
         "recommendations": [],
+        "report_sections": [],
+        "skill_insights": [],
     }
