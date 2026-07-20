@@ -58,7 +58,7 @@ If live providers are unavailable, CareerFit still works locally by returning sa
 
 If an Adzuna key has been shared publicly, revoke it in the Adzuna dashboard, create a new key, and update `backend/.env`.
 
-To enable free AI report coaching locally, install [Ollama](https://ollama.com/download), download a model, and enable the feature:
+To enable free optional AI resume coaching locally, install [Ollama](https://ollama.com/download), download a model, and enable the feature:
 
 ```bash
 ollama pull gemma3:4b
@@ -70,7 +70,6 @@ Add these values to `backend/.env`:
 CAREERFIT_ENABLE_LLM=True
 CAREERFIT_LLM_PROVIDER=ollama
 OLLAMA_MODEL=gemma3:4b
-OLLAMA_HEALTH_TIMEOUT_SECONDS=2
 ```
 
 Ollama runs on the same computer as CareerFit, so this option does not require a paid API key. You can still use OpenAI instead:
@@ -84,7 +83,7 @@ OPENAI_RESUME_MAX_OUTPUT_TOKENS=3500
 
 ChatGPT Plus and the OpenAI API are separate products. A ChatGPT Plus subscription does not automatically give the Django backend API access; create an API key in the OpenAI platform dashboard and put it in `backend/.env`.
 
-AI report highlights and priority fixes are requested automatically for full reports when a provider is configured. CareerFit checks the local Ollama service first, so Ollama guidance is shown when available and the explainable deterministic report appears quickly when Ollama is off, disabled, rate limited, or unavailable.
+AI coaching and AI resume drafts are opt-in for each scan. The explainable CareerFit score, ATS checks, and deterministic recommendations still work when AI is disabled or the configured provider is unavailable.
 
 To run the optional local semantic-similarity evaluation described below, or to add local embedding evidence to the report score, pull a dedicated embedding model:
 
@@ -125,6 +124,7 @@ Before deployment, run `python manage.py collectstatic --noinput`. Configure aut
 cd frontend
 npm install
 npm run dev
+ollama pull embeddinggemma
 ```
 
 The frontend runs at `http://127.0.0.1:5173`.
@@ -157,7 +157,7 @@ VITE_API_BASE_URL=/api
 - Explainable weighted requirement matching, best-segment BM25/TF-IDF evidence, skill coverage, optional local embedding evidence, missing-skill analysis, and recommendations.
 - Role-specific interview questions, STAR answer prompts, and a progress dashboard.
 - Persistent light and dark appearance modes across the public site and private workspace.
-- Local Ollama or OpenAI-powered report highlights and priority coaching with deterministic fallback.
+- Optional local Ollama or OpenAI-powered coaching with explicit user consent and deterministic fallback.
 - Expiring sessions, email verification, password reset, account deletion, and saved-data cleanup.
 
 ## Evaluation
@@ -228,11 +228,11 @@ CareerFit combines available Adzuna, Remotive, Arbeitnow, and optional Jooble re
   },
   "resume_text": "Python, SQL, dashboards, projects...",
   "job_description": "We need Python, SQL, Tableau, communication...",
-  "use_llm": true
+  "use_llm": false
 }
 ```
 
-The response includes score summaries, an explainable score breakdown, matched and missing skills, weighted requirement-level evidence, best-segment BM25/TF-IDF/concept evidence signals, optional embedding evidence when configured, and automatic AI coaching status.
+The response includes score summaries, an explainable score breakdown, matched and missing skills, weighted requirement-level evidence, best-segment BM25/TF-IDF/concept evidence signals, optional embedding evidence when configured, and the optional AI coaching status.
 
 ### Preview Match
 
@@ -244,7 +244,7 @@ Returns the deterministic score summary and skill gaps for the current resume an
 
 `POST /api/matches/coach/`
 
-Returns AI coaching for the current resume and selected job without saving a duplicate report. The endpoint uses the configured Ollama or OpenAI provider and applies the dedicated coaching rate limit.
+Returns optional AI coaching for the current resume and selected job without saving a duplicate report. The endpoint uses the configured Ollama or OpenAI provider and applies the dedicated coaching rate limit.
 
 `POST /api/matches/resume-draft/`
 
@@ -263,3 +263,19 @@ Send a multipart form request with a `file` field. Supported formats are `.pdf`,
   "character_count": 1234
 }
 ```
+
+
+
+Run:
+ollama pull embeddinggemma
+
+cd backend
+source .venv/bin/activate
+python manage.py runserver
+
+kill 21711
+python manage.py runserver
+
+cd frontend
+npm install
+npm run dev
