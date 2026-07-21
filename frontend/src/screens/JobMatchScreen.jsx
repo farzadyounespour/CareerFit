@@ -367,7 +367,7 @@ export default function JobMatchScreen({
 
           <button type="button" onClick={onAnalyze} disabled={isLoading || !hasJobDescription} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-teal px-4 py-3 text-sm font-semibold text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:bg-slate-300">
             <Sparkles size={16} />
-            {isLoading ? "Analyzing with AI..." : "Generate AI readiness report"}
+            {isLoading ? "Analyzing..." : "Generate readiness report"}
           </button>
         </aside>
       </div>

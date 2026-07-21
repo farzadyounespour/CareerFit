@@ -262,7 +262,7 @@ describe("JobMatchScreen", () => {
     expect(screen.getByText("Job text used for scoring")).toBeVisible();
     fireEvent.click(screen.getByText("Job text used for scoring"));
     expect(screen.getByText(/job description text only/)).toBeVisible();
-    expect(screen.getByRole("button", { name: "Generate AI readiness report" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Generate readiness report" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Add to tracker" }));
     fireEvent.click(screen.getByRole("button", { name: "Open tracker" }));
     expect(onSaveJob).toHaveBeenCalledWith(expect.objectContaining({ id: "job-1" }));

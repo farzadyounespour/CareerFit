@@ -37,7 +37,6 @@ export default function ReportScreen({
   onRequestAiCoaching = () => {},
   isLoadingAiCoaching = false,
   aiCoachingError = "",
-  history = [],
   onAddToTracker = () => {},
   canAddToTracker = true,
 }) {
@@ -73,6 +72,7 @@ export default function ReportScreen({
   const aiReportSections = aiCompleted ? normalizedReportSections(aiCoaching.report_sections || []) : [];
   const aiSkillInsights = aiCompleted ? normalizedSkillInsights(aiCoaching.skill_insights || []) : [];
   const priorityActions = buildPriorityActions(skills, requirements, atsIssues, recommendations, priorityFixes, aiRecommendations);
+  const wordingSuggestions = buildWordingSuggestions(priorityActions);
   const completedActionCount = priorityActions.filter((item) => completedActions.has(actionKey(item))).length;
   const scoreBreakdown = summary.score_breakdown || {
     requirement_evidence: { score: matchScore, weight: 65 },
@@ -129,7 +129,6 @@ export default function ReportScreen({
               <ScoreCard label="ATS preparation" value={atsScore} detail={`${atsIssues.length} check${atsIssues.length === 1 ? "" : "s"} to improve`} />
             </div>
             <ScoreExplanation breakdown={scoreBreakdown} />
-            <ScoreHistory history={history} targetRole={summary.target_role} />
           </section>
 
           {aiReportSections.length > 0 && (
@@ -203,6 +202,10 @@ export default function ReportScreen({
               ))}
             </div>
           </section>
+
+          {wordingSuggestions.length > 0 && (
+            <ProblemWordingSection suggestions={wordingSuggestions} />
+          )}
 
           <section id="skill-review" className="scroll-mt-24 rounded-md border border-slate-200 bg-white shadow-panel">
             <div className="border-b border-slate-200 p-5">
@@ -317,6 +320,7 @@ export default function ReportScreen({
             <div className="mt-2 space-y-1">
               {aiReportSections.length > 0 && <ReportJumpLink target="ai-highlights">AI highlights</ReportJumpLink>}
               <ReportJumpLink target="priority-improvements">Priority fixes</ReportJumpLink>
+              {wordingSuggestions.length > 0 && <ReportJumpLink target="wording-suggestions">Wording suggestions</ReportJumpLink>}
               <ReportJumpLink target="skill-review">Skills</ReportJumpLink>
               <ReportJumpLink target="ats-checks">ATS checks</ReportJumpLink>
               <ReportJumpLink target="requirement-evidence">Requirement evidence</ReportJumpLink>
@@ -378,27 +382,77 @@ function AiReportHighlights({ sections, provider, model }) {
   );
 }
 
+function ProblemWordingSection({ suggestions }) {
+  return (
+    <section id="wording-suggestions" className="scroll-mt-24 rounded-md border border-slate-200 bg-white shadow-panel">
+      <div className="border-b border-slate-200 p-5">
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-emerald-50 text-teal">
+            <Sparkles size={18} />
+          </span>
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-teal">Resume wording suggestions</p>
+            <h3 className="mt-1 text-lg font-semibold text-ink">Text to adapt for each problem</h3>
+            <p className="mt-1 text-sm leading-6 text-slate-600">Keep bracketed placeholders until the detail is true and specific.</p>
+          </div>
+        </div>
+      </div>
+      <div className="divide-y divide-slate-100">
+        {suggestions.map((item) => (
+          <article key={item.key} className="p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold text-ink">{item.title}</p>
+                  <ImpactBadge priority={item.priority} />
+                </div>
+                {item.where && <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{item.where}</p>}
+              </div>
+              <span className={`rounded px-2 py-1 text-xs font-bold ${item.source === "ai" ? "bg-emerald-50 text-teal" : "bg-slate-100 text-slate-500"}`}>
+                {item.source === "ai" ? "AI generated" : "CareerFit starter"}
+              </span>
+            </div>
+            <p className="mt-3 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm leading-6 text-slate-700">{item.text}</p>
+            {item.truthfulnessNote && (
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                <span className="font-semibold text-slate-600">Truthfulness note: </span>
+                {item.truthfulnessNote}
+              </p>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function EvidenceGapCard({ item }) {
   const hasGapDetails = item.jobSignal || item.resumeSignal || item.evidenceNeeded;
   const suggestedBullet = suggestedResumeBullet(item);
+  const showBeforeAfterWording = item.source === "ai" && suggestedBullet;
+  const gapGridClassName = showBeforeAfterWording
+    ? "grid divide-y divide-slate-200 bg-white md:grid-cols-2 md:divide-x md:divide-y-0"
+    : "grid divide-y divide-slate-200 bg-white md:grid-cols-3 md:divide-x md:divide-y-0";
   if (!hasGapDetails && !suggestedBullet && !item.checklist?.length && !item.why) return null;
 
   return (
     <div className="mt-3 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
       {hasGapDetails && (
-        <div className="grid divide-y divide-slate-200 bg-white md:grid-cols-3 md:divide-x md:divide-y-0">
+        <div className={gapGridClassName}>
           <EvidenceGapColumn
             label="Job asks for"
             value={item.jobSignal}
             empty="No specific job signal found."
             tone="job"
           />
-          <EvidenceGapColumn
-            label="Resume shows"
-            value={item.resumeSignal}
-            empty="No clear resume proof yet."
-            tone="resume"
-          />
+          {!showBeforeAfterWording && (
+            <EvidenceGapColumn
+              label="Resume shows"
+              value={item.resumeSignal}
+              empty="No clear resume proof yet."
+              tone="resume"
+            />
+          )}
           <EvidenceGapColumn
             label="Add this proof"
             value={item.evidenceNeeded}
@@ -433,7 +487,13 @@ function EvidenceGapCard({ item }) {
             {item.why}
           </p>
         )}
-        {suggestedBullet && (
+        {showBeforeAfterWording && (
+          <BeforeAfterResumeWording
+            beforeText={beforeResumeWording(item)}
+            afterText={suggestedBullet}
+          />
+        )}
+        {suggestedBullet && !showBeforeAfterWording && (
           <div className="rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2">
             <p className="text-xs font-bold uppercase tracking-wide text-teal">Suggested resume bullet</p>
             <p className="mt-1 text-xs leading-5 text-slate-700">{suggestedBullet}</p>
@@ -450,12 +510,65 @@ function EvidenceGapCard({ item }) {
   );
 }
 
+function BeforeAfterResumeWording({ beforeText, afterText }) {
+  return (
+    <div className="overflow-hidden rounded-md border border-emerald-100 bg-white">
+      <div className="border-b border-emerald-100 bg-emerald-50 px-3 py-2">
+        <p className="text-xs font-bold uppercase tracking-wide text-teal">Before / after resume wording</p>
+      </div>
+      <div className="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">
+        <ResumeWordingColumn label="Before" tone="before" text={beforeText} />
+        <ResumeWordingColumn label="Stronger wording" tone="after" text={afterText} />
+      </div>
+    </div>
+  );
+}
+
+function ResumeWordingColumn({ label, tone, text }) {
+  const labelClassName = tone === "after" ? "bg-emerald-50 text-teal" : "bg-slate-100 text-slate-500";
+
+  return (
+    <div className="p-3">
+      <p className={`inline-flex rounded px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${labelClassName}`}>
+        {label}
+      </p>
+      <p className="mt-2 text-xs leading-5 text-slate-700">{text}</p>
+    </div>
+  );
+}
+
 function suggestedResumeBullet(item) {
   return firstMeaningfulText(
     item.example,
     aiRecommendationBulletTemplate(item.jobSignal, item.evidenceNeeded, item.title),
     requirementBulletExample(item.title || ""),
   );
+}
+
+function buildWordingSuggestions(actions = []) {
+  return actions
+    .map((item, index) => {
+      const text = suggestedResumeBullet(item);
+      if (!text) return null;
+      return {
+        key: `${actionKey(item)}-${index}`,
+        title: item.title,
+        priority: item.priority,
+        where: item.where,
+        text,
+        source: item.source === "ai" ? "ai" : "fallback",
+        truthfulnessNote: item.truthfulnessNote,
+      };
+    })
+    .filter(Boolean);
+}
+
+function beforeResumeWording(item) {
+  const resumeSignal = firstMeaningfulText(item.resumeSignal);
+  if (!resumeSignal || isNoResumeEvidenceText(resumeSignal)) {
+    return "No current resume wording clearly proves this requirement.";
+  }
+  return resumeSignal;
 }
 
 function EvidenceGapColumn({ label, value, empty, tone }) {
@@ -595,30 +708,6 @@ function SkillBlock({ title, skills, details = [], insights = [], tone, empty })
         </div>
       )}
     </div>
-  );
-}
-
-function ScoreHistory({ history, targetRole }) {
-  const relevantHistory = history
-    .filter((item) => !targetRole || item.target_role === targetRole)
-    .slice(0, 5)
-    .reverse();
-  if (relevantHistory.length < 2) return null;
-  return (
-    <section className="mt-4 border-t border-slate-200 pt-4">
-      <p className="text-sm font-semibold text-ink">Readiness improvement history</p>
-      <p className="mt-1 text-xs leading-5 text-slate-500">Rescan after tailoring your resume to see whether the evidence and ATS preparation improved.</p>
-      <div className="mt-3 flex flex-wrap items-end gap-3">
-        {relevantHistory.map((item) => (
-          <div key={item.id} className="min-w-16 flex-1">
-            <p className="text-xs font-bold text-teal">{item.summary.readiness_score || 0}%</p>
-            <div className="mt-1 flex h-16 items-end rounded bg-slate-100 px-2">
-              <div className="w-full rounded-t bg-teal" style={{ height: `${Math.max(item.summary.readiness_score || 0, 6)}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 

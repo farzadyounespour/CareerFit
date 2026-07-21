@@ -77,10 +77,6 @@ describe("ReportScreen", () => {
         onNavigate={() => {}}
         onRequestAiCoaching={onRequestAiCoaching}
         onAddToTracker={onAddToTracker}
-        history={[
-          { id: 2, target_role: "Data Analyst", summary: { readiness_score: 56 } },
-          { id: 1, target_role: "Data Analyst", summary: { readiness_score: 48 } },
-        ]}
       />,
     );
 
@@ -91,12 +87,15 @@ describe("ReportScreen", () => {
     expect(screen.getAllByText("Add this proof")[0]).toBeVisible();
     expect(screen.getAllByText("Best place")[0]).toBeVisible();
     expect(screen.getAllByText("A strong fix includes")[0]).toBeVisible();
-    expect(screen.getByText("Experience or Projects")).toBeVisible();
+    expect(screen.getAllByText("Experience or Projects")[0]).toBeVisible();
     expect(screen.getByText("Skill used")).toBeVisible();
     expect(screen.getAllByText("Suggested resume bullet")[0]).toBeVisible();
+    expect(screen.getByText("Resume wording suggestions")).toBeVisible();
+    expect(screen.getByText("Text to adapt for each problem")).toBeVisible();
+    expect(screen.getAllByText("CareerFit starter")[0]).toBeVisible();
     expect(screen.getByText("Skills for this job")).toBeVisible();
     expect(screen.getByText("How CareerFit calculates the score")).toBeVisible();
-    expect(screen.getByText("Readiness improvement history")).toBeVisible();
+    expect(screen.queryByText("Readiness improvement history")).not.toBeInTheDocument();
     expect(screen.getByText("65% of job match")).toBeVisible();
     expect(screen.getByText("optional")).toBeVisible();
     expect(screen.queryByText("Resume draft workspace")).not.toBeInTheDocument();
@@ -104,6 +103,7 @@ describe("ReportScreen", () => {
     expect(screen.getAllByText("Additional tools")[0]).toBeVisible();
     expect(screen.getByText("Open these only when you need the extra detail")).toBeVisible();
     expect(screen.getByRole("navigation", { name: "Report sections" })).toBeVisible();
+    expect(screen.getByRole("button", { name: /Wording suggestions/ })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Update resume" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Add to tracker" }));
     expect(onAddToTracker).toHaveBeenCalledOnce();
@@ -207,7 +207,7 @@ describe("ReportScreen", () => {
 
     expect(screen.queryByText("Specific improvements")).not.toBeInTheDocument();
     expect(within(document.getElementById("priority-improvements")).getByText("Add a Tableau bullet")).toBeVisible();
-    expect(screen.getAllByText("Add a Tableau bullet")).toHaveLength(1);
+    expect(within(document.getElementById("priority-improvements")).getAllByText("Add a Tableau bullet")).toHaveLength(1);
     expect(screen.getByText("AI report highlights")).toBeVisible();
     expect(screen.getByText("Dashboard gap")).toBeVisible();
     expect(screen.getByText("Add one truthful dashboard result.")).toBeVisible();
@@ -216,6 +216,15 @@ describe("ReportScreen", () => {
     expect(screen.getByText("The job mentions Tableau, but the resume does not prove Tableau work.")).toBeVisible();
     expect(screen.getAllByText("Best place")[0]).toBeVisible();
     expect(screen.getAllByText("Projects")[0]).toBeVisible();
+    const prioritySection = within(document.getElementById("priority-improvements"));
+    expect(prioritySection.getByText("Before / after resume wording")).toBeVisible();
+    expect(prioritySection.getByText("Before")).toBeVisible();
+    expect(prioritySection.getByText("Stronger wording")).toBeVisible();
+    expect(prioritySection.getByText("Python SQL dashboard experience")).toBeVisible();
+    const wordingSection = within(document.getElementById("wording-suggestions"));
+    expect(wordingSection.getByText("Add a Tableau bullet")).toBeVisible();
+    expect(wordingSection.getByText("AI generated")).toBeVisible();
+    expect(wordingSection.getByText("Built [dashboard] for [audience], improving [decision or workflow].")).toBeVisible();
     expect(screen.getAllByText("Built [dashboard] for [audience], improving [decision or workflow].")[0]).toBeVisible();
   });
 
@@ -268,7 +277,9 @@ describe("ReportScreen", () => {
     const prioritySection = within(document.getElementById("priority-improvements"));
     expect(prioritySection.getByText("AWS hands-on ownership - has provisioned, deployed, monitored, and debugged AWS infrastructure.")).toBeVisible();
     expect(prioritySection.getByText("Software Engineer: deployed Kafka on AWS ECS and monitored service health.")).toBeVisible();
-    expect(prioritySection.getAllByText("Suggested resume bullet")[0]).toBeVisible();
+    expect(prioritySection.getByText("Before / after resume wording")).toBeVisible();
+    expect(prioritySection.getByText("Before")).toBeVisible();
+    expect(prioritySection.getByText("Stronger wording")).toBeVisible();
     expect(prioritySection.getByText("Provisioned or improved [cloud service/infrastructure] for [project/system], using [AWS service/tool] to improve [reliability, deployment speed, monitoring, or cost].")).toBeVisible();
     expect(screen.queryByText("Specific improvements")).not.toBeInTheDocument();
   });
@@ -341,12 +352,12 @@ describe("ReportScreen", () => {
       />,
     );
 
-    expect(screen.getByText("Strengthen REST API evidence")).toBeVisible();
+    expect(screen.getAllByText("Strengthen REST API evidence")[0]).toBeVisible();
     expect(screen.getAllByText("Experience with REST API development")[0]).toBeVisible();
     expect(screen.getAllByText("Built backend endpoints and integrated third-party services")[0]).toBeVisible();
     expect(screen.getByText("Mention REST API design or integration if truthful.")).toBeVisible();
-    expect(screen.getByText("Built [backend service/API endpoint] for [use case], integrating [system/tool] and improving [latency, reliability, automation, or user workflow].")).toBeVisible();
-    expect(screen.getByText("Use this only if it reflects work you actually did.")).toBeVisible();
+    expect(screen.getAllByText("Built [backend service/API endpoint] for [use case], integrating [system/tool] and improving [latency, reliability, automation, or user workflow].")[0]).toBeVisible();
+    expect(screen.getAllByText("Use this only if it reflects work you actually did.")[0]).toBeVisible();
     expect(screen.queryByText("Add evidence for missing skills")).not.toBeInTheDocument();
   });
 

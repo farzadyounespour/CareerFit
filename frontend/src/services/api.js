@@ -356,10 +356,11 @@ async function downloadFile(path, filename) {
 
 async function handleResponse(response) {
   if (!response.ok) {
-    const details = await response.json().catch(() => ({}));
+    const details = await readErrorPayload(response);
     const message =
       details.detail ||
-      Object.values(details).flat().join(" ") ||
+      flattenErrorDetails(details) ||
+      apiStatusMessage(response.status) ||
       "Unable to complete request.";
     throw new Error(message);
   }
@@ -367,6 +368,30 @@ async function handleResponse(response) {
     return {};
   }
   return response.json();
+}
+
+async function readErrorPayload(response) {
+  const contentType = response.headers?.get?.("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return response.json().catch(() => ({}));
+  }
+
+  const text = await response.text?.().catch(() => "");
+  return text?.trim() ? { detail: text.trim() } : {};
+}
+
+function flattenErrorDetails(details) {
+  return Object.values(details || {})
+    .flat()
+    .filter(Boolean)
+    .join(" ");
+}
+
+function apiStatusMessage(status) {
+  if ([502, 503, 504].includes(status)) {
+    return "API server unavailable. Start the backend server and try again.";
+  }
+  return "";
 }
 
 function formatSalary(minimum, maximum) {

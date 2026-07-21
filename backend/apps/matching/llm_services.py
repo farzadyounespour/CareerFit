@@ -382,6 +382,7 @@ def _build_prompt(match_result, resume_text, job_description):
         "and a practical next_step. For skill_insights, cover the most important matched and missing skills. "
         "Use status='supported' only when the resume clearly proves the skill, status='missing' when the job asks for it but the resume does not prove it, "
         "and status='related' when the resume has adjacent evidence but needs clearer wording. "
+        "Create one recommendation object for each CareerFit priority fix listed, up to five total. "
         "Return recommendation objects with job_requirement, resume_evidence, where_to_add, "
         "what_to_add, bullet_template, and truthfulness_note. The bullet_template must be a resume-ready bullet sentence with bracketed placeholders for unknown facts. "
         "Do not leave bullet_template empty. Do not leave job_requirement empty: "

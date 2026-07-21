@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { generateResumeDraft, previewMatch, requestAiCoaching, searchJobs, storeToken } from "./api.js";
+import { generateResumeDraft, loginAccount, previewMatch, requestAiCoaching, searchJobs, storeToken } from "./api.js";
 
 
 afterEach(() => {
@@ -115,5 +115,22 @@ describe("generateResumeDraft", () => {
       "Content-Type": "application/json",
       Authorization: "Token careerfit-test-token",
     });
+  });
+});
+
+
+describe("loginAccount", () => {
+  it("shows a clear message when the API proxy cannot reach Django", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      headers: { get: () => "text/plain" },
+      text: async () => "",
+    }));
+
+    await expect(loginAccount({
+      email: "farzad@gmail.com",
+      password: "careerfit-pass",
+    })).rejects.toThrow("API server unavailable. Start the backend server and try again.");
   });
 });
