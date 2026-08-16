@@ -33,7 +33,7 @@ class AnalyzeMatchView(APIView):
             if not throttle.allow_request(request, self):
                 ai_coaching = coaching_status(
                     "rate_limited",
-                    "AI report guidance is temporarily rate limited. The deterministic report is shown instead; retry AI guidance later.",
+                    "Report guidance is temporarily rate limited. The deterministic report is shown instead; retry guidance later.",
                 )
         result["ai_coaching"] = ai_coaching or enrich_match_report(
             match_result=result,

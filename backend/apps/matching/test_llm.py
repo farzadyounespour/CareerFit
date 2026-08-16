@@ -117,6 +117,8 @@ class OptionalLlmCoachingTests(SimpleTestCase):
         CAREERFIT_LLM_PROVIDER="ollama",
         OLLAMA_BASE_URL="http://127.0.0.1:11434",
         OLLAMA_MODEL="gemma3:4b",
+        OLLAMA_MAX_OUTPUT_TOKENS=1800,
+        OLLAMA_CONTEXT_TOKENS=8192,
     )
     @patch("apps.matching.llm_services.urlopen")
     def test_returns_structured_local_ollama_coaching(self, mock_urlopen):
@@ -150,6 +152,9 @@ class OptionalLlmCoachingTests(SimpleTestCase):
         request = mock_urlopen.call_args.args[0]
         payload = json.loads(request.data.decode("utf-8"))
         self.assertEqual(request.full_url, "http://127.0.0.1:11434/api/chat")
+        self.assertEqual(payload["options"]["num_ctx"], 8192)
+        self.assertEqual(payload["options"]["num_predict"], 1800)
+        self.assertEqual(payload["options"]["temperature"], 0.2)
         self.assertIn("Do not leave job_requirement empty", payload["messages"][1]["content"])
         self.assertIn("Do not leave resume_evidence empty", payload["messages"][1]["content"])
 

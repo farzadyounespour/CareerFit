@@ -160,7 +160,7 @@ export default function ReportScreen({
                       className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-teal hover:border-teal disabled:cursor-wait disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500"
                     >
                       <Sparkles size={14} />
-                      {isLoadingAiCoaching ? "Generating..." : "Retry AI"}
+                      {isLoadingAiCoaching ? "Generating..." : "Retry guidance"}
                     </button>
                   )}
                   <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-teal">
@@ -318,7 +318,7 @@ export default function ReportScreen({
           <nav aria-label="Report sections" className="mt-6 border-t border-slate-100 pt-5">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Jump to section</p>
             <div className="mt-2 space-y-1">
-              {aiReportSections.length > 0 && <ReportJumpLink target="ai-highlights">AI highlights</ReportJumpLink>}
+              {aiReportSections.length > 0 && <ReportJumpLink target="ai-highlights">Tailored highlights</ReportJumpLink>}
               <ReportJumpLink target="priority-improvements">Priority fixes</ReportJumpLink>
               {wordingSuggestions.length > 0 && <ReportJumpLink target="wording-suggestions">Wording suggestions</ReportJumpLink>}
               <ReportJumpLink target="skill-review">Skills</ReportJumpLink>
@@ -347,14 +347,14 @@ function AiReportHighlights({ sections, provider, model }) {
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 shrink-0 text-teal" size={20} />
             <div>
-              <h3 className="text-lg font-semibold text-ink">AI report highlights</h3>
+              <h3 className="text-lg font-semibold text-ink">Tailored report highlights</h3>
               <p className="mt-1 text-sm leading-6 text-slate-600">
-                Tailored guidance from {provider || "AI"}{model ? ` (${model})` : ""}, grounded in the resume, job posting, and CareerFit evidence.
+                Tailored guidance from {provider || "the coaching engine"}{model ? ` (${model})` : ""}, grounded in the resume, job posting, and CareerFit evidence.
               </p>
             </div>
           </div>
           <span className="rounded bg-white px-2 py-1 text-xs font-bold text-teal">
-            {provider === "ollama" ? "Ollama enriched" : "AI enriched"}
+            {provider === "ollama" ? "Ollama enriched" : "Guidance enriched"}
           </span>
         </div>
       </div>
@@ -409,7 +409,7 @@ function ProblemWordingSection({ suggestions }) {
                 {item.where && <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{item.where}</p>}
               </div>
               <span className={`rounded px-2 py-1 text-xs font-bold ${item.source === "ai" ? "bg-emerald-50 text-teal" : "bg-slate-100 text-slate-500"}`}>
-                {item.source === "ai" ? "AI generated" : "CareerFit starter"}
+                {item.source === "ai" ? "Generated guidance" : "CareerFit starter"}
               </span>
             </div>
             <p className="mt-3 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm leading-6 text-slate-700">{item.text}</p>
@@ -625,7 +625,7 @@ function ScoreExplanation({ breakdown }) {
         <div>
           <p className="text-sm font-semibold text-ink">How CareerFit calculates the score</p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            Job match combines requirement evidence and skill coverage. Readiness combines {breakdown.job_match_weight}% job match with {breakdown.ats_preparation.weight}% ATS preparation. AI coaching does not change the score.
+            Job match combines requirement evidence and skill coverage. Readiness combines {breakdown.job_match_weight}% job match with {breakdown.ats_preparation.weight}% ATS preparation. Coaching guidance does not change the score.
           </p>
         </div>
       </div>

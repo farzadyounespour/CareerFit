@@ -70,6 +70,8 @@ Add these values to `backend/.env`:
 CAREERFIT_ENABLE_LLM=True
 CAREERFIT_LLM_PROVIDER=ollama
 OLLAMA_MODEL=gemma3:4b
+OLLAMA_CONTEXT_TOKENS=8192
+OLLAMA_MAX_OUTPUT_TOKENS=6000
 ```
 
 Ollama runs on the same computer as CareerFit, so this option does not require a paid API key. You can still use OpenAI instead:

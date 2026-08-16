@@ -108,7 +108,7 @@ describe("ReportScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add to tracker" }));
     expect(onAddToTracker).toHaveBeenCalledOnce();
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry guidance" }));
     expect(onRequestAiCoaching).toHaveBeenCalledOnce();
 
     expect(screen.queryByRole("button", { name: "Resume draft" })).not.toBeInTheDocument();
@@ -208,7 +208,7 @@ describe("ReportScreen", () => {
     expect(screen.queryByText("Specific improvements")).not.toBeInTheDocument();
     expect(within(document.getElementById("priority-improvements")).getByText("Add a Tableau bullet")).toBeVisible();
     expect(within(document.getElementById("priority-improvements")).getAllByText("Add a Tableau bullet")).toHaveLength(1);
-    expect(screen.getByText("AI report highlights")).toBeVisible();
+    expect(screen.getByText("Tailored report highlights")).toBeVisible();
     expect(screen.getByText("Dashboard gap")).toBeVisible();
     expect(screen.getByText("Add one truthful dashboard result.")).toBeVisible();
     expect(screen.getByText("Ollama guidance ready")).toBeVisible();
@@ -223,7 +223,7 @@ describe("ReportScreen", () => {
     expect(prioritySection.getByText("Python SQL dashboard experience")).toBeVisible();
     const wordingSection = within(document.getElementById("wording-suggestions"));
     expect(wordingSection.getByText("Add a Tableau bullet")).toBeVisible();
-    expect(wordingSection.getByText("AI generated")).toBeVisible();
+    expect(wordingSection.getByText("Generated guidance")).toBeVisible();
     expect(wordingSection.getByText("Built [dashboard] for [audience], improving [decision or workflow].")).toBeVisible();
     expect(screen.getAllByText("Built [dashboard] for [audience], improving [decision or workflow].")[0]).toBeVisible();
   });
