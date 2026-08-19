@@ -40,6 +40,20 @@ describe("searchJobs", () => {
     expect(url).toContain("salary_min=60000");
     expect(options.headers).toEqual({ Authorization: "Token careerfit-test-token" });
   });
+
+  it("shows backend validation errors instead of a generic search failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      headers: { get: () => "application/json" },
+      json: async () => ({ country: ['"Canada" is not a valid choice.'] }),
+    }));
+
+    await expect(searchJobs({
+      title: "Backend Engineer",
+      country: "Canada",
+    })).rejects.toThrow('"Canada" is not a valid choice.');
+  });
 });
 
 

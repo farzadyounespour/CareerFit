@@ -140,6 +140,30 @@ class AdditionalJobProviderTests(SimpleTestCase):
         self.assertEqual(jobs["results"][0]["description"], "Build Python SQL dashboards.")
 
     @patch("apps.jobs.services.urlopen")
+    def test_arbeitnow_accepts_non_list_job_types(self, mock_urlopen):
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = b"""
+        {
+          "data": [
+            {
+              "slug": "backend-engineer",
+              "title": "Backend Engineer",
+              "company_name": "Example Co",
+              "location": "Remote",
+              "remote": true,
+              "description": "<p>Build Python SQL APIs.</p>",
+              "url": "https://arbeitnow.com/jobs/backend-engineer",
+              "job_types": {"0": "full_time"}
+            }
+          ],
+          "links": {"next": null}
+        }
+        """
+
+        jobs = search_arbeitnow_jobs("Backend Engineer", workplace="remote", skills="Python SQL")
+
+        self.assertEqual(jobs["results"][0]["employment_type"], "full_time")
+
+    @patch("apps.jobs.services.urlopen")
     def test_formats_and_filters_remotive_results(self, mock_urlopen):
         mock_urlopen.return_value.__enter__.return_value.read.return_value = b"""
         {

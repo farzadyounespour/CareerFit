@@ -150,12 +150,7 @@ export async function searchJobs({
     headers: authHeaders(),
   });
 
-  if (!response.ok) {
-    const details = await response.json().catch(() => ({}));
-    throw new Error(details.detail || "Unable to search jobs.");
-  }
-
-  return response.json();
+  return handleResponse(response);
 }
 
 export async function importJobUrl(url) {

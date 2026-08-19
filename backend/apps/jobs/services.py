@@ -767,12 +767,22 @@ def _format_arbeitnow_job(job):
         "company": job.get("company_name") or "",
         "location": job.get("location") or ("Remote" if job.get("remote") else ""),
         "workplace": "remote" if job.get("remote") else "on_site",
-        "employment_type": _normalize_employment_type((job.get("job_types") or [""])[0]),
+        "employment_type": _normalize_employment_type(_first_job_type(job.get("job_types"))),
         "description": _strip_html(job.get("description") or ""),
         "url": job.get("url") or "",
         "source": "Arbeitnow",
         "posted_at": _normalize_posted_at(job.get("created_at")),
     }
+
+
+def _first_job_type(job_types):
+    if isinstance(job_types, str):
+        return job_types
+    if isinstance(job_types, (list, tuple)):
+        return job_types[0] if job_types else ""
+    if isinstance(job_types, dict):
+        return next((value for value in job_types.values() if value), "")
+    return ""
 
 
 def _format_remotive_job(job):
